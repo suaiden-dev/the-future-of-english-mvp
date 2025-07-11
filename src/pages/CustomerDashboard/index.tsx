@@ -1,5 +1,4 @@
-@@ .. @@
- interface CustomerDashboardProps {
+interface CustomerDashboardProps {
    user: UserType | null;
    documents: Document[];
    folders: Folder[];
@@ -8,9 +7,9 @@
    onFolderUpdate: (folderId: string, updates: Partial<Folder>) => void;
    onFolderDelete: (folderId: string) => void;
 +  onViewDocument: (document: Document) => void;
- }
+}
 
- export function CustomerDashboard({ 
+export function CustomerDashboard({ 
    user, 
    documents, 
    folders, 
@@ -20,4 +19,5 @@
 -  onFolderDelete 
 +  onFolderDelete,
 +  onViewDocument
- }: CustomerDashboardProps) {
+}: CustomerDashboardProps) {
+}
