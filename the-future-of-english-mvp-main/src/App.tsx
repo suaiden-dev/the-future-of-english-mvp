@@ -35,7 +35,7 @@ export type Folder = {
   id: string;
   userId: string;
   name: string;
-  parentId?: string;
+  parentId?: string | null;
   createdAt: string;
   color?: string;
 };

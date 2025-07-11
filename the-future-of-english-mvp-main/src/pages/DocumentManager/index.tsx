@@ -93,7 +93,7 @@ export function DocumentManager({
       id: Date.now().toString(),
       userId: user.id,
       name: newFolderName.trim(),
-      parentId: currentFolderId || undefined,
+      parentId: currentFolderId,
       createdAt: new Date().toISOString(),
       color: folderColors[Math.floor(Math.random() * folderColors.length)]
     };
