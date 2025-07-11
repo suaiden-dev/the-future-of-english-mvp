@@ -35,5 +35,6 @@
 +        return <Contact onNavigate={setCurrentPage} />;
        default:
          return <Home onNavigate={setCurrentPage} />;
+            onNavigate={setCurrentPage}
      }
    };
