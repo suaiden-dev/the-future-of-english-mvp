@@ -8,6 +8,7 @@ import { CustomerDashboard } from './pages/CustomerDashboard';
 import { DocumentVerification } from './pages/DocumentVerification';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { DocumentManager } from './pages/DocumentManager';
 import { Home as HomeIcon, FileText, Search, User, Shield, LogIn, UserPlus, LogOut } from 'lucide-react';
 
 export type User = {
@@ -27,6 +28,7 @@ export type Document = {
   totalCost: number;
   verificationCode?: string;
   isAuthenticated?: boolean;
+  folderId?: string | null;
 };
 
 export type Folder = {
@@ -38,7 +40,7 @@ export type Folder = {
   color?: string;
 };
 
-type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register';
+type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register' | 'documents';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -84,6 +86,10 @@ function App() {
     setFolders(prev => prev.filter(folder => folder.id !== folderId));
   };
 
+  const handleViewDocument = (document: Document) => {
+    // Implementar visualização de documento se necessário
+    console.log('View document:', document);
+  };
   // Define navigation items based on user status
   const getNavItems = () => {
     const baseItems = [
@@ -127,6 +133,20 @@ function App() {
             onFolderCreate={handleFolderCreate}
             onFolderUpdate={handleFolderUpdate}
             onFolderDelete={handleFolderDelete}
+            onViewDocument={handleViewDocument}
+          />
+        );
+      case 'documents':
+        return (
+          <DocumentManager
+            user={user}
+            documents={documents.filter(doc => doc.userId === user?.id)}
+            folders={folders.filter(folder => folder.userId === user?.id)}
+            onDocumentUpload={handleDocumentUpload}
+            onFolderCreate={handleFolderCreate}
+            onFolderUpdate={handleFolderUpdate}
+            onFolderDelete={handleFolderDelete}
+            onViewDocument={handleViewDocument}
           />
         );
       case 'admin':
@@ -150,7 +170,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Only show sidebar and different layout for dashboard pages */}
-      {(currentPage === 'dashboard-customer' || currentPage === 'admin') && user ? (
+      {(currentPage === 'dashboard-customer' || currentPage === 'admin' || currentPage === 'documents') && user ? (
         <div className="flex">
           <Sidebar 
             navItems={getNavItems()} 

@@ -14,6 +14,7 @@ interface CustomerDashboardProps {
   onFolderCreate: (folder: Folder) => void;
   onFolderUpdate: (folderId: string, updates: Partial<Folder>) => void;
   onFolderDelete: (folderId: string) => void;
+  onViewDocument: (document: Document) => void;
 }
 
 export function CustomerDashboard({ 
@@ -23,7 +24,8 @@ export function CustomerDashboard({
   onDocumentUpload, 
   onFolderCreate, 
   onFolderUpdate, 
-  onFolderDelete 
+  onFolderDelete,
+  onViewDocument
 }: CustomerDashboardProps) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
