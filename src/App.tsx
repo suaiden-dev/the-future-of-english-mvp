@@ -6,6 +6,7 @@
    parentId?: string;
    createdAt: string;
    color?: string;
+  folderId?: string | null;
  };
 
 -type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register';
