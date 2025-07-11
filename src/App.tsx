@@ -17,7 +17,7 @@
 @@ .. @@
        case 'dashboard-customer':
          return (
-           <CustomerDashboard 
+          <DocumentManager
              user={user} 
              documents={documents.filter(doc => doc.userId === user?.id)}
              folders={folders.filter(folder => folder.userId === user?.id)}
@@ -57,3 +57,7 @@
              {renderPage()}
            </main>
          </div>
+            onViewDocument={(doc) => {
+              // You can implement document viewing logic here
+              console.log('View document:', doc);
+            }}
