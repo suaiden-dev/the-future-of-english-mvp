@@ -134,6 +134,7 @@ function App() {
             onFolderUpdate={handleFolderUpdate}
             onFolderDelete={handleFolderDelete}
             onViewDocument={handleViewDocument}
+            onNavigate={setCurrentPage}
           />
         );
       case 'documents':

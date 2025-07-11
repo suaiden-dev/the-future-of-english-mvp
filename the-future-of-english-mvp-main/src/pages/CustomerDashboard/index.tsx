@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { WelcomeSection } from './WelcomeSection';
+import { CustomerStatsCards } from './CustomerStatsCards';
+import { RecentActivity } from './RecentActivity';
+import { QuickActions } from './QuickActions';
 import { DocumentUploadModal } from './DocumentUploadModal';
 import { DocumentsList } from './DocumentsList';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
@@ -15,6 +18,7 @@ interface CustomerDashboardProps {
   onFolderUpdate: (folderId: string, updates: Partial<Folder>) => void;
   onFolderDelete: (folderId: string) => void;
   onViewDocument: (document: Document) => void;
+  onNavigate: (page: string) => void;
 }
 
 export function CustomerDashboard({ 
@@ -25,11 +29,14 @@ export function CustomerDashboard({
   onFolderCreate, 
   onFolderUpdate, 
   onFolderDelete,
-  onViewDocument
+  onViewDocument,
+  onNavigate
 }: CustomerDashboardProps) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [currentView, setCurrentView] = useState<'overview' | 'documents'>('overview');
+
+  const hasCompletedDocuments = documents.some(doc => doc.status === 'completed');
 
   const handleUploadClick = () => {
     setIsUploadModalOpen(true);
@@ -53,6 +60,25 @@ export function CustomerDashboard({
         {currentView === 'overview' ? (
           <>
             <WelcomeSection user={user} onUploadClick={handleUploadClick} />
+            
+            <CustomerStatsCards documents={documents} />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+              <div className="lg:col-span-2">
+                <RecentActivity 
+                  documents={documents} 
+                  onViewDocument={handleViewDocument} 
+                />
+              </div>
+              <div>
+                <QuickActions 
+                  onUploadClick={handleUploadClick}
+                  onNavigate={onNavigate}
+                  hasCompletedDocuments={hasCompletedDocuments}
+                />
+              </div>
+            </div>
+            
             <DocumentsList 
               documents={documents} 
               onViewDocument={handleViewDocument} 
