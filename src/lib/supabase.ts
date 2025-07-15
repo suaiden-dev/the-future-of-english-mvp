@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from './database.types';
 
-// Removido logs de variáveis de ambiente e teste de conexão
-
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+console.log('[Supabase] Conectando ao novo Supabase:', supabaseUrl);
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
@@ -15,6 +15,15 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
+  }
+});
+
+// Teste de conexão
+supabase.from('profiles').select('count').limit(1).then(({ data, error }) => {
+  if (error) {
+    console.error('[Supabase] Erro na conexão:', error);
+  } else {
+    console.log('[Supabase] Conexão estabelecida com sucesso');
   }
 });
 

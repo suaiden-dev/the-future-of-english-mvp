@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 export function Register() {
-  const { register } = useAuth();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -47,9 +47,11 @@ export function Register() {
     setIsLoading(true);
 
     try {
-      await register(formData.email, formData.password, { name: formData.name, role: 'customer' });
+      console.log('[Register] Tentando registrar:', formData.email);
+      await signUp(formData.email, formData.password, formData.name);
       setSuccess(true);
     } catch (err) {
+      console.error('[Register] Erro no registro:', err);
       if (err instanceof Error) {
         setErrors({ general: err.message || 'Registration failed. Please try again.' });
       } else {

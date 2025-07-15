@@ -87,12 +87,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
+    console.log('[AuthProvider] Iniciando signup:', email);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } }
     });
-    if (error) throw error;
+    if (error) {
+      console.error('[AuthProvider] Erro no signup:', error);
+      throw error;
+    }
+    console.log('[AuthProvider] Signup realizado:', data);
     return data;
   };
 
