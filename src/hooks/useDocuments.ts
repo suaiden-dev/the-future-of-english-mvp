@@ -88,12 +88,16 @@ export function useAllDocuments() {
   const fetchAllDocuments = async () => {
     try {
       setLoading(true);
+      console.log('[useAllDocuments] Buscando todos os documentos...');
       const data = await db.getAllDocuments();
+      console.log('[useAllDocuments] Documentos encontrados:', data?.length || 0);
       setDocuments(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching all documents:', err);
-      setError('Failed to fetch documents');
+      console.error('[useAllDocuments] Erro ao buscar documentos:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch documents';
+      setError(`Erro ao carregar documentos: ${errorMessage}`);
+      setDocuments([]);
     } finally {
       setLoading(false);
     }

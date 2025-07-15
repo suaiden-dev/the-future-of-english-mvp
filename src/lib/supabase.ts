@@ -123,6 +123,7 @@ export const db = {
   },
 
   getAllDocuments: async () => {
+    console.log('[db.getAllDocuments] Iniciando busca de todos os documentos...');
     const { data, error } = await supabase
       .from('documents')
       .select(`
@@ -134,7 +135,11 @@ export const db = {
       `)
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('[db.getAllDocuments] Erro na query:', error);
+      throw error;
+    }
+    console.log('[db.getAllDocuments] Query executada com sucesso, documentos:', data?.length || 0);
     return data;
   },
 

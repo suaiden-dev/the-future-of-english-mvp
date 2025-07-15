@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     console.log('[AuthProvider] Inicializando auth state com novo Supabase');
-    supabase.auth.getSession().then(async ({ data }) => {
+    supabase.auth.getSession().then(async ({ data, error }) => {
       if (error) {
         console.error('[AuthProvider] Erro ao obter sessão inicial:', error);
         setLoading(false);
