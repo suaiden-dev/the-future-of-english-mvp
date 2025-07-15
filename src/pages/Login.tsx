@@ -17,12 +17,22 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.email.trim() || !formData.password.trim()) {
+      setError('Please fill in all fields');
+      return;
+    }
+    
     setError(null);
     setIsLoading(true);
+    console.log('[Login] Tentando fazer login com:', formData.email);
+    
     try {
       await signIn(formData.email, formData.password);
+      console.log('[Login] Login realizado com sucesso');
       // A navegação será feita automaticamente pelo useEffect no App.tsx
     } catch (err: any) {
+      console.error('[Login] Erro no login:', err);
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);

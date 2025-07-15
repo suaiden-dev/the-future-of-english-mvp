@@ -105,16 +105,19 @@ function App() {
   // Auto-navigate based on user role
   React.useEffect(() => {
     console.log('[App] useEffect [user, authLoading]', { user, authLoading, currentPage });
-    if (!authLoading) {
-      if (user && (currentPage !== (user.role === 'admin' ? 'admin' : 'dashboard-customer'))) {
+    if (!authLoading && user) {
+      // Se o usuário está logado, navegar para o dashboard apropriado
+      const targetPage = user.role === 'admin' ? 'admin' : 'dashboard-customer';
+      if (currentPage === 'login' || currentPage === 'register' || currentPage !== targetPage) {
         console.log('[App] Navegando para dashboard conforme role', { role: user.role });
-        setCurrentPage(user.role === 'admin' ? 'admin' : 'dashboard-customer');
-      } else if (!user && currentPage !== 'login') {
-        console.log('[App] Usuário não autenticado, navegando para login');
-        setCurrentPage('login');
+        setCurrentPage(targetPage);
       }
+    } else if (!authLoading && !user && ['dashboard-customer', 'admin', 'upload', 'documents'].includes(currentPage)) {
+      // Se não está logado e está em página protegida, ir para login
+      console.log('[App] Usuário não autenticado em página protegida, navegando para login');
+      setCurrentPage('login');
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, currentPage]);
 
   // Bloquear loading apenas para páginas protegidas
   const protectedPages: Page[] = ['dashboard-customer', 'admin', 'upload'];

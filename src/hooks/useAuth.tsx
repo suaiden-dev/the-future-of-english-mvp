@@ -33,21 +33,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    console.log('[AuthProvider] Inicializando auth state');
     supabase.auth.getSession().then(async ({ data }) => {
+      console.log('[AuthProvider] Sessão inicial:', data.session?.user?.email);
       setSession(data.session);
       let userObj = data.session?.user ?? null;
       if (userObj) {
         const role = await fetchUserRole(userObj.id);
+        console.log('[AuthProvider] Role do usuário:', role);
         userObj = { ...userObj, role };
       }
       setUser(userObj);
       setLoading(false);
     });
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('[AuthProvider] Auth state change:', _event, session?.user?.email);
       setSession(session);
       let userObj = session?.user ?? null;
       if (userObj) {
         const role = await fetchUserRole(userObj.id);
+        console.log('[AuthProvider] Role após mudança:', role);
         userObj = { ...userObj, role };
       }
       setUser(userObj);
@@ -59,12 +64,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('[AuthProvider] Tentando fazer login:', email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    console.log('[AuthProvider] Login bem-sucedido:', data.user?.email);
     setSession(data.session);
     let userObj = data.user;
     if (userObj) {
       const role = await fetchUserRole(userObj.id);
+      console.log('[AuthProvider] Role após login:', role);
       userObj = { ...userObj, role };
     }
     setUser(userObj);
@@ -72,6 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    console.log('[AuthProvider] Fazendo logout');
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
