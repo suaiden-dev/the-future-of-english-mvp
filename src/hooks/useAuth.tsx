@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Função auxiliar para buscar o papel customizado
   const fetchUserRole = async (userId: string) => {
+    console.log('[Auth] Buscando role para userId:', userId);
     const { data, error } = await supabase
       .from('profiles')
       .select('role')
@@ -29,6 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('[Auth] Erro ao buscar role do perfil:', error);
       return undefined;
     }
+    console.log('[Auth] Role encontrado:', data?.role);
     return data?.role;
   };
 
