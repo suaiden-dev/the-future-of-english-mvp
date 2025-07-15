@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { User, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  onNavigate?: (page: 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register') => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   const { signIn } = useAuth();
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -15,14 +17,27 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.email.trim() || !formData.password.trim()) {
+      setError('Please fill in all fields');
+      return;
+    }
+    
     setError(null);
     setIsLoading(true);
+    console.log('[Login] Tentando fazer login com:', formData.email);
+    console.log('[Login] Estado antes do login:', { isLoading, error });
+    
     try {
+      console.log('[Login] Chamando signIn...');
       await signIn(formData.email, formData.password);
-      navigate('/dashboard'); // ou '/admin' se quiser lógica de role
+      console.log('[Login] signIn completado com sucesso');
+      // A navegação será feita automaticamente pelo useEffect no App.tsx
     } catch (err: any) {
+      console.log('[Login] Erro no signIn:', err);
       setError(err.message || 'Login failed. Please try again.');
     } finally {
+      console.log('[Login] Finalizando login, setIsLoading(false)');
       setIsLoading(false);
     }
   };
@@ -96,9 +111,12 @@ const Login: React.FC = () => {
           </form>
           <p className="mt-10 text-center text-sm text-gray-500">
             Not a member?{' '}
-            <a href="/register" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
+            <button 
+              onClick={() => onNavigate?.('register')}
+              className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
+            >
               Register now
-            </a>
+            </button>
           </p>
         </div>
       </div>

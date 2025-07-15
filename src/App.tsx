@@ -245,20 +245,20 @@ function App() {
             </div>
           ) : <Navigate to="/login" />} />
           <Route path="/upload" element={user ? (
-            <div className="flex">
+        <div className="flex">
               <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
-              <main className="flex-1">
+          <main className="flex-1">
                 <Upload user={user} documents={documents} onDocumentUpload={handleDocumentUpload} />
-              </main>
-            </div>
+          </main>
+        </div>
           ) : <Navigate to="/login" />} />
           <Route path="/documents" element={user ? (
             <div className="flex">
               <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
               <main className="flex-1">
                 <DocumentManager user={user} documents={documents} folders={folders} onDocumentUpload={handleDocumentUpload} onFolderCreate={handleFolderCreate} onFolderUpdate={handleFolderUpdate} onFolderDelete={handleFolderDelete} onViewDocument={handleViewDocument} />
-              </main>
-            </div>
+          </main>
+        </div>
           ) : <Navigate to="/login" />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
