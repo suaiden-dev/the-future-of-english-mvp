@@ -4,11 +4,18 @@ import { Database } from './database.types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('[Supabase] Conectando ao Supabase:', supabaseUrl);
-console.log('[Supabase] Anon Key:', supabaseAnonKey ? 'Configurada' : 'NÃO CONFIGURADA');
+console.log('[Supabase] Environment check:');
+console.log('- VITE_SUPABASE_URL:', supabaseUrl || 'NOT SET');
+console.log('- VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET');
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  const missingVars = [];
+  if (!supabaseUrl) missingVars.push('VITE_SUPABASE_URL');
+  if (!supabaseAnonKey) missingVars.push('VITE_SUPABASE_ANON_KEY');
+  
+  console.error('[Supabase] Missing environment variables:', missingVars);
+  console.error('[Supabase] Please check your .env file and restart the dev server');
+  throw new Error(`Missing Supabase environment variables: ${missingVars.join(', ')}`);
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
@@ -19,24 +26,36 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-// Teste de conexão
-console.log('[Supabase] Testando conexão...');
-supabase.from('profiles').select('count').limit(1).then(({ data, error }) => {
-  if (error) {
-    console.error('[Supabase] Erro na conexão com tabela profiles:', error);
-    console.log('[Supabase] Tentando testar auth...');
-    // Testa se pelo menos o auth funciona
-    supabase.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
-      if (sessionError) {
-        console.error('[Supabase] Erro no auth:', sessionError);
-      } else {
-        console.log('[Supabase] Auth funcionando, sessão:', sessionData.session ? 'Ativa' : 'Inativa');
-      }
-    });
-  } else {
-    console.log('[Supabase] Conexão com tabela profiles estabelecida com sucesso');
+// Test connection with better error handling
+console.log('[Supabase] Testing connection...');
+const testConnection = async () => {
+  try {
+    // Test basic auth connection first
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error('[Supabase] Auth connection failed:', sessionError.message);
+      return;
+    }
+    console.log('[Supabase] Auth connection successful');
+    
+    // Test database connection
+    const { data, error } = await supabase.from('profiles').select('count').limit(1);
+    if (error) {
+      console.error('[Supabase] Database connection failed:', error.message);
+      console.error('[Supabase] This usually means:');
+      console.error('  1. Supabase is not running (run: supabase start)');
+      console.error('  2. Wrong URL in .env file');
+      console.error('  3. Tables not created (run the migration)');
+    } else {
+      console.log('[Supabase] Database connection successful');
+    }
+  } catch (err) {
+    console.error('[Supabase] Connection test failed:', err);
+    console.error('[Supabase] Check if Supabase is running and .env is configured correctly');
   }
-});
+};
+
+testConnection();
 
 // Auth helpers
 export const auth = {

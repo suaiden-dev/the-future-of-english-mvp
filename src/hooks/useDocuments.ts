@@ -89,13 +89,28 @@ export function useAllDocuments() {
     try {
       setLoading(true);
       console.log('[useAllDocuments] Buscando todos os documentos...');
+      
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        throw new Error('Supabase environment variables not configured. Please check your .env file.');
+      }
+      
       const data = await db.getAllDocuments();
       console.log('[useAllDocuments] Documentos encontrados:', data?.length || 0);
       setDocuments(data);
       setError(null);
     } catch (err) {
       console.error('[useAllDocuments] Erro ao buscar documentos:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch documents';
+      
+      let errorMessage = 'Failed to fetch documents';
+      if (err instanceof Error) {
+        if (err.message.includes('Failed to fetch')) {
+          errorMessage = 'Cannot connect to Supabase. Please check if Supabase is running and .env is configured correctly.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
       setError(`Erro ao carregar documentos: ${errorMessage}`);
       setDocuments([]);
     } finally {
