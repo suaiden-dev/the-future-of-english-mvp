@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, CheckCircle, FileText, Image as ImageIcon, AlertCircle, Download } from 'lucide-react';
+import { Clock, FileText, Image as ImageIcon, Download } from 'lucide-react';
 import { Document } from '../../App';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -82,17 +82,6 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
               <span className="text-xs text-gray-400 ml-2">
                 {formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}
               </span>
-              {doc.file_url && (
-                <a
-                  href={doc.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-4 text-blue-600 hover:underline text-xs flex items-center"
-                  title="Download"
-                >
-                  <Download className="w-4 h-4 mr-1" />Download
-                </a>
-              )}
               <button
                 onClick={() => onViewDocument(doc)}
                 className="ml-2 text-gray-500 hover:text-blue-700 text-xs font-medium"

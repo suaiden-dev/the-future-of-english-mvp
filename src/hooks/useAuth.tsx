@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  user: (User & { role?: string }) | null;
+  user: User | null;
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<any>;
@@ -14,43 +14,19 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<(User & { role?: string }) | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Função auxiliar para buscar o papel customizado
-  const fetchUserRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-    if (error) {
-      console.error('[Auth] Erro ao buscar role do perfil:', error);
-      return undefined;
-    }
-    return data?.role;
-  };
-
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
-      let userObj = data.session?.user ?? null;
-      if (userObj) {
-        const role = await fetchUserRole(userObj.id);
-        userObj = { ...userObj, role };
-      }
-      setUser(userObj);
+      setUser(data.session?.user ?? null);
       setLoading(false);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      let userObj = session?.user ?? null;
-      if (userObj) {
-        const role = await fetchUserRole(userObj.id);
-        userObj = { ...userObj, role };
-      }
-      setUser(userObj);
+      setUser(session?.user ?? null);
       setLoading(false);
     });
     return () => {
@@ -62,12 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     setSession(data.session);
-    let userObj = data.user;
-    if (userObj) {
-      const role = await fetchUserRole(userObj.id);
-      userObj = { ...userObj, role };
-    }
-    setUser(userObj);
+    setUser(data.user);
     return data;
   };
 

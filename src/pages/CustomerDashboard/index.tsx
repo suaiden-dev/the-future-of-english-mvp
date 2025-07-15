@@ -23,7 +23,6 @@ interface CustomerDashboardProps {
   onFolderUpdate: (folderId: string, updates: Partial<Folder>) => void;
   onFolderDelete: (folderId: string) => void;
   onViewDocument: (document: Document) => void;
-  onNavigate: (page: Page) => void;
 }
 
 export function CustomerDashboard({ 
@@ -34,8 +33,7 @@ export function CustomerDashboard({
   onFolderCreate, 
   onFolderUpdate, 
   onFolderDelete,
-  onViewDocument,
-  onNavigate
+  onViewDocument
 }: CustomerDashboardProps) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
@@ -78,7 +76,6 @@ export function CustomerDashboard({
               <div>
                 <QuickActions 
                   onUploadClick={handleUploadClick}
-                  onNavigate={onNavigate}
                   hasCompletedDocuments={hasCompletedDocuments}
                 />
               </div>

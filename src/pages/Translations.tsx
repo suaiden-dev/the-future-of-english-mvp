@@ -1,11 +1,9 @@
 import React from 'react';
 import { FileText, DollarSign, Clock, Shield, CheckCircle, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-interface TranslationsProps {
-  onNavigate: (page: 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register') => void;
-}
-
-export function Translations({ onNavigate }: TranslationsProps) {
+export function Translations() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -24,14 +22,14 @@ export function Translations({ onNavigate }: TranslationsProps) {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
-                onClick={() => onNavigate('register')}
+                onClick={() => navigate('/register')}
                 className="bg-white text-blue-900 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"
               >
                 <span>Start Translation</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
-                onClick={() => onNavigate('verify')}
+                onClick={() => navigate('/verify')}
                 className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-900 transition-colors"
               >
                 Verify Document
@@ -82,7 +80,7 @@ export function Translations({ onNavigate }: TranslationsProps) {
                 </div>
 
                 <button
-                  onClick={() => onNavigate('register')}
+                  onClick={() => navigate('/register')}
                   className="w-full bg-blue-900 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-800 transition-colors"
                 >
                   Get Started
@@ -254,14 +252,14 @@ export function Translations({ onNavigate }: TranslationsProps) {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => onNavigate('register')}
+              onClick={() => navigate('/register')}
               className="bg-white text-blue-900 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"
             >
               <span>Start Translation</span>
               <ArrowRight className="w-5 h-5" />
             </button>
             <button
-              onClick={() => onNavigate('verify')}
+              onClick={() => navigate('/verify')}
               className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-900 transition-colors"
             >
               Verify Document

@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { User, Lock, Mail, UserPlus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
-interface RegisterProps {
-  onNavigate: (page: 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register') => void;
-}
-
-export function Register({ onNavigate }: RegisterProps) {
-  const { signUp } = useAuth();
+export function Register() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -49,10 +47,14 @@ export function Register({ onNavigate }: RegisterProps) {
     setIsLoading(true);
 
     try {
-      await signUp(formData.email, formData.password, formData.name);
+      await register(formData.email, formData.password, { name: formData.name, role: 'customer' });
       setSuccess(true);
-    } catch (err: any) {
-      setErrors({ general: err.message || 'Registration failed. Please try again.' });
+    } catch (err) {
+      if (err instanceof Error) {
+        setErrors({ general: err.message || 'Registration failed. Please try again.' });
+      } else {
+        setErrors({ general: 'Registration failed. Please try again.' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +86,7 @@ export function Register({ onNavigate }: RegisterProps) {
             <p className="mt-2 text-center text-sm text-gray-600">
               Please check your email to verify your account, then{' '}
               <button
-                onClick={() => onNavigate('login')}
+                onClick={() => navigate('/login')}
                 className="font-medium text-blue-900 hover:text-blue-700 transition-colors"
               >
                 sign in
@@ -109,7 +111,7 @@ export function Register({ onNavigate }: RegisterProps) {
           <p className="mt-2 text-center text-sm text-gray-600">
             Already have an account?{' '}
             <button
-              onClick={() => onNavigate('login')}
+              onClick={() => navigate('/login')}
               className="font-medium text-blue-900 hover:text-blue-700 transition-colors"
             >
               Sign in

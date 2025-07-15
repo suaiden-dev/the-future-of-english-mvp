@@ -16,15 +16,17 @@ import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, Us
 
 import { Page } from './types/Page';
 import { Database } from './lib/database.types';
-import type { User } from './hooks/useAuth';
+import type { User as UserType } from './hooks/useAuth';
 import Upload from './pages/CustomerDashboard/Upload';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import AuthRedirect from './components/AuthRedirect';
 
 type Document = Database['public']['Tables']['documents']['Row'];
 type Folder = Database['public']['Tables']['folders']['Row'];
 type DocumentInsert = Database['public']['Tables']['documents']['Insert'];
 type FolderInsert = Database['public']['Tables']['folders']['Insert'];
 
-export type { User, Document, Folder };
+export type { UserType, Document, Folder };
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -162,12 +164,14 @@ function App() {
     }
   };
 
+  const location = useLocation();
+
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <Home onNavigate={setCurrentPage} />;
+        return <Home />;
       case 'translations':
-        return <Translations onNavigate={setCurrentPage} />;
+        return <Translations />;
       case 'dashboard-customer':
         return (
           <CustomerDashboard 
@@ -179,7 +183,6 @@ function App() {
             onFolderUpdate={handleFolderUpdate}
             onFolderDelete={handleFolderDelete}
             onViewDocument={handleViewDocument}
-            onNavigate={setCurrentPage}
           />
         );
       case 'upload':
@@ -209,41 +212,57 @@ function App() {
       case 'login':
         return <Login />;
       case 'register':
-        return <Register onNavigate={setCurrentPage} />;
+        return <Register />;
       default:
-        return <Home onNavigate={setCurrentPage} />;
+        return <Home />;
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Only show sidebar and different layout for dashboard pages */}
-      {(currentPage === 'dashboard-customer' || currentPage === 'admin' || currentPage === 'documents' || currentPage === 'upload') && user ? (
-        <div className="flex">
-          <Sidebar 
-            navItems={getNavItems()} 
-            onNavigate={setCurrentPage} 
-            currentPage={currentPage}
-            user={user}
-            onLogout={handleLogout}
-          />
-          <main className="flex-1">
-            {renderPage()}
-          </main>
-        </div>
-      ) : (
-        <div>
-          <Header 
-            user={user} 
-            onNavigate={setCurrentPage} 
-            onLogout={handleLogout}
-            currentPage={currentPage}
-          />
-          <main>
-            {renderPage()}
-          </main>
-        </div>
-      )}
+      <Header user={user} onLogout={handleLogout} />
+      <AuthRedirect>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/translations" element={<Translations />} />
+          <Route path="/verify" element={<DocumentVerification />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={user ? (
+            <div className="flex">
+              <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
+              <main className="flex-1">
+                <CustomerDashboard user={user} documents={documents} folders={folders} onDocumentUpload={handleDocumentUpload} onFolderCreate={handleFolderCreate} onFolderUpdate={handleFolderUpdate} onFolderDelete={handleFolderDelete} onViewDocument={handleViewDocument} />
+              </main>
+            </div>
+          ) : <Navigate to="/login" />} />
+          <Route path="/admin" element={user && user.role === 'admin' ? (
+            <div className="flex">
+              <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
+              <main className="flex-1">
+                <AdminDashboard documents={allDocuments} onStatusUpdate={handleDocumentStatusUpdate} />
+              </main>
+            </div>
+          ) : <Navigate to="/login" />} />
+          <Route path="/upload" element={user ? (
+            <div className="flex">
+              <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
+              <main className="flex-1">
+                <Upload user={user} documents={documents} onDocumentUpload={handleDocumentUpload} />
+              </main>
+            </div>
+          ) : <Navigate to="/login" />} />
+          <Route path="/documents" element={user ? (
+            <div className="flex">
+              <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
+              <main className="flex-1">
+                <DocumentManager user={user} documents={documents} folders={folders} onDocumentUpload={handleDocumentUpload} onFolderCreate={handleFolderCreate} onFolderUpdate={handleFolderUpdate} onFolderDelete={handleFolderDelete} onViewDocument={handleViewDocument} />
+              </main>
+            </div>
+          ) : <Navigate to="/login" />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </AuthRedirect>
     </div>
   );
 }

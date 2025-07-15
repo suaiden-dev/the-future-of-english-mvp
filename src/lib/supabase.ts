@@ -159,19 +159,6 @@ export const db = {
     return data;
   },
 
-  getDocumentsToVerify: async () => {
-    const { data, error } = await supabase
-      .from('documents_to_verify')
-      .select(`
-        *,
-        profiles:user_id (name, email),
-        documents:doc_id (filename, file_url)
-      `)
-      .order('register_date', { ascending: false });
-    if (error) throw error;
-    return data;
-  },
-
   // Folders
   getFolders: async (userId: string) => {
     const { data, error } = await supabase

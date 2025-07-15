@@ -1,13 +1,14 @@
 import React from 'react';
 import { Upload, Search, FileText, MessageCircle, Download, HelpCircle, ArrowUpRight, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface QuickActionsProps {
   onUploadClick: () => void;
-  onNavigate: (page: string) => void;
   hasCompletedDocuments: boolean;
 }
 
-export function QuickActions({ onUploadClick, onNavigate, hasCompletedDocuments }: QuickActionsProps) {
+export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActionsProps) {
+  const navigate = useNavigate();
   const actions = [
     {
       id: 'upload',
@@ -27,7 +28,7 @@ export function QuickActions({ onUploadClick, onNavigate, hasCompletedDocuments 
       color: 'bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700',
       textColor: 'text-white',
       iconBg: 'bg-white/20',
-      onClick: () => onNavigate('verify')
+      onClick: () => navigate('/verify')
     },
     {
       id: 'translations',
@@ -37,7 +38,7 @@ export function QuickActions({ onUploadClick, onNavigate, hasCompletedDocuments 
       color: 'bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700',
       textColor: 'text-white',
       iconBg: 'bg-white/20',
-      onClick: () => onNavigate('translations')
+      onClick: () => navigate('/translations')
     },
     {
       id: 'contact',
@@ -47,7 +48,7 @@ export function QuickActions({ onUploadClick, onNavigate, hasCompletedDocuments 
       color: 'bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700',
       textColor: 'text-white',
       iconBg: 'bg-white/20',
-      onClick: () => onNavigate('contact')
+      onClick: () => navigate('/contact')
     }
   ];
 
@@ -156,7 +157,7 @@ export function QuickActions({ onUploadClick, onNavigate, hasCompletedDocuments 
                 View FAQ
               </button>
               <button 
-                onClick={() => onNavigate('contact')}
+                onClick={() => navigate('/contact')}
                 className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md transition-colors"
               >
                 Contact Support

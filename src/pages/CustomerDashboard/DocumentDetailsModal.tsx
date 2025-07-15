@@ -1,5 +1,5 @@
 import React from 'react';
-import { XCircle, FileText, Calendar, DollarSign, Hash, Shield } from 'lucide-react';
+import { XCircle, FileText, Calendar, Hash, Shield } from 'lucide-react';
 import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
 import { Document } from '../../App';
 
@@ -38,7 +38,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
               </div>
               <div>
                 <span className="text-gray-600">Cost:</span>
-                <span className="ml-2 font-medium">${document.totalCost}.00</span>
+                <span className="ml-2 font-medium">R$ {document.total_cost?.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -57,18 +57,18 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
             <span className="text-sm font-medium text-gray-700">Upload Date:</span>
             <div className="flex items-center text-sm text-gray-900">
               <Calendar className="w-4 h-4 mr-1" />
-              {new Date(document.uploadDate).toLocaleString()}
+              <span className="text-gray-700">{document.upload_date ? new Date(document.upload_date).toLocaleDateString() : '-'}</span>
             </div>
           </div>
 
           {/* Verification Code */}
-          {document.verificationCode && (
+          {document.verification_code && (
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-center mb-2">
                 <Hash className="w-5 h-5 text-blue-600 mr-2" />
                 <span className="font-medium text-blue-900">Verification Code</span>
               </div>
-              <p className="font-mono text-lg text-blue-900 mb-2">{document.verificationCode}</p>
+              <p className="font-mono text-lg text-blue-900 mb-2">{document.verification_code}</p>
               <p className="text-sm text-blue-700">
                 Use this code to verify the authenticity of your translated document.
               </p>
@@ -76,7 +76,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
           )}
 
           {/* Authentication Status */}
-          {document.isAuthenticated && (
+          {document.is_authenticated && (
             <div className="flex items-center text-green-600">
               <Shield className="w-5 h-5 mr-2" />
               <span className="text-sm font-medium">Document Authenticated</span>

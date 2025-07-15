@@ -126,34 +126,3 @@ export function useAllDocuments() {
     refetch: fetchAllDocuments
   };
 }
-
-export function useDocumentsToVerify() {
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchDocumentsToVerify = async () => {
-    try {
-      setLoading(true);
-      const data = await db.getDocumentsToVerify();
-      setDocuments(data);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching documents to verify:', err);
-      setError('Failed to fetch documents to verify');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDocumentsToVerify();
-  }, []);
-
-  return {
-    documents,
-    loading,
-    error,
-    refetch: fetchDocumentsToVerify
-  };
-}
