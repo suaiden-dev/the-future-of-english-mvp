@@ -4,7 +4,8 @@ import { Database } from './database.types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('[Supabase] Conectando ao novo Supabase:', supabaseUrl);
+console.log('[Supabase] Conectando ao Supabase:', supabaseUrl);
+console.log('[Supabase] Anon Key:', supabaseAnonKey ? 'Configurada' : 'NÃO CONFIGURADA');
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
@@ -19,11 +20,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 });
 
 // Teste de conexão
+console.log('[Supabase] Testando conexão...');
 supabase.from('profiles').select('count').limit(1).then(({ data, error }) => {
   if (error) {
-    console.error('[Supabase] Erro na conexão:', error);
+    console.error('[Supabase] Erro na conexão com tabela profiles:', error);
+    console.log('[Supabase] Tentando testar auth...');
+    // Testa se pelo menos o auth funciona
+    supabase.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
+      if (sessionError) {
+        console.error('[Supabase] Erro no auth:', sessionError);
+      } else {
+        console.log('[Supabase] Auth funcionando, sessão:', sessionData.session ? 'Ativa' : 'Inativa');
+      }
+    });
   } else {
-    console.log('[Supabase] Conexão estabelecida com sucesso');
+    console.log('[Supabase] Conexão com tabela profiles estabelecida com sucesso');
   }
 });
 

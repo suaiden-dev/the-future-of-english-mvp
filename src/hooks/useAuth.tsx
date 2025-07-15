@@ -35,8 +35,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    console.log('[AuthProvider] Inicializando auth state');
+    console.log('[AuthProvider] Inicializando auth state com novo Supabase');
     supabase.auth.getSession().then(async ({ data }) => {
+      if (error) {
+        console.error('[AuthProvider] Erro ao obter sessão inicial:', error);
+        setLoading(false);
+        return;
+      }
       console.log('[AuthProvider] Sessão inicial:', data.session?.user?.email);
       setSession(data.session);
       let userObj = data.session?.user ?? null;
@@ -49,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('[AuthProvider] Auth state change:', _event, session?.user?.email);
+      console.log('[AuthProvider] Auth state change:', _event, session?.user?.email || 'Sem usuário');
       setSession(session);
       let userObj = session?.user ?? null;
       if (userObj) {
