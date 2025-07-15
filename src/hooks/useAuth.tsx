@@ -56,8 +56,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const role = await fetchUserRole(userObj.id);
         console.log('[AuthProvider] Role após mudança:', role);
         userObj = { ...userObj, role };
+        console.log('[AuthProvider] Definindo usuário com role:', userObj);
       }
       setUser(userObj);
+      console.log('[AuthProvider] Estado do usuário atualizado:', userObj?.email, userObj?.role);
       setLoading(false);
     });
     return () => {
@@ -72,16 +74,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) throw error;
     console.log('[AuthProvider] Login bem-sucedido:', data.user?.email);
     console.log('[AuthProvider] Dados completos do login:', data);
-    setSession(data.session);
-    let userObj = data.user;
-    if (userObj) {
-      console.log('[AuthProvider] Buscando role para usuário:', userObj.id);
-      const role = await fetchUserRole(userObj.id);
-      console.log('[AuthProvider] Role após login:', role);
-      userObj = { ...userObj, role };
-    }
-    console.log('[AuthProvider] Definindo usuário final:', userObj);
-    setUser(userObj);
+    // Não precisamos definir o user aqui, o onAuthStateChange vai fazer isso
+    console.log('[AuthProvider] signIn completado, aguardando onAuthStateChange');
     return data;
   };
 

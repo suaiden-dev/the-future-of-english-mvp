@@ -119,6 +119,7 @@ function App() {
         const targetPage = user.role === 'admin' ? 'admin' : 'dashboard-customer';
         console.log('[App] Navegando após login para:', targetPage);
         console.log('[App] Página atual antes da navegação:', currentPage);
+        console.log('[App] Chamando setCurrentPage com:', targetPage);
         setCurrentPage(targetPage);
         console.log('[App] setCurrentPage chamado com:', targetPage);
       }
