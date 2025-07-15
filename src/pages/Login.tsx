@@ -26,13 +26,18 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     setError(null);
     setIsLoading(true);
     console.log('[Login] Tentando fazer login com:', formData.email);
+    console.log('[Login] Estado antes do login:', { isLoading, error });
     
     try {
+      console.log('[Login] Chamando signIn...');
       await signIn(formData.email, formData.password);
+      console.log('[Login] signIn completado com sucesso');
       // A navegação será feita automaticamente pelo useEffect no App.tsx
     } catch (err: any) {
+      console.log('[Login] Erro no signIn:', err);
       setError(err.message || 'Login failed. Please try again.');
     } finally {
+      console.log('[Login] Finalizando login, setIsLoading(false)');
       setIsLoading(false);
     }
   };

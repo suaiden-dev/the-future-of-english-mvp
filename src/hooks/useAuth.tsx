@@ -67,16 +67,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     console.log('[AuthProvider] Tentando fazer login:', email);
+    console.log('[AuthProvider] Estado atual antes do login:', { user: user?.email, loading });
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     console.log('[AuthProvider] Login bem-sucedido:', data.user?.email);
+    console.log('[AuthProvider] Dados completos do login:', data);
     setSession(data.session);
     let userObj = data.user;
     if (userObj) {
+      console.log('[AuthProvider] Buscando role para usuário:', userObj.id);
       const role = await fetchUserRole(userObj.id);
       console.log('[AuthProvider] Role após login:', role);
       userObj = { ...userObj, role };
     }
+    console.log('[AuthProvider] Definindo usuário final:', userObj);
     setUser(userObj);
     return data;
   };
