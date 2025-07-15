@@ -18,17 +18,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-<<<<<<< HEAD
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-=======
   // Função auxiliar para buscar o papel customizado
   const fetchUserRole = async (userId: string) => {
     console.log('[Auth] Buscando role para userId:', userId);
@@ -71,7 +60,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setUser(userObj);
       console.log('[AuthProvider] Estado do usuário atualizado:', userObj?.email, userObj?.role);
->>>>>>> e6999661caa83040b73ac9d28b5a7655ef172d5c
       setLoading(false);
     });
     return () => {
@@ -84,15 +72,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('[AuthProvider] Estado atual antes do login:', { user: user?.email, loading });
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-<<<<<<< HEAD
-    setSession(data.session);
-    setUser(data.user);
-=======
     console.log('[AuthProvider] Login bem-sucedido:', data.user?.email);
     console.log('[AuthProvider] Dados completos do login:', data);
     // Não precisamos definir o user aqui, o onAuthStateChange vai fazer isso
     console.log('[AuthProvider] signIn completado, aguardando onAuthStateChange');
->>>>>>> e6999661caa83040b73ac9d28b5a7655ef172d5c
     return data;
   };
 
