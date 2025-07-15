@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { User, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  onNavigate?: (page: 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register') => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   const { signIn } = useAuth();
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -19,7 +21,7 @@ const Login: React.FC = () => {
     setIsLoading(true);
     try {
       await signIn(formData.email, formData.password);
-      navigate('/dashboard'); // ou '/admin' se quiser lógica de role
+      // A navegação será feita automaticamente pelo useEffect no App.tsx
     } catch (err: any) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {
@@ -96,9 +98,12 @@ const Login: React.FC = () => {
           </form>
           <p className="mt-10 text-center text-sm text-gray-500">
             Not a member?{' '}
-            <a href="/register" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
+            <button 
+              onClick={() => onNavigate?.('register')}
+              className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
+            >
               Register now
-            </a>
+            </button>
           </p>
         </div>
       </div>

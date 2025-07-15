@@ -207,7 +207,7 @@ function App() {
       case 'verify':
         return <DocumentVerification />;
       case 'login':
-        return <Login />;
+        return <Login onNavigate={setCurrentPage} />;
       case 'register':
         return <Register onNavigate={setCurrentPage} />;
       default:
