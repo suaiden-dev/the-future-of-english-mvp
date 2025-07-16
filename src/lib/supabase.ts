@@ -3,20 +3,19 @@ import { Database } from './database.types';
 
 // Removido logs de variáveis de ambiente e teste de conexão
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL!,
+  import.meta.env.VITE_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    }
   }
-});
+);
+
+console.log('SUPABASE_URL EM USO:', import.meta.env.VITE_SUPABASE_URL);
 
 // Auth helpers
 export const auth = {
@@ -126,13 +125,16 @@ export const db = {
     total_cost: number;
     file_url?: string;
   }) => {
+    console.log('[db.createDocument] Inserindo documento:', JSON.stringify(document, null, 2));
     const { data, error } = await supabase
       .from('documents')
       .insert(document)
       .select()
       .single();
-    
-    if (error) throw error;
+    if (error) {
+      console.error('[db.createDocument] Erro no insert:', error, JSON.stringify(error, null, 2));
+      throw error;
+    }
     return data;
   },
 
@@ -208,6 +210,8 @@ export const db = {
     if (error) throw error;
   }
 };
+
+export { supabase };
 
 // @ts-ignore
 window.supabase = supabase;

@@ -19,6 +19,29 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, current
   const [dragActive, setDragActive] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [tipoTrad, setTipoTrad] = useState<'Certificado' | 'Notorizado'>('Certificado');
+  const [isExtrato, setIsExtrato] = useState(false);
+  const [idiomaRaiz, setIdiomaRaiz] = useState('Português');
+  const idiomas = [
+    'Português',
+    'Português(Portugal)',
+    'Espanhol',
+    'Alemão',
+    'Árabe',
+    'Hebraico',
+    'Japonês',
+    'Coreano',
+  ];
+
+  // Função para calcular o valor
+  function calcularValor(pages: number, tipo: 'Certificado' | 'Notorizado', extrato: boolean) {
+    if (extrato) {
+      return tipo === 'Certificado' ? pages * 25 : pages * 35;
+    } else {
+      return tipo === 'Certificado' ? pages * 15 : pages * 20;
+    }
+  }
+  const valor = calcularValor(pages, tipoTrad, isExtrato);
 
   if (!isOpen) return null;
 
@@ -63,12 +86,23 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, current
   };
 
   const handleUpload = async () => {
+    // Logar sessão do usuário
+    const sessionResult = await supabase.auth.getSession();
+    console.log('DEBUG: Sessão atual antes do upload:', sessionResult);
     if (!selectedFile) return;
     setError(null);
     setSuccess(null);
     setIsUploading(true);
     console.log('DEBUG: Iniciando upload do arquivo', selectedFile);
+    console.log('DEBUG: userId recebido nas props:', userId);
     try {
+      // Logar headers de autenticação se possível
+      try {
+        const token = sessionResult.data?.session?.access_token;
+        console.log('DEBUG: Access token:', token);
+      } catch (e) {
+        console.log('DEBUG: Não foi possível obter o access token:', e);
+      }
       console.log('DEBUG: Antes do upload para Supabase Storage');
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
@@ -80,16 +114,20 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, current
       const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath);
       const publicUrl = publicUrlData.publicUrl;
       console.log('DEBUG: Depois de obter publicUrl', publicUrl);
-
       // 1. Inserir na tabela documents ANTES do webhook
-      await onUpload({
+      const docInsertObj = {
+        user_id: userId,
         filename: selectedFile.name,
         file_url: publicUrl,
         pages,
+        tipo_trad: tipoTrad,
+        valor,
+        idioma_raiz: idiomaRaiz,
         folder_id: currentFolderId || undefined
-      });
+      };
+      console.log('DEBUG: Objeto enviado no insert:', JSON.stringify(docInsertObj, null, 2));
+      await onUpload(docInsertObj);
       console.log('DEBUG: Depois de registrar no banco');
-
       // 2. Chamar Edge Function para acionar o n8n
       try {
         const webhookPayload = {
@@ -97,30 +135,28 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, current
           url: publicUrl,
           mimetype: selectedFile.type,
           size: selectedFile.size,
-          user_id: userId // Enviar user_id diretamente
+          user_id: userId,
+          paginas: pages,
+          tipo_trad: tipoTrad,
+          valor,
+          idioma_raiz: idiomaRaiz
         };
-        const webhookRes = await fetch('https://nqhbwpizaizhyijkxkwj.functions.supabase.co/send-translation-webhook', {
+        console.log('DEBUG: Payload enviado para Edge Function:', webhookPayload);
+        const webhookRes = await fetch('https://ywpogqwhwscbdhnoqsmv.functions.supabase.co/send-translation-webhook', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(webhookPayload),
+          body: JSON.stringify(webhookPayload)
         });
-        const webhookData = await webhookRes.json();
-        console.log('DEBUG: Webhook enviado para Edge Function', webhookData);
-      } catch (webhookErr) {
-        console.error('DEBUG: Erro ao enviar webhook para Edge Function', webhookErr);
+        console.log('DEBUG: Resposta da Edge Function:', webhookRes.status, await webhookRes.text());
+      } catch (err) {
+        console.error('DEBUG: Erro ao chamar Edge Function:', err);
       }
+      setSuccess('Upload realizado com sucesso!');
       setSelectedFile(null);
-      setPages(1);
       setFileUrl(null);
-      setSuccess('Document uploaded successfully!');
-      console.log('DEBUG: Upload finalizado com sucesso, modal será fechado.');
-      setTimeout(() => {
-        setSuccess(null);
-        onClose(); // Fecha o modal, usuário permanece no dashboard
-      }, 1200);
     } catch (err: any) {
-      setError(err.message || 'Failed to upload document');
-      console.error('DEBUG: Erro ao fazer upload', err);
+      console.log('DEBUG: Erro ao fazer upload', err, JSON.stringify(err, null, 2));
+      setError(err.message || 'Erro ao fazer upload');
     } finally {
       setIsUploading(false);
     }
@@ -238,16 +274,59 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, current
             />
           </div>
 
+          {/* Tipo de Tradução */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tipo de Tradução
+            </label>
+            <select
+              value={tipoTrad}
+              onChange={e => setTipoTrad(e.target.value as 'Certificado' | 'Notorizado')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="Certificado">Certificado ($15/página ou $25 se extrato)</option>
+              <option value="Notorizado">Notorizado ($20/página ou $35 se extrato)</option>
+            </select>
+          </div>
+          {/* É extrato bancário? */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              É extrato bancário?
+            </label>
+            <select
+              value={isExtrato ? 'sim' : 'nao'}
+              onChange={e => setIsExtrato(e.target.value === 'sim')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="nao">Não</option>
+              <option value="sim">Sim</option>
+            </select>
+          </div>
+          {/* Idioma Raiz */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Idioma do documento original
+            </label>
+            <select
+              value={idiomaRaiz}
+              onChange={e => setIdiomaRaiz(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {idiomas.map(idioma => (
+                <option key={idioma} value={idioma}>{idioma}</option>
+              ))}
+            </select>
+          </div>
           {/* Cost Calculation */}
           <div className="bg-blue-50 p-4 rounded-lg">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Translation Cost:</span>
               <span className="text-lg font-semibold text-blue-900">
-                ${totalCost}.00
+                ${valor}.00
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              $20.00 per page × {pages} page{pages !== 1 ? 's' : ''}
+              {tipoTrad} {isExtrato ? (tipoTrad === 'Certificado' ? '$25' : '$35') : (tipoTrad === 'Certificado' ? '$15' : '$20')} por página × {pages} página{pages !== 1 ? 's' : ''}
             </p>
           </div>
 
@@ -257,7 +336,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, current
             disabled={!selectedFile || isUploading}
             className="w-full bg-gradient-to-r from-blue-900 to-blue-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-lg mt-2"
           >
-            {isUploading ? 'Uploading...' : `Upload & Pay $${totalCost}.00`}
+            {isUploading ? 'Uploading...' : `Upload & Pay $${valor}.00`}
           </button>
         </div>
       </div>

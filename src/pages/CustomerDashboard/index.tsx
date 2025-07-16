@@ -57,6 +57,11 @@ export function CustomerDashboard({
     setSelectedDocument(null);
   };
 
+  const handleDocumentUpload = async (doc: any) => {
+    console.log('DEBUG: [onDocumentUpload] chamado com:', JSON.stringify(doc, null, 2));
+    await createDocument(doc);
+  };
+
   return (
     <div className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

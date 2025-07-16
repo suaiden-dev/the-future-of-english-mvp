@@ -15,11 +15,13 @@ import {
   Eye,
   Copy
 } from 'lucide-react';
-import { User as UserType, Document, Folder } from '../../App';
+import { Document, Folder } from '../../App';
 import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
+import AuthenticatorDashboard from './AuthenticatorDashboard';
+import { useAuth } from '../../hooks/useAuth';
 
 interface DocumentManagerProps {
-  user: UserType | null;
+  user: { id: string } | null;
   documents: Document[];
   folders: Folder[];
   onDocumentUpload: (document: Document) => void;
@@ -27,6 +29,24 @@ interface DocumentManagerProps {
   onFolderUpdate: (folderId: string, updates: Partial<Folder>) => void;
   onFolderDelete: (folderId: string) => void;
   onViewDocument: (document: Document) => void;
+}
+
+export default function DocumentManagerPage() {
+  const { user, loading } = useAuth();
+
+  console.log('[DocumentManager] Usuário logado:', user);
+  if (loading) return <div>Carregando...</div>;
+  if (!user) return <div>Você precisa estar logado para acessar esta página.</div>;
+
+  if (user.role === 'authenticator' || user.role === 'admin') {
+    console.log('[DocumentManager] Exibindo dashboard do autenticador para role:', user.role);
+    return <AuthenticatorDashboard />;
+  }
+
+  console.log('[DocumentManager] Exibindo dashboard do cliente para role:', user.role);
+  // Dashboard padrão do cliente
+  // ... aqui você pode importar e renderizar o dashboard do cliente, se existir ...
+  return <div>Dashboard do cliente (em construção)</div>;
 }
 
 export function DocumentManager({
@@ -46,8 +66,6 @@ export function DocumentManager({
   const [newFolderName, setNewFolderName] = useState('');
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState('');
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const folderColors = [
     'bg-blue-100 text-blue-800',
@@ -58,8 +76,8 @@ export function DocumentManager({
     'bg-indigo-100 text-indigo-800'
   ];
 
-  const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
-  const currentDocuments = documents.filter(doc => doc.folderId === currentFolderId);
+  const currentFolders = folders.filter(folder => folder.parent_id === currentFolderId);
+  const currentDocuments = documents.filter(doc => doc.folder_id === currentFolderId);
   
   const filteredFolders = currentFolders.filter(folder =>
     folder.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -77,7 +95,7 @@ export function DocumentManager({
       const folder = folders.find(f => f.id === currentId);
       if (folder) {
         path.unshift(folder);
-        currentId = folder.parentId || null;
+        currentId = folder.parent_id || null;
       } else {
         break;
       }
@@ -91,10 +109,11 @@ export function DocumentManager({
 
     const newFolder: Folder = {
       id: Date.now().toString(),
-      userId: user.id,
+      user_id: user.id,
       name: newFolderName.trim(),
-      parentId: currentFolderId,
-      createdAt: new Date().toISOString(),
+      parent_id: currentFolderId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(), // Adicionado para corrigir o erro
       color: folderColors[Math.floor(Math.random() * folderColors.length)]
     };
 
@@ -126,18 +145,18 @@ export function DocumentManager({
   };
 
   const handleUploadDocument = () => {
-    setShowUploadModal(true);
+    // setShowUploadModal(true); // This line was removed as per the edit hint
   };
 
-  const handleDocumentUploadComplete = (document: Document) => {
-    // Add the current folder ID to the document
-    const documentWithFolder = {
-      ...document,
-      folderId: currentFolderId
-    };
-    onDocumentUpload(documentWithFolder);
-    setShowUploadModal(false);
-  };
+  // const handleDocumentUploadComplete = (document: Document) => { // This function was removed as per the edit hint
+  //   // Add the current folder ID to the document
+  //   const documentWithFolder = {
+  //     ...document,
+  //     folderId: currentFolderId
+  //   };
+  //   onDocumentUpload(documentWithFolder);
+  //   setShowUploadModal(false);
+  // };
 
   const copyVerificationCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -233,7 +252,7 @@ export function DocumentManager({
             <button
               onClick={() => {
                 const currentFolder = folders.find(f => f.id === currentFolderId);
-                setCurrentFolderId(currentFolder?.parentId || null);
+                setCurrentFolderId(currentFolder?.parent_id || null);
               }}
               className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors"
             >
@@ -401,14 +420,14 @@ export function DocumentManager({
                       </div>
                     </div>
 
-                    {document.verificationCode && (
+                    {document.verification_code && (
                       <div className="absolute bottom-2 left-2 right-2 bg-gray-50 rounded p-1">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-mono text-gray-600 truncate">
-                            {document.verificationCode}
+                            {document.verification_code}
                           </span>
                           <button
-                            onClick={() => copyVerificationCode(document.verificationCode!)}
+                            onClick={() => copyVerificationCode(document.verification_code!)}
                             className="p-1 text-gray-400 hover:text-blue-600"
                             title="Copy Code"
                           >
@@ -463,7 +482,7 @@ export function DocumentManager({
                         Folder
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(folder.createdAt).toLocaleDateString()}
+                        {new Date(folder.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-500">-</span>
@@ -500,7 +519,7 @@ export function DocumentManager({
                         Document
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(document.uploadDate).toLocaleDateString()}
+                        {new Date(document.upload_date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(document.status)}`}>

@@ -34,23 +34,27 @@ export function useDocuments(userId?: string) {
     fetchDocuments();
   }, [userId]);
 
-  const createDocument = async (documentData: Omit<DocumentInsert, 'user_id'>) => {
+  const createDocument = async (documentData: Partial<DocumentInsert> & { file_url?: string }) => {
+    console.log('DEBUG: [useDocuments] createDocument chamado com:', JSON.stringify(documentData, null, 2));
     if (!userId) throw new Error('User not authenticated');
+    if (!documentData.filename) throw new Error('Filename is required');
 
     try {
       // Garantir que folder_id nunca seja null (apenas string ou undefined)
       const docToInsert = {
         ...documentData,
         folder_id: documentData.folder_id ?? undefined,
-        user_id: userId,
+        user_id: userId, // sempre sobrescreve
         pages: documentData.pages ?? 1,
         total_cost: (documentData.pages ?? 1) * 20,
+        filename: documentData.filename // garantir obrigatório
       };
+      console.log('DEBUG: [useDocuments] docToInsert:', JSON.stringify(docToInsert, null, 2));
       const newDocument = await db.createDocument(docToInsert);
       setDocuments(prev => [newDocument, ...prev]);
       return newDocument;
     } catch (err) {
-      console.error('Error creating document:', err);
+      console.error('DEBUG: [useDocuments] Erro ao criar documento:', err, JSON.stringify(err, null, 2));
       throw err;
     }
   };

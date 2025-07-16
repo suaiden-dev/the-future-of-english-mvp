@@ -37,7 +37,7 @@
     - Enable RLS on all tables
     - Add policies for authenticated users to manage their own data
     - Add admin policies for document management
-</sql>
+*/
 
 -- Create profiles table
 CREATE TABLE IF NOT EXISTS profiles (

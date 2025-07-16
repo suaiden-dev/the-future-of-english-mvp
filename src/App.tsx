@@ -20,6 +20,8 @@ import type { User as UserType } from './hooks/useAuth';
 import Upload from './pages/CustomerDashboard/Upload';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AuthRedirect from './components/AuthRedirect';
+import DocumentManagerPage from './pages/DocumentManager';
+import AuthenticatorDashboard from './pages/DocumentManager/AuthenticatorDashboard';
 
 type Document = Database['public']['Tables']['documents']['Row'];
 type Folder = Database['public']['Tables']['folders']['Row'];
@@ -149,11 +151,12 @@ function App() {
         { id: 'dashboard', label: 'Dashboard', icon: UserIcon, page: 'dashboard-customer' as Page },
         { id: 'upload', label: 'Upload', icon: UploadIcon, page: 'upload' as Page },
       ];
-      
       if (user.role === 'admin') {
         userItems.push({ id: 'admin', label: 'Admin Panel', icon: Shield, page: 'admin' as Page });
       }
-      
+      if (user.role === 'authenticator' || user.role === 'admin') {
+        userItems.push({ id: 'authenticator', label: 'Painel do Autenticador', icon: Shield, page: '/authenticator' });
+      }
       return [...baseItems, ...userItems];
     } else {
       return [
@@ -260,6 +263,14 @@ function App() {
           </main>
         </div>
           ) : <Navigate to="/login" />} />
+          <Route path="/authenticator" element={user && (user.role === 'authenticator' || user.role === 'admin') ? (
+        <div className="flex">
+          <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
+          <main className="flex-1">
+            <AuthenticatorDashboard />
+          </main>
+        </div>
+      ) : <Navigate to="/login" />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AuthRedirect>
