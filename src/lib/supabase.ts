@@ -1,19 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from './database.types';
 
-<<<<<<< HEAD
-// Removido logs de variáveis de ambiente e teste de conexão
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    }
-=======
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -36,9 +23,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
   }
-);
+});
 
 console.log('SUPABASE_URL EM USO:', import.meta.env.VITE_SUPABASE_URL);
 
@@ -271,8 +257,6 @@ export const db = {
     if (error) throw error;
   }
 };
-
-export { supabase };
 
 // @ts-ignore
 window.supabase = supabase;
