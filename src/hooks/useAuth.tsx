@@ -46,26 +46,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-<<<<<<< HEAD
-    let isMounted = true;
-    setLoading(true);
-    supabase.auth.getSession().then(async ({ data, error }) => {
-      console.log('[AuthProvider] getSession result:', { data, error });
-      try {
-        if (error) {
-          console.error('[AuthProvider] Erro ao obter sessão:', error);
-          if (isMounted) setUser(null);
-          // Fallback: tentar restaurar do localStorage
-          if (typeof window !== 'undefined') {
-            const savedUser = window.localStorage.getItem('app_user');
-            if (savedUser) {
-              const parsedUser = JSON.parse(savedUser);
-              console.log('[AuthProvider] Restaurando usuário do localStorage:', parsedUser);
-              setUser(parsedUser);
-            }
-          }
-        } else {
-=======
     console.log('[AuthProvider] Inicializando auth state com novo Supabase');
     supabase.auth.getSession().then(async ({ data, error }) => {
       if (error) {
@@ -74,70 +54,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       console.log('[AuthProvider] Sessão inicial:', data.session?.user?.email);
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       setSession(data.session);
       let userObj = data.session?.user ?? null;
       if (userObj) {
         const role = await fetchUserRole(userObj.id);
-            userObj = { ...userObj, role } as CustomUser;
-            console.log('[AuthProvider] userObj montado:', userObj);
-            // Salvar no localStorage
-            if (typeof window !== 'undefined') {
-              window.localStorage.setItem('app_user', JSON.stringify(userObj));
-              console.log('[AuthProvider] Usuário salvo no localStorage:', userObj);
-            }
-      }
-        if (isMounted) {
-            console.log('[AuthProvider] Chamando setUser com:', userObj);
-      setUser(userObj);
-          }
+        userObj = { ...userObj, role } as CustomUser;
+        console.log('[AuthProvider] userObj montado:', userObj);
+        // Salvar no localStorage
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('app_user', JSON.stringify(userObj));
+          console.log('[AuthProvider] Usuário salvo no localStorage:', userObj);
         }
-      } catch (err) {
-        console.error('[AuthProvider] Erro ao inicializar sessão:', err);
-        if (isMounted) setUser(null);
-      } finally {
-        if (isMounted) setLoading(false);
       }
+      console.log('[AuthProvider] Chamando setUser com:', userObj);
+      setUser(userObj);
+      setLoading(false);
     });
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-<<<<<<< HEAD
-      console.log('[AuthProvider] onAuthStateChange:', _event, session);
-      if (!session) {
-        setUser(null);
-        setLoading(false);
-        // Limpar localStorage
-        if (typeof window !== 'undefined') {
-          window.localStorage.removeItem('app_user');
-          console.log('[AuthProvider] Usuário removido do localStorage');
-        }
-        return;
-      }
-      try {
-=======
       console.log('[AuthProvider] Auth state change:', _event, session?.user?.email || 'Sem usuário');
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       setSession(session);
       let userObj = session?.user ?? null;
       if (userObj) {
         const role = await fetchUserRole(userObj.id);
-          userObj = { ...userObj, role } as CustomUser;
-          console.log('[AuthProvider] userObj montado:', userObj);
-          // Salvar no localStorage
-          if (typeof window !== 'undefined') {
-            window.localStorage.setItem('app_user', JSON.stringify(userObj));
-            console.log('[AuthProvider] Usuário salvo no localStorage:', userObj);
-          }
+        userObj = { ...userObj, role } as CustomUser;
+        console.log('[AuthProvider] userObj montado:', userObj);
+        // Salvar no localStorage
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('app_user', JSON.stringify(userObj));
+          console.log('[AuthProvider] Usuário salvo no localStorage:', userObj);
         }
-        console.log('[AuthProvider] Chamando setUser com:', userObj);
-      setUser(userObj);
-      } catch (err) {
-        setUser(null);
-      } finally {
-      setLoading(false);
       }
+      console.log('[AuthProvider] Chamando setUser com:', userObj);
+      setUser(userObj);
+      setLoading(false);
     });
     return () => {
-      isMounted = false;
       listener?.subscription.unsubscribe();
       console.log('[AuthProvider] useEffect CLEANUP');
     };
@@ -171,28 +122,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-<<<<<<< HEAD
-    console.log('[AuthProvider] signUp chamado:', email);
-=======
     console.log('[AuthProvider] Iniciando signup:', email);
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } }
     });
     if (error) {
-<<<<<<< HEAD
-      console.error('[AuthProvider] Erro no signUp:', error);
-      throw error;
-    }
-    console.log('[AuthProvider] Cadastro bem-sucedido:', data.user?.email);
-=======
       console.error('[AuthProvider] Erro no signup:', error);
       throw error;
     }
     console.log('[AuthProvider] Signup realizado:', data);
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
     return data;
   };
 

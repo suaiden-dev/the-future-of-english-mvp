@@ -47,10 +47,7 @@ export function Register() {
     setIsLoading(true);
 
     try {
-<<<<<<< HEAD
-=======
       console.log('[Register] Tentando registrar:', formData.email);
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       await signUp(formData.email, formData.password, formData.name);
       setSuccess(true);
     } catch (err) {

@@ -36,16 +36,6 @@ Deno.serve(async (req: Request) => {
     console.log("Supabase URL:", supabaseUrl ? "✓ Set" : "✗ Missing");
     console.log("Service Role Key:", supabaseServiceKey ? "✓ Set" : "✗ Missing");
 
-<<<<<<< HEAD
-    // Instanciar o client do Supabase com a service role key (banco novo)
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL"),
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-    );
-
-    // Recebe o evento do Supabase Storage ou do frontend
-    const { filename, url, mimetype, size, record, user_id, paginas, tipo_trad, valor, idioma_raiz } = await req.json();
-=======
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase environment variables");
     }
@@ -59,8 +49,8 @@ Deno.serve(async (req: Request) => {
     const parsedBody = JSON.parse(requestBody);
     console.log("Parsed request body:", parsedBody);
 
-    const { filename, url, mimetype, size, record, user_id } = parsedBody;
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
+    // Recebe o evento do Supabase Storage ou do frontend
+    const { filename, url, mimetype, size, record, user_id, paginas, tipo_trad, valor, idioma_raiz } = parsedBody;
     let payload;
 
     if (record) {
@@ -68,12 +58,7 @@ Deno.serve(async (req: Request) => {
       console.log("Processing storage trigger payload");
       const bucket = record.bucket_id || record.bucket || record.bucketId;
       const path = record.name || record.path || record.file_name;
-<<<<<<< HEAD
-      const publicUrl = `https://ywpogqwhwscbdhnoqsmv.supabase.co/storage/v1/object/public/${bucket}/${path}`;
-=======
       const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
-      
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       payload = {
         filename: path,
         url: publicUrl,
@@ -86,22 +71,6 @@ Deno.serve(async (req: Request) => {
         idioma_raiz: record.idioma_raiz || idioma_raiz || null
       };
     } else {
-<<<<<<< HEAD
-      // Chamada do frontend
-      payload = { filename, url, mimetype, size, user_id: user_id || null, paginas, tipo_trad, valor, idioma_raiz };
-    }
-
-    console.log("Payload para inserção:", payload);
-
-    // Inserir no banco novo
-    const { data, error } = await supabase
-      .from("documents")
-      .insert([payload]);
-
-    // Enviar para o n8n
-    const n8nWebhookUrl = "https://nwh.thefutureofenglish.com/webhook/tfoetranslations";
-    const n8nResponse = await fetch(n8nWebhookUrl, {
-=======
       // Called from frontend
       console.log("Processing frontend payload");
       payload = { 
@@ -109,7 +78,8 @@ Deno.serve(async (req: Request) => {
         url, 
         mimetype, 
         size, 
-        user_id: user_id || null 
+        user_id: user_id || null, 
+        paginas, tipo_trad, valor, idioma_raiz 
       };
     }
 
@@ -120,7 +90,6 @@ Deno.serve(async (req: Request) => {
     console.log("Sending webhook to:", webhookUrl);
 
     const webhookResponse = await fetch(webhookUrl, {
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
@@ -128,18 +97,6 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify(payload),
     });
-    console.log("Resposta do n8n:", n8nResponse.status, await n8nResponse.text());
-
-<<<<<<< HEAD
-    // Retorna o resultado da operação
-    return new Response(
-      JSON.stringify({
-        ok: !error && n8nResponse.ok,
-        data,
-        error,
-        n8nStatus: n8nResponse.status
-      }),
-=======
     const responseText = await webhookResponse.text();
     console.log("n8n webhook response status:", webhookResponse.status);
     console.log("n8n webhook response body:", responseText);
@@ -211,7 +168,6 @@ Deno.serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify(responseData),
->>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       {
         status: webhookResponse.ok ? 200 : 500,
         headers: {
