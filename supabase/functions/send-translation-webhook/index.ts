@@ -1,35 +1,42 @@
-// @ts-ignore
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Adicionar import do client do Supabase
-import { createClient } from "https://esm.sh/@supabase/supabase-js";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
 
 Deno.serve(async (req: Request) => {
-  // CORS preflight
+  console.log(`[${new Date().toISOString()}] Edge Function: send-translation-webhook called`);
+  console.log(`Method: ${req.method}`);
+  console.log(`URL: ${req.url}`);
+
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
+    console.log("Handling CORS preflight request");
     return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      }
+      status: 200,
+      headers: corsHeaders,
     });
   }
 
   if (req.method !== "POST") {
+    console.log(`Method ${req.method} not allowed`);
     return new Response("Method Not Allowed", {
       status: 405,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      }
+      headers: corsHeaders,
     });
   }
 
   try {
-    console.log("Edge Function chamada!");
+    // Create Supabase client with service role key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    console.log("Supabase URL:", supabaseUrl ? "✓ Set" : "✗ Missing");
+    console.log("Service Role Key:", supabaseServiceKey ? "✓ Set" : "✗ Missing");
 
+<<<<<<< HEAD
     // Instanciar o client do Supabase com a service role key (banco novo)
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL"),
@@ -38,13 +45,35 @@ Deno.serve(async (req: Request) => {
 
     // Recebe o evento do Supabase Storage ou do frontend
     const { filename, url, mimetype, size, record, user_id, paginas, tipo_trad, valor, idioma_raiz } = await req.json();
+=======
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Missing Supabase environment variables");
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Parse request body
+    const requestBody = await req.text();
+    console.log("Raw request body:", requestBody);
+    
+    const parsedBody = JSON.parse(requestBody);
+    console.log("Parsed request body:", parsedBody);
+
+    const { filename, url, mimetype, size, record, user_id } = parsedBody;
+>>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
     let payload;
 
     if (record) {
-      // Chamada do trigger do Storage
+      // Called from Storage trigger
+      console.log("Processing storage trigger payload");
       const bucket = record.bucket_id || record.bucket || record.bucketId;
       const path = record.name || record.path || record.file_name;
+<<<<<<< HEAD
       const publicUrl = `https://ywpogqwhwscbdhnoqsmv.supabase.co/storage/v1/object/public/${bucket}/${path}`;
+=======
+      const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+      
+>>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       payload = {
         filename: path,
         url: publicUrl,
@@ -57,6 +86,7 @@ Deno.serve(async (req: Request) => {
         idioma_raiz: record.idioma_raiz || idioma_raiz || null
       };
     } else {
+<<<<<<< HEAD
       // Chamada do frontend
       payload = { filename, url, mimetype, size, user_id: user_id || null, paginas, tipo_trad, valor, idioma_raiz };
     }
@@ -71,12 +101,36 @@ Deno.serve(async (req: Request) => {
     // Enviar para o n8n
     const n8nWebhookUrl = "https://nwh.thefutureofenglish.com/webhook/tfoetranslations";
     const n8nResponse = await fetch(n8nWebhookUrl, {
+=======
+      // Called from frontend
+      console.log("Processing frontend payload");
+      payload = { 
+        filename, 
+        url, 
+        mimetype, 
+        size, 
+        user_id: user_id || null 
+      };
+    }
+
+    console.log("Final payload for n8n webhook:", JSON.stringify(payload, null, 2));
+
+    // Send POST to n8n webhook
+    const webhookUrl = "https://nwh.thefutureofenglish.com/webhook/tfoetranslations";
+    console.log("Sending webhook to:", webhookUrl);
+
+    const webhookResponse = await fetch(webhookUrl, {
+>>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "User-Agent": "Supabase-Edge-Function/1.0"
+      },
       body: JSON.stringify(payload),
     });
     console.log("Resposta do n8n:", n8nResponse.status, await n8nResponse.text());
 
+<<<<<<< HEAD
     // Retorna o resultado da operação
     return new Response(
       JSON.stringify({
@@ -85,28 +139,108 @@ Deno.serve(async (req: Request) => {
         error,
         n8nStatus: n8nResponse.status
       }),
+=======
+    const responseText = await webhookResponse.text();
+    console.log("n8n webhook response status:", webhookResponse.status);
+    console.log("n8n webhook response body:", responseText);
+
+    // If webhook call was successful and we have user_id, update document status
+    if (webhookResponse.ok && user_id && filename) {
+      try {
+        console.log("Updating document status to processing...");
+        const { data: updateData, error: updateError } = await supabase
+          .from('documents')
+          .update({ status: 'processing' })
+          .eq('user_id', user_id)
+          .eq('filename', filename)
+          .select();
+        
+        if (updateError) {
+          console.error("Error updating document status:", updateError);
+        } else {
+          console.log("Document status updated successfully:", updateData);
+        }
+      } catch (updateError) {
+        console.error("Exception updating document status:", updateError);
+      }
+    }
+
+    // Also insert into documents_to_verify table if needed
+    if (webhookResponse.ok && user_id && url) {
+      try {
+        console.log("Inserting into documents_to_verify...");
+        
+        // First, find the document ID
+        const { data: docData, error: docError } = await supabase
+          .from('documents')
+          .select('id')
+          .eq('user_id', user_id)
+          .eq('filename', filename)
+          .single();
+
+        if (docData && !docError) {
+          const { data: verifyData, error: verifyError } = await supabase
+            .from('documents_to_verify')
+            .insert({
+              doc_url: url,
+              doc_id: docData.id,
+              user_id: user_id
+            })
+            .select();
+
+          if (verifyError) {
+            console.error("Error inserting into documents_to_verify:", verifyError);
+          } else {
+            console.log("Inserted into documents_to_verify successfully:", verifyData);
+          }
+        }
+      } catch (verifyError) {
+        console.error("Exception inserting into documents_to_verify:", verifyError);
+      }
+    }
+
+    const responseData = {
+      success: webhookResponse.ok,
+      status: webhookResponse.status,
+      message: responseText,
+      payload: payload,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log("Final response:", JSON.stringify(responseData, null, 2));
+
+    return new Response(
+      JSON.stringify(responseData),
+>>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       {
+        status: webhookResponse.ok ? 200 : 500,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        }
+          ...corsHeaders,
+        },
       }
     );
-  } catch (err: any) {
-    console.error("Erro na Edge Function:", err);
+
+  } catch (error) {
+    console.error("Error in send-translation-webhook:", error);
+    console.error("Error stack:", error.stack);
+    
+    const errorResponse = {
+      success: false,
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    };
+
     return new Response(
-      JSON.stringify({ ok: false, error: err.message }),
+      JSON.stringify(errorResponse),
       {
         status: 500,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        }
+          ...corsHeaders,
+        },
       }
     );
   }
-}); 
+});

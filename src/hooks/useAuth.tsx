@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+<<<<<<< HEAD
     let isMounted = true;
     setLoading(true);
     supabase.auth.getSession().then(async ({ data, error }) => {
@@ -64,6 +65,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
         } else {
+=======
+    console.log('[AuthProvider] Inicializando auth state com novo Supabase');
+    supabase.auth.getSession().then(async ({ data, error }) => {
+      if (error) {
+        console.error('[AuthProvider] Erro ao obter sessão inicial:', error);
+        setLoading(false);
+        return;
+      }
+      console.log('[AuthProvider] Sessão inicial:', data.session?.user?.email);
+>>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       setSession(data.session);
       let userObj = data.session?.user ?? null;
       if (userObj) {
@@ -89,6 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+<<<<<<< HEAD
       console.log('[AuthProvider] onAuthStateChange:', _event, session);
       if (!session) {
         setUser(null);
@@ -101,6 +113,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       try {
+=======
+      console.log('[AuthProvider] Auth state change:', _event, session?.user?.email || 'Sem usuário');
+>>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
       setSession(session);
       let userObj = session?.user ?? null;
       if (userObj) {
@@ -156,17 +171,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
+<<<<<<< HEAD
     console.log('[AuthProvider] signUp chamado:', email);
+=======
+    console.log('[AuthProvider] Iniciando signup:', email);
+>>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } }
     });
     if (error) {
+<<<<<<< HEAD
       console.error('[AuthProvider] Erro no signUp:', error);
       throw error;
     }
     console.log('[AuthProvider] Cadastro bem-sucedido:', data.user?.email);
+=======
+      console.error('[AuthProvider] Erro no signup:', error);
+      throw error;
+    }
+    console.log('[AuthProvider] Signup realizado:', data);
+>>>>>>> 5ea06a41fdc73af20a17758e72a38cc2fc43c31e
     return data;
   };
 
