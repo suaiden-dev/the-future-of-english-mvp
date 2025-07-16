@@ -11,37 +11,37 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
   const pendingDocuments = documents.filter(doc => doc.status === 'pending').length;
   const processingDocuments = documents.filter(doc => doc.status === 'processing').length;
   const completedDocuments = documents.filter(doc => doc.status === 'completed').length;
-  const totalSpent = documents.reduce((sum, doc) => sum + doc.totalCost, 0);
-  const totalPages = documents.reduce((sum, doc) => sum + doc.pages, 0);
+  const totalSpent = documents.reduce((sum, doc) => sum + (doc.totalCost || 0), 0);
+  const totalPages = documents.reduce((sum, doc) => sum + (doc.pages || 0), 0);
 
   // Calculate this month's activity
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const thisMonthDocuments = documents.filter(doc => {
-    const docDate = new Date(doc.uploadDate);
-    return docDate.getMonth() === currentMonth && docDate.getFullYear() === currentYear;
+    const docDate = doc.uploadDate ? new Date(doc.uploadDate) : null;
+    return docDate && docDate.getMonth() === currentMonth && docDate.getFullYear() === currentYear;
   });
 
   const stats = [
     {
       title: 'Total Documents',
-      value: totalDocuments,
+      value: totalDocuments || 0,
       icon: FileText,
       bgColor: 'bg-blue-100',
       iconColor: 'text-blue-900',
-      description: `${totalPages} pages total`
+      description: `${totalPages || 0} pages total`
     },
     {
       title: 'In Progress',
-      value: pendingDocuments + processingDocuments,
+      value: pendingDocuments + processingDocuments || 0,
       icon: Clock,
       bgColor: 'bg-yellow-100',
       iconColor: 'text-yellow-900',
-      description: `${pendingDocuments} pending, ${processingDocuments} processing`
+      description: `${pendingDocuments || 0} pending, ${processingDocuments || 0} in progress`
     },
     {
       title: 'Completed',
-      value: completedDocuments,
+      value: completedDocuments || 0,
       icon: CheckCircle,
       bgColor: 'bg-green-100',
       iconColor: 'text-green-900',
@@ -49,15 +49,15 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
     },
     {
       title: 'Total Spent',
-      value: `$${totalSpent}`,
+      value: `$${isNaN(totalSpent) ? '0' : totalSpent}`,
       icon: DollarSign,
       bgColor: 'bg-purple-100',
       iconColor: 'text-purple-900',
-      description: `$${totalSpent / totalDocuments || 0} avg per document`
+      description: `$${totalDocuments > 0 ? (totalSpent / totalDocuments).toFixed(2) : '0'} avg per document`
     },
     {
       title: 'This Month',
-      value: thisMonthDocuments.length,
+      value: thisMonthDocuments.length || 0,
       icon: Calendar,
       bgColor: 'bg-indigo-100',
       iconColor: 'text-indigo-900',

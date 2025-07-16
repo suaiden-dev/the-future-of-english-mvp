@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS documents (
 -- Enable Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE folders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;                                              
 
 -- Profiles policies
 CREATE POLICY "Users can read own profile"

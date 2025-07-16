@@ -18,7 +18,7 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
       color: 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
       textColor: 'text-white',
       iconBg: 'bg-white/20',
-      onClick: onUploadClick
+      onClick: () => navigate('/dashboard/upload')
     },
     {
       id: 'verify',

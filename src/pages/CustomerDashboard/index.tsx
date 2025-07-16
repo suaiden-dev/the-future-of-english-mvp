@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { WelcomeSection } from './WelcomeSection';
 import { CustomerStatsCards } from './CustomerStatsCards';
 import { RecentActivity } from './RecentActivity';
@@ -9,6 +9,11 @@ import { DocumentDetailsModal } from './DocumentDetailsModal';
 import { DocumentManager } from './DocumentManager';
 import { User as UserType, Document, Folder } from '../../App';
 import { Database } from '../../lib/database.types';
+import { Link, Route, Routes, useNavigate } from 'react-router-dom';
+import ProfilePage from './ProfilePage';
+import MyDocumentsPage from './MyDocumentsPage';
+import { CheckCircle } from 'lucide-react';
+import UploadDocument from './UploadDocument';
 type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register' | 'documents';
 
 type DocumentInsert = Database['public']['Tables']['documents']['Insert'];
@@ -39,6 +44,33 @@ export function CustomerDashboard({
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [currentView, setCurrentView] = useState<'overview' | 'documents'>('overview');
 
+  // Toast de novo documento traduzido
+  const [showToast, setShowToast] = useState(false);
+  const [newCompletedDoc, setNewCompletedDoc] = useState<Document | null>(null);
+  const prevCompletedIds = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    // Detectar novos documentos completed
+    const completedDocs = documents.filter(doc => doc.status === 'completed');
+    const completedIds = new Set(completedDocs.map(doc => doc.id));
+    // Verifica se há algum novo completed
+    for (const doc of completedDocs) {
+      if (!prevCompletedIds.current.has(doc.id)) {
+        setNewCompletedDoc(doc);
+        setShowToast(true);
+        break;
+      }
+    }
+    prevCompletedIds.current = completedIds;
+  }, [documents]);
+
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => setShowToast(false), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
+
   const hasCompletedDocuments = documents.some(doc => doc.status === 'completed');
 
   const handleUploadClick = () => {
@@ -63,58 +95,88 @@ export function CustomerDashboard({
   };
 
   return (
-    <div className="py-8">
+    <div className="py-8 relative">
+      {/* Toast/banner de novo documento traduzido */}
+      {showToast && newCompletedDoc && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-50 border border-green-200 rounded-xl shadow-lg flex items-center px-6 py-4 gap-4 animate-fade-in-up min-w-[320px] max-w-[90vw]">
+          <CheckCircle className="w-7 h-7 text-green-600" />
+          <div className="flex-1">
+            <div className="font-semibold text-green-900 text-base mb-1">Your translation is ready!</div>
+            <div className="text-green-800 text-sm truncate">{newCompletedDoc.filename}</div>
+          </div>
+          <button
+            className="ml-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+            onClick={() => {
+              setShowToast(false);
+              onViewDocument(newCompletedDoc);
+            }}
+          >
+            Download
+          </button>
+          <button
+            className="ml-2 text-green-700 hover:text-green-900 text-xl font-bold"
+            onClick={() => setShowToast(false)}
+            aria-label="Close notification"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {currentView === 'overview' ? (
-          <>
-            <WelcomeSection user={user} onUploadClick={handleUploadClick} />
-            
-            <CustomerStatsCards documents={documents} />
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-              <div className="lg:col-span-2">
-                <RecentActivity 
-                  documents={documents} 
-                  onViewDocument={handleViewDocument} 
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                {currentView === 'overview' ? (
+                  <>
+                    <WelcomeSection user={user} onUploadClick={handleUploadClick} />
+                    <CustomerStatsCards documents={documents} />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                      <div className="lg:col-span-2">
+                        <RecentActivity 
+                          documents={documents} 
+                          onViewDocument={handleViewDocument} 
+                        />
+                      </div>
+                      <div>
+                        <QuickActions 
+                          onUploadClick={handleUploadClick}
+                          hasCompletedDocuments={hasCompletedDocuments}
+                        />
+                      </div>
+                    </div>
+                    {/* Removido: <DocumentsList documents={documents} onViewDocument={handleViewDocument} /> */}
+                  </>
+                ) : (
+                  <DocumentManager
+                    user={user}
+                    documents={documents}
+                    folders={folders}
+                    onDocumentUpload={onDocumentUpload}
+                    onFolderCreate={onFolderCreate}
+                    onFolderUpdate={onFolderUpdate}
+                    onFolderDelete={onFolderDelete}
+                    onViewDocument={handleViewDocument}
+                  />
+                )}
+                <DocumentUploadModal
+                  isOpen={isUploadModalOpen}
+                  onClose={handleCloseUploadModal}
+                  onUpload={onDocumentUpload}
+                  userId={user?.id || ''}
                 />
-              </div>
-              <div>
-                <QuickActions 
-                  onUploadClick={handleUploadClick}
-                  hasCompletedDocuments={hasCompletedDocuments}
+                <DocumentDetailsModal
+                  document={selectedDocument}
+                  onClose={handleCloseDetailsModal}
                 />
-              </div>
-            </div>
-            
-            <DocumentsList 
-              documents={documents} 
-              onViewDocument={handleViewDocument} 
-            />
-          </>
-        ) : (
-          <DocumentManager
-            user={user}
-            documents={documents}
-            folders={folders}
-            onDocumentUpload={onDocumentUpload}
-            onFolderCreate={onFolderCreate}
-            onFolderUpdate={onFolderUpdate}
-            onFolderDelete={onFolderDelete}
-            onViewDocument={handleViewDocument}
+              </>
+            }
           />
-        )}
-
-        <DocumentUploadModal
-          isOpen={isUploadModalOpen}
-          onClose={handleCloseUploadModal}
-          onUpload={onDocumentUpload}
-          userId={user?.id || ''}
-        />
-
-        <DocumentDetailsModal
-          document={selectedDocument}
-          onClose={handleCloseDetailsModal}
-        />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="my-documents" element={<MyDocumentsPage />} />
+          <Route path="upload" element={<UploadDocument />} />
+        </Routes>
       </div>
     </div>
   );

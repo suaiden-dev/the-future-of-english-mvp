@@ -99,7 +99,6 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
                       className="text-sm border border-gray-300 rounded px-2 py-1"
                     >
                       <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
                       <option value="completed">Completed</option>
                     </select>
                   </div>

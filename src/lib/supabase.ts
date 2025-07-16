@@ -199,11 +199,10 @@ export const db = {
 
   verifyDocument: async (verificationCode: string) => {
     const { data, error } = await supabase
-      .from('documents')
+      .from('translated_documents')
       .select('*')
-      .eq('verification_code', verificationCode)
+      .ilike('verification_code', verificationCode)
       .single();
-    
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
@@ -255,6 +254,16 @@ export const db = {
       .eq('id', folderId);
     
     if (error) throw error;
+  },
+
+  getTranslatedDocuments: async (userId: string) => {
+    const { data, error } = await supabase
+      .from('translated_documents')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
   }
 };
 

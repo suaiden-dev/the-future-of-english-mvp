@@ -1,3 +1,4 @@
+// OBSOLETO: Esta página foi substituída por UploadDocument.tsx. Não usar mais.
 import React, { useRef, useState } from 'react';
 import { UploadCloud, X, CheckCircle, RefreshCw, Eye, Download } from 'lucide-react';
 import type { User, Document } from '../../App';

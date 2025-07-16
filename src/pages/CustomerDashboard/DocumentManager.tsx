@@ -12,10 +12,10 @@ import {
   Grid,
   List
 } from 'lucide-react';
-import { User as UserType, Document, Folder } from '../../App';
+import { Document, Folder } from '../../App';
 
 interface DocumentManagerProps {
-  user: UserType | null;
+  user: any | null;
   documents: Document[];
   folders: Folder[];
   onDocumentUpload: (document: Document) => void;
@@ -51,8 +51,8 @@ export function DocumentManager({
     'bg-indigo-100 text-indigo-800'
   ];
 
-  const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
-  const currentDocuments = documents.filter(doc => doc.folderId === currentFolderId);
+  const currentFolders = folders.filter(folder => folder.parent_id === currentFolderId);
+  const currentDocuments = documents.filter(doc => doc.folder_id === currentFolderId);
   
   const filteredFolders = currentFolders.filter(folder =>
     folder.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -70,7 +70,7 @@ export function DocumentManager({
       const folder = folders.find(f => f.id === currentId);
       if (folder) {
         path.unshift(folder);
-        currentId = folder.parentId || null;
+        currentId = folder.parent_id || null;
       } else {
         break;
       }
@@ -84,11 +84,12 @@ export function DocumentManager({
 
     const newFolder: Folder = {
       id: Date.now().toString(),
-      userId: user.id,
+      user_id: user.id,
       name: newFolderName.trim(),
-      parentId: currentFolderId || undefined,
-      createdAt: new Date().toISOString(),
-      color: folderColors[Math.floor(Math.random() * folderColors.length)]
+      parent_id: currentFolderId || null,
+      created_at: new Date().toISOString(),
+      color: folderColors[Math.floor(Math.random() * folderColors.length)],
+      updated_at: new Date().toISOString(),
     };
 
     onFolderCreate(newFolder);
@@ -133,7 +134,7 @@ export function DocumentManager({
             >
               Home
             </button>
-            {breadcrumbs.map((folder, index) => (
+            {breadcrumbs.map((folder) => (
               <React.Fragment key={folder.id}>
                 <span>/</span>
                 <button
@@ -178,6 +179,7 @@ export function DocumentManager({
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setViewMode('grid')}
+            aria-label="Visualizar em grade"
             className={`p-2 rounded-lg transition-colors ${
               viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'
             }`}
@@ -186,6 +188,7 @@ export function DocumentManager({
           </button>
           <button
             onClick={() => setViewMode('list')}
+            aria-label="Visualizar em lista"
             className={`p-2 rounded-lg transition-colors ${
               viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'
             }`}
@@ -200,7 +203,7 @@ export function DocumentManager({
         <button
           onClick={() => {
             const currentFolder = folders.find(f => f.id === currentFolderId);
-            setCurrentFolderId(currentFolder?.parentId || null);
+            setCurrentFolderId(currentFolder?.parent_id || null);
           }}
           className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors"
         >
@@ -296,7 +299,7 @@ export function DocumentManager({
                       
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="relative">
-                          <button className="p-1 text-gray-400 hover:text-gray-600 rounded">
+                          <button className="p-1 text-gray-400 hover:text-gray-600 rounded" aria-label="Mais opções">
                             <MoreVertical className="w-4 h-4" />
                           </button>
                           <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px] opacity-0 group-hover:opacity-100">
@@ -306,6 +309,7 @@ export function DocumentManager({
                                 handleEditFolder(folder.id);
                               }}
                               className="w-full px-3 py-1 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                              aria-label="Renomear pasta"
                             >
                               <Edit2 className="w-3 h-3" />
                               <span>Rename</span>
@@ -316,6 +320,7 @@ export function DocumentManager({
                                 handleDeleteFolder(folder.id);
                               }}
                               className="w-full px-3 py-1 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                              aria-label="Excluir pasta"
                             >
                               <Trash2 className="w-3 h-3" />
                               <span>Delete</span>
@@ -391,7 +396,7 @@ export function DocumentManager({
                       Folder
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(folder.createdAt).toLocaleDateString()}
+                      {new Date(folder.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-500">-</span>
@@ -401,12 +406,16 @@ export function DocumentManager({
                         <button
                           onClick={() => handleEditFolder(folder.id)}
                           className="text-blue-600 hover:text-blue-800"
+                          aria-label="Renomear pasta"
+                          title="Renomear pasta"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteFolder(folder.id)}
                           className="text-red-600 hover:text-red-800"
+                          aria-label="Excluir pasta"
+                          title="Excluir pasta"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -428,7 +437,7 @@ export function DocumentManager({
                       Document
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(document.uploadDate).toLocaleDateString()}
+                      {new Date(document.upload_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

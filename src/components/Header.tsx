@@ -1,12 +1,11 @@
 import React from 'react';
 import { User, LogOut, Shield, Home, FileText, Search } from 'lucide-react';
-import { User as UserType } from '../App';
 import { useNavigate } from 'react-router-dom';
 
 type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register';
 
 interface HeaderProps {
-  user: UserType | null;
+  user: any | null; // Changed from UserType to any as UserType is no longer imported
   onLogout: () => void;
   currentPage?: Page;
 }
@@ -101,7 +100,7 @@ export function Header({ user, onLogout, currentPage }: HeaderProps) {
                 
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-600">Welcome, {user.name || user.email}</span>
-                                      <button
+                                                                          <button
                     onClick={onLogout}
                     className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-red-600 transition-colors"
                   >

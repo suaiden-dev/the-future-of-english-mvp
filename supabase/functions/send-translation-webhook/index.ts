@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
     console.log("Parsed request body:", parsedBody);
 
     // Recebe o evento do Supabase Storage ou do frontend
-    const { filename, url, mimetype, size, record, user_id, paginas, tipo_trad, valor, idioma_raiz } = parsedBody;
+    const { filename, url, mimetype, size, record, user_id, paginas, tipo_trad, valor, idioma_raiz, is_bank_statement } = parsedBody;
     let payload;
 
     if (record) {
@@ -68,7 +68,8 @@ Deno.serve(async (req: Request) => {
         paginas: record.paginas || paginas || null,
         tipo_trad: record.tipo_trad || tipo_trad || null,
         valor: record.valor || valor || null,
-        idioma_raiz: record.idioma_raiz || idioma_raiz || null
+        idioma_raiz: record.idioma_raiz || idioma_raiz || null,
+        is_bank_statement: record.is_bank_statement || is_bank_statement || false
       };
     } else {
       // Called from frontend
@@ -79,7 +80,8 @@ Deno.serve(async (req: Request) => {
         mimetype, 
         size, 
         user_id: user_id || null, 
-        paginas, tipo_trad, valor, idioma_raiz 
+        paginas, tipo_trad, valor, idioma_raiz, 
+        is_bank_statement: is_bank_statement || false
       };
     }
 

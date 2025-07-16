@@ -135,11 +135,11 @@ export function DocumentVerification() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Status:</span>
-                          <span className="text-green-600 font-medium capitalize">{searchResult.status}</span>
+                          <span className="text-green-600 font-medium capitalize">Authenticated</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Authenticated:</span>
-                          <span className="text-green-600 font-medium">{searchResult.is_authenticated ? 'Yes' : 'No'}</span>
+                          <span className="text-green-600 font-medium">Yes</span>
                         </div>
                       </div>
                     </div>

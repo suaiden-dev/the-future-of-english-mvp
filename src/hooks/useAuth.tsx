@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
-interface CustomUser extends User {
-  role?: string;
+export interface CustomUser extends SupabaseUser {
+  role: 'user' | 'authenticator' | 'admin';
 }
 
 interface AuthContextType {
@@ -12,7 +12,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<any>;
+  signUp: (email: string, password: string, name: string, role?: 'user' | 'authenticator') => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,123 +21,134 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<CustomUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
-  // Função auxiliar para buscar o papel customizado
-  const fetchUserRole = async (userId: string) => {
+  // Busca ou cria perfil na tabela profiles
+  const fetchOrCreateProfile = async (userId: string, email: string, name: string, role: 'user' | 'authenticator' | 'admin' = 'user') => {
     try {
-    console.log('[Auth] Buscando role para userId:', userId);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-    if (error) {
-      console.error('[Auth] Erro ao buscar role do perfil:', error);
-      return undefined;
-    }
-    console.log('[Auth] Role encontrado:', data?.role);
-    return data?.role;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      if (error && error.code !== 'PGRST116') {
+        console.error('[Auth] Erro ao buscar perfil:', error);
+        return null;
+      }
+      if (data) {
+        let updates: any = {};
+        if (!data.role || data.role === '') {
+          updates.role = role;
+        }
+        if (!data.name || data.name !== name) {
+          updates.name = name;
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('profiles').update(updates).eq('id', userId);
+          return { ...data, ...updates };
+        }
+        return data;
+      } else {
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({ id: userId, email, name, role })
+          .select()
+          .single();
+        if (createError) {
+          console.error('[Auth] Erro ao criar perfil:', createError);
+          return null;
+        }
+        return newProfile;
+      }
     } catch (err) {
-      console.error('[Auth] Erro inesperado ao buscar role:', err);
-      return undefined;
-    } finally {
-      console.log('[Auth] fetchUserRole FINALIZADO para userId:', userId);
+      console.error('[Auth] Erro inesperado ao buscar/criar perfil:', err);
+      return null;
     }
   };
 
+  // Centraliza a lógica de buscar/criar perfil e atualizar contexto
+  const fetchAndSetUser = async (session: Session | null) => {
+    if (session?.user) {
+      const userObj = session.user;
+      try {
+        const profile = await fetchOrCreateProfile(userObj.id, userObj.email ?? '', userObj.user_metadata?.name ?? '', 'user');
+        const role = profile?.role || 'user';
+        const customUser: CustomUser = { ...userObj, role };
+        setUser(customUser);
+        setSession(session);
+        setSessionExpired(false);
+      } catch (err) {
+        console.error('[AuthProvider] Erro ao processar perfil:', err);
+        setUser(null);
+        setSession(session);
+        setSessionExpired(true);
+      }
+    } else {
+      setUser(null);
+      setSession(null);
+      if (session === null) {
+        setSessionExpired(true);
+      }
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    console.log('[AuthProvider] Inicializando auth state com novo Supabase');
-    supabase.auth.getSession().then(async ({ data, error }) => {
-      if (error) {
-        console.error('[AuthProvider] Erro ao obter sessão inicial:', error);
-        setLoading(false);
-        return;
-      }
-      console.log('[AuthProvider] Sessão inicial:', data.session?.user?.email);
-      setSession(data.session);
-      let userObj = data.session?.user ?? null;
-      if (userObj) {
-        const role = await fetchUserRole(userObj.id);
-        userObj = { ...userObj, role } as CustomUser;
-        console.log('[AuthProvider] userObj montado:', userObj);
-        // Salvar no localStorage
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('app_user', JSON.stringify(userObj));
-          console.log('[AuthProvider] Usuário salvo no localStorage:', userObj);
-        }
-      }
-      console.log('[AuthProvider] Chamando setUser com:', userObj);
-      setUser(userObj);
-      setLoading(false);
+    setLoading(true);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      fetchAndSetUser(session);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('[AuthProvider] Auth state change:', _event, session?.user?.email || 'Sem usuário');
-      setSession(session);
-      let userObj = session?.user ?? null;
-      if (userObj) {
-        const role = await fetchUserRole(userObj.id);
-        userObj = { ...userObj, role } as CustomUser;
-        console.log('[AuthProvider] userObj montado:', userObj);
-        // Salvar no localStorage
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('app_user', JSON.stringify(userObj));
-          console.log('[AuthProvider] Usuário salvo no localStorage:', userObj);
-        }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        fetchAndSetUser(session);
       }
-      console.log('[AuthProvider] Chamando setUser com:', userObj);
-      setUser(userObj);
-      setLoading(false);
-    });
+    );
     return () => {
-      listener?.subscription.unsubscribe();
-      console.log('[AuthProvider] useEffect CLEANUP');
+      subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('[AuthProvider] signIn chamado:', email);
-    console.log('[AuthProvider] Estado atual antes do login:', { user: user?.email, loading });
+    setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      console.error('[AuthProvider] Erro no signIn:', error);
+      setLoading(false);
       throw error;
     }
-    console.log('[AuthProvider] Login bem-sucedido:', data.user?.email);
-    console.log('[AuthProvider] Dados completos do login:', data);
-    // Log do localStorage após login
-    if (typeof window !== 'undefined') {
-      console.log('[AuthProvider] localStorage após login:', window.localStorage);
-    }
-    // Não precisamos definir o user aqui, o onAuthStateChange vai fazer isso
-    console.log('[AuthProvider] signIn completado, aguardando onAuthStateChange');
+    // O listener de onAuthStateChange vai processar o usuário
     return data;
   };
 
   const signOut = async () => {
-    console.log('[AuthProvider] Fazendo logout');
+    setLoading(true);
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
-    console.log('[AuthProvider] Logout concluído, user e session limpos');
+    setLoading(false);
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
-    console.log('[AuthProvider] Iniciando signup:', email);
+  const signUp = async (email: string, password: string, name: string, role: 'user' | 'authenticator' = 'user') => {
+    setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } }
+      options: { data: { name, role } }
     });
     if (error) {
-      console.error('[AuthProvider] Erro no signup:', error);
+      setLoading(false);
       throw error;
     }
-    console.log('[AuthProvider] Signup realizado:', data);
+    // Cria perfil imediatamente após registro
+    if (data.user) {
+      await fetchOrCreateProfile(data.user.id, email, name, role);
+    }
+    setLoading(false);
     return data;
   };
 
   return (
     <AuthContext.Provider value={{ user, session, loading, signIn, signOut, signUp }}>
+      {/* Mensagem de sessão expirada removida */}
       {children}
     </AuthContext.Provider>
   );

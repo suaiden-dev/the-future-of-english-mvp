@@ -14,16 +14,6 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
 
-  const getFileIcon = (filename: string) => {
-    if (filename.toLowerCase().endsWith('.pdf')) {
-      return <FileText className="w-5 h-5 text-red-500" />;
-    } else if (filename.match(/\.(jpg|jpeg|png)$/i)) {
-      return <ImageIcon className="w-5 h-5 text-blue-500" />;
-    } else {
-      return <FileText className="w-5 h-5 text-gray-400" />;
-    }
-  };
-
   const getStatusBadge = (status: string) => {
     let color = '';
     let text = '';
@@ -34,7 +24,7 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
         break;
       case 'processing':
         color = 'bg-blue-100 text-blue-800';
-        text = 'Processing';
+        text = 'In Progress'; // Atualizado
         break;
       case 'completed':
         color = 'bg-green-100 text-green-800';
@@ -60,45 +50,43 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-        <p className="text-sm text-gray-600">Latest updates on your documents</p>
-      </div>
-      <ul>
+    <div className="bg-white rounded-2xl shadow-sm p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+      <div className="grid grid-cols-1 gap-4">
         {recentDocuments.map((doc) => (
-          <li key={doc.id} className="flex items-center px-6 py-4 border-b last:border-b-0 hover:bg-gray-50 transition">
-            <div className="flex-shrink-0 mr-4">
-              {getFileIcon(doc.filename)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 truncate">{doc.filename}</div>
-              <div className="text-xs text-gray-500">
-                {doc.pages} page{doc.pages !== 1 ? 's' : ''} &middot; ${doc.total_cost}
+          <div key={doc.id} className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-2 shadow-sm">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <FileText className="w-6 h-6 text-blue-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-blue-900 truncate" title={doc.filename}>{doc.filename}</div>
+                <div className="text-xs text-blue-800 flex gap-2 items-center mt-0.5">
+                  {getStatusBadge(doc.status)}
+                  <span className="text-gray-500">{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : ''}</span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              {getStatusBadge(doc.status)}
-              <span className="text-xs text-gray-400 ml-2">
-                {formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}
-              </span>
+            <div className="flex items-center gap-2 mt-2 md:mt-0">
+              {doc.file_url && (
+                <a
+                  href={doc.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-xs"
+                  download
+                >
+                  <Download className="w-4 h-4" /> Download
+                </a>
+              )}
               <button
                 onClick={() => onViewDocument(doc)}
-                className="ml-2 text-gray-500 hover:text-blue-700 text-xs font-medium"
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-lg font-medium hover:bg-blue-50 transition-colors text-xs"
               >
                 View
               </button>
             </div>
-          </li>
+          </div>
         ))}
-      </ul>
-      {documents.length > 5 && (
-        <div className="px-6 py-4 bg-gray-50 text-center">
-          <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-            View All Activity
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

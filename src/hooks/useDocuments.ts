@@ -149,3 +149,40 @@ export function useAllDocuments() {
     refetch: fetchAllDocuments
   };
 }
+
+// Novo hook para buscar apenas documentos traduzidos do usuário logado
+export function useTranslatedDocuments(userId?: string) {
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDocuments = async () => {
+    if (!userId) {
+      setDocuments([]);
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const data = await db.getTranslatedDocuments(userId);
+      setDocuments(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching translated documents:', err);
+      setError('Failed to fetch translated documents');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [userId]);
+
+  return {
+    documents,
+    loading,
+    error,
+    refetch: fetchDocuments
+  };
+}
