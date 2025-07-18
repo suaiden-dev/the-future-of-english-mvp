@@ -235,7 +235,7 @@ export const db = {
     return data;
   },
 
-  updateFolder: async (folderId: string, updates: { name?: string; color?: string }) => {
+  updateFolder: async (folderId: string, updates: { name?: string; color?: string; parent_id?: string | null }) => {
     const { data, error } = await supabase
       .from('folders')
       .update(updates)
@@ -261,6 +261,7 @@ export const db = {
       .from('translated_documents')
       .select('*')
       .eq('user_id', userId)
+      .eq('is_deleted', false)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data;

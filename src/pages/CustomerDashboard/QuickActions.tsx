@@ -18,7 +18,7 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
       color: 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
       textColor: 'text-white',
       iconBg: 'bg-white/20',
-      onClick: () => navigate('/dashboard/upload')
+      onClick: onUploadClick
     },
     {
       id: 'verify',
@@ -48,7 +48,10 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
       color: 'bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700',
       textColor: 'text-white',
       iconBg: 'bg-white/20',
-      onClick: () => navigate('/contact')
+      onClick: () => {
+        // Placeholder for contact support
+        console.log('Contact support clicked');
+      }
     }
   ];
 
@@ -157,7 +160,10 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
                 View FAQ
               </button>
               <button 
-                onClick={() => navigate('/contact')}
+                onClick={() => {
+                  // Placeholder for contact support
+                  console.log('Contact support clicked');
+                }}
                 className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md transition-colors"
               >
                 Contact Support

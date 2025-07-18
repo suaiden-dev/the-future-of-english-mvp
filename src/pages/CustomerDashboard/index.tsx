@@ -6,21 +6,21 @@ import { QuickActions } from './QuickActions';
 import { DocumentUploadModal } from './DocumentUploadModal';
 import { DocumentsList } from './DocumentsList';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
-import { DocumentManager } from './DocumentManager';
-import { User as UserType, Document, Folder } from '../../App';
+// import { DocumentManager } from './DocumentManager';
+import { Document, Folder } from '../../App';
 import { Database } from '../../lib/database.types';
 import { Link, Route, Routes, useNavigate } from 'react-router-dom';
 import ProfilePage from './ProfilePage';
-import MyDocumentsPage from './MyDocumentsPage';
 import { CheckCircle } from 'lucide-react';
 import UploadDocument from './UploadDocument';
+import { CustomUser } from '../../hooks/useAuth';
 type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register' | 'documents';
 
 type DocumentInsert = Database['public']['Tables']['documents']['Insert'];
 type FolderInsert = Database['public']['Tables']['folders']['Insert'];
 
 interface CustomerDashboardProps {
-  user: UserType | null;
+  user: CustomUser | null;
   documents: Document[];
   folders: Folder[];
   onDocumentUpload: (document: Omit<DocumentInsert, 'user_id'>) => void;
@@ -42,7 +42,10 @@ export function CustomerDashboard({
 }: CustomerDashboardProps) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [currentView, setCurrentView] = useState<'overview' | 'documents'>('overview');
+
+  console.log('[CustomerDashboard] Renderizando dashboard do usuário');
+  console.log('[CustomerDashboard] User:', user);
+  console.log('[CustomerDashboard] Documents count:', documents.length);
 
   // Toast de novo documento traduzido
   const [showToast, setShowToast] = useState(false);
@@ -91,11 +94,11 @@ export function CustomerDashboard({
 
   const handleDocumentUpload = async (doc: any) => {
     console.log('DEBUG: [onDocumentUpload] chamado com:', JSON.stringify(doc, null, 2));
-    await createDocument(doc);
+    await onDocumentUpload(doc);
   };
 
   return (
-    <div className="py-8 relative">
+    <div className="relative">
       {/* Toast/banner de novo documento traduzido */}
       {showToast && newCompletedDoc && (
         <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-50 border border-green-200 rounded-xl shadow-lg flex items-center px-6 py-4 gap-4 animate-fade-in-up min-w-[320px] max-w-[90vw]">
@@ -122,61 +125,36 @@ export function CustomerDashboard({
           </button>
         </div>
       )}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <>
-                {currentView === 'overview' ? (
-                  <>
-                    <WelcomeSection user={user} onUploadClick={handleUploadClick} />
-                    <CustomerStatsCards documents={documents} />
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                      <div className="lg:col-span-2">
-                        <RecentActivity 
-                          documents={documents} 
-                          onViewDocument={handleViewDocument} 
-                        />
-                      </div>
-                      <div>
-                        <QuickActions 
-                          onUploadClick={handleUploadClick}
-                          hasCompletedDocuments={hasCompletedDocuments}
-                        />
-                      </div>
-                    </div>
-                    {/* Removido: <DocumentsList documents={documents} onViewDocument={handleViewDocument} /> */}
-                  </>
-                ) : (
-                  <DocumentManager
-                    user={user}
-                    documents={documents}
-                    folders={folders}
-                    onDocumentUpload={onDocumentUpload}
-                    onFolderCreate={onFolderCreate}
-                    onFolderUpdate={onFolderUpdate}
-                    onFolderDelete={onFolderDelete}
-                    onViewDocument={handleViewDocument}
-                  />
-                )}
-                <DocumentUploadModal
-                  isOpen={isUploadModalOpen}
-                  onClose={handleCloseUploadModal}
-                  onUpload={onDocumentUpload}
-                  userId={user?.id || ''}
-                />
-                <DocumentDetailsModal
-                  document={selectedDocument}
-                  onClose={handleCloseDetailsModal}
-                />
-              </>
-            }
-          />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="my-documents" element={<MyDocumentsPage />} />
-          <Route path="upload" element={<UploadDocument />} />
-        </Routes>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Dashboard principal - sempre renderiza o overview */}
+        <WelcomeSection user={user} onUploadClick={handleUploadClick} />
+        <CustomerStatsCards documents={documents} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          <div className="lg:col-span-2">
+            <RecentActivity 
+              documents={documents} 
+              onViewDocument={handleViewDocument} 
+            />
+          </div>
+          <div>
+            <QuickActions 
+              onUploadClick={handleUploadClick}
+              hasCompletedDocuments={hasCompletedDocuments}
+            />
+          </div>
+        </div>
+        
+        {/* Modais */}
+        <DocumentUploadModal
+          isOpen={isUploadModalOpen}
+          onClose={handleCloseUploadModal}
+          onUpload={onDocumentUpload}
+          userId={user?.id || ''}
+        />
+        <DocumentDetailsModal
+          document={selectedDocument}
+          onClose={handleCloseDetailsModal}
+        />
       </div>
     </div>
   );

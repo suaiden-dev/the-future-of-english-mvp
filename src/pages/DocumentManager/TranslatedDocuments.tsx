@@ -1,0 +1,506 @@
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase';
+import { FileText, Download, Eye, Calendar, DollarSign, User, CheckCircle, XCircle } from 'lucide-react';
+
+interface TranslatedDocument {
+  id: string;
+  original_document_id: string;
+  user_id: string;
+  filename: string;
+  translated_file_url: string;
+  source_language: string;
+  target_language: string;
+  pages: number | null;
+  status: string;
+  total_cost: number | null;
+  verification_code: string;
+  is_authenticated: boolean;
+  upload_date: string;
+  created_at: string | null;
+  updated_at: string | null;
+  // Campos de auditoria
+  authenticated_by?: string | null;
+  authenticated_by_name?: string | null;
+  authenticated_by_email?: string | null;
+  authentication_date?: string | null;
+}
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export default function TranslatedDocuments() {
+  const [documents, setDocuments] = useState<TranslatedDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [userLoading, setUserLoading] = useState(false);
+  const [userError, setUserError] = useState<string | null>(null);
+  
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const documentsPerPage = 10;
+
+  useEffect(() => {
+    async function fetchTranslatedDocuments() {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from('translated_documents')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('[TranslatedDocuments] Error fetching documents:', error);
+          setError(error.message);
+        } else {
+          setDocuments(data as TranslatedDocument[] || []);
+        }
+      } catch (err) {
+        console.error('[TranslatedDocuments] Unexpected error:', err);
+        setError('Unexpected error while fetching documents.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTranslatedDocuments();
+  }, []);
+
+  async function handleViewUser(userId: string) {
+    setUserLoading(true);
+    setUserError(null);
+    setSelectedUser(null);
+    setUserModalOpen(true);
+    try {
+      const { data: user, error } = await supabase
+        .from('profiles')
+        .select('id, name, email, role')
+        .eq('id', userId)
+        .single();
+      if (error || !user) {
+        setUserError('Erro ao buscar informações do usuário.');
+      } else {
+        setSelectedUser(user);
+      }
+    } catch (err) {
+      setUserError('Erro inesperado ao buscar usuário.');
+    } finally {
+      setUserLoading(false);
+    }
+  }
+
+  // Summary cards
+  const totalDocuments = documents.length;
+  const totalValue = documents.reduce((sum, doc) => sum + (doc.total_cost || 0), 0);
+  const totalPages = documents.reduce((sum, doc) => sum + (doc.pages || 0), 0);
+
+  // Paginação
+  const totalPagesForPagination = Math.ceil(documents.length / documentsPerPage);
+  const startIndex = (currentPage - 1) * documentsPerPage;
+  const endIndex = startIndex + documentsPerPage;
+  const currentDocuments = documents.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
+          <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Translated Documents</h1>
+            <p className="text-sm sm:text-base text-gray-600">View all documents that have been translated and sent to clients.</p>
+          </div>
+        </div>
+
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-900" />
+            </div>
+            <div>
+              <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{totalDocuments}</div>
+              <div className="text-xs sm:text-sm text-gray-600 font-medium">Total Documents</div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-900" />
+            </div>
+            <div>
+              <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">${totalValue.toFixed(2)}</div>
+              <div className="text-xs sm:text-sm text-gray-600 font-medium">Total Value</div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-900" />
+            </div>
+            <div>
+              <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{totalPages}</div>
+              <div className="text-xs sm:text-sm text-gray-600 font-medium">Total Pages</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Documents Table */}
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-700" /> Translated Documents History
+          </h2>
+          {loading && <p className="text-blue-700 text-base sm:text-lg">Loading documents...</p>}
+          {error && <p className="text-red-500 text-base sm:text-lg">Error: {error}</p>}
+          
+          {/* Mobile Cards View */}
+          <div className="block sm:hidden space-y-4">
+            {currentDocuments.map(doc => (
+              <div key={doc.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="space-y-3">
+                  {/* Document Name */}
+                  <div>
+                    <span className="text-gray-900 font-medium text-sm">
+                      {doc.filename}
+                    </span>
+                  </div>
+
+                  {/* Document Actions */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
+                      className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors font-medium"
+                      title="View PDF"
+                    >
+                      <FileText className="w-3 h-3" /> View
+                    </button>
+                    <button
+                      className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
+                      onClick={async e => {
+                        e.preventDefault();
+                        try {
+                          const response = await fetch(doc.translated_file_url || '');
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = doc.filename || 'translated_document.pdf';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          alert('Failed to download file.');
+                        }
+                      }}
+                      title="Download PDF"
+                    >
+                      <Download className="w-3 h-3" /> Download
+                    </button>
+                  </div>
+
+                  {/* Document Details */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="font-medium text-gray-600">Value:</span>
+                      <span className="ml-1">${doc.total_cost?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Pages:</span>
+                      <span className="ml-1">{doc.pages}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Language:</span>
+                      <span className="ml-1">{doc.source_language} → {doc.target_language}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Status:</span>
+                      <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_authenticated ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {doc.is_authenticated ? 'Authenticated' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Client Info */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-gray-600 truncate max-w-20" title={doc.user_id}>
+                        {doc.user_id.slice(0, 8)}...
+                      </span>
+                      <button
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                        title="View user information"
+                        onClick={() => handleViewUser(doc.user_id)}
+                      >
+                        <User className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
+                    </span>
+                  </div>
+
+                  {/* Authentication Info */}
+                  {doc.authenticated_by_name && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <CheckCircle className="w-3 h-3 text-green-600" />
+                        <span>Authenticated by {doc.authenticated_by_name}</span>
+                      </div>
+                      {doc.authentication_date && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {new Date(doc.authentication_date).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full bg-white border rounded-lg shadow">
+              <thead className="bg-blue-50">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Document</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Actions</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Client</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Value</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Language</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Details</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Authenticated By</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Sent Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentDocuments.map(doc => {
+                  return (
+                    <tr key={doc.id} className="border-t hover:bg-blue-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="space-y-2">
+                          <div>
+                            <span className="text-gray-900 font-medium text-sm">
+                              {doc.filename}
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
+                              className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors font-medium"
+                              title="View PDF"
+                            >
+                              <FileText className="w-3 h-3" /> View
+                            </button>
+                            <button
+                              className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
+                              onClick={async e => {
+                                e.preventDefault();
+                                try {
+                                  const response = await fetch(doc.translated_file_url || '');
+                                  const blob = await response.blob();
+                                  const url = window.URL.createObjectURL(blob);
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.download = doc.filename || 'translated_document.pdf';
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                  window.URL.revokeObjectURL(url);
+                                } catch (err) {
+                                  alert('Failed to download file.');
+                                }
+                              }}
+                              title="Download PDF"
+                            >
+                              <Download className="w-3 h-3" /> Download
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
+                            className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors font-medium"
+                            title="View PDF"
+                          >
+                            <FileText className="w-3 h-3" /> View
+                          </button>
+                          <button
+                            className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
+                            onClick={async e => {
+                              e.preventDefault();
+                              try {
+                                const response = await fetch(doc.translated_file_url || '');
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = doc.filename || 'translated_document.pdf';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                window.URL.revokeObjectURL(url);
+                              } catch (err) {
+                                alert('Failed to download file.');
+                              }
+                            }}
+                            title="Download PDF"
+                          >
+                            <Download className="w-3 h-3" /> Download
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-gray-600 truncate max-w-24" title={doc.user_id}>
+                            {doc.user_id.slice(0, 8)}...
+                          </span>
+                          <button
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="View user information"
+                            onClick={() => handleViewUser(doc.user_id)}
+                          >
+                            <User className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-sm">
+                        ${doc.total_cost?.toFixed(2) || '0.00'}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {doc.source_language} → {doc.target_language}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-1 text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Pages:</span>
+                            <span>{doc.pages}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Status:</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_authenticated ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              {doc.is_authenticated ? 'Authenticated' : 'Pending'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Code:</span>
+                            <span className="font-mono">{doc.verification_code}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {doc.authenticated_by_name ? (
+                          <div>
+                            <div className="font-medium text-gray-900">{doc.authenticated_by_name}</div>
+                            <div className="text-xs text-gray-500">{doc.authenticated_by_email}</div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Not authenticated</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {documents.length === 0 && !loading && <p className="mt-8 text-gray-500 text-center text-base sm:text-lg">No translated documents found.</p>}
+          
+          {/* Controles de Paginação */}
+          {documents.length > 0 && (
+            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="text-sm text-gray-700 text-center sm:text-left">
+                Showing {startIndex + 1} to {Math.min(endIndex, documents.length)} of {documents.length} documents
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPagesForPagination }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPagesForPagination}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal de informações do usuário */}
+      {userModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 w-full max-w-md sm:min-w-[400px] relative animate-fade-in">
+            <button
+              className="absolute top-2 sm:top-4 right-2 sm:right-4 text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={() => setUserModalOpen(false)}
+              aria-label="Close modal"
+            >
+              <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+            <h3 className="text-xl font-bold mb-6 text-gray-900">Client Information</h3>
+            {userLoading && <p className="text-blue-700 text-lg">Loading...</p>}
+            {userError && <p className="text-red-500 text-lg">{userError}</p>}
+            {selectedUser && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="font-medium text-gray-700">Name:</span>
+                  <span className="text-gray-900">{selectedUser.name}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="font-medium text-gray-700">Email:</span>
+                  <span className="text-gray-900">{selectedUser.email}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="font-medium text-gray-700">Role:</span>
+                  <span className="text-gray-900">{selectedUser.role}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-medium text-gray-700">ID:</span>
+                  <span className="text-gray-900 font-mono text-sm">{selectedUser.id}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+} 

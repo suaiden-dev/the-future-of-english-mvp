@@ -1,4 +1,5 @@
 import React from 'react';
+import LoadingSpinner from './LoadingSpinner';
 
 interface ImagePreviewModalProps {
   imageUrl: string;
@@ -40,7 +41,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
       >
         {loading && (
           <div className="flex items-center justify-center min-h-[300px] min-w-[300px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <LoadingSpinner size="lg" color="blue" />
           </div>
         )}
         <img 

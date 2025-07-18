@@ -128,21 +128,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, name: string, role: 'user' | 'authenticator' = 'user') => {
-    setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name, role } }
     });
     if (error) {
-      setLoading(false);
       throw error;
     }
     // Cria perfil imediatamente após registro
     if (data.user) {
       await fetchOrCreateProfile(data.user.id, email, name, role);
     }
-    setLoading(false);
     return data;
   };
 

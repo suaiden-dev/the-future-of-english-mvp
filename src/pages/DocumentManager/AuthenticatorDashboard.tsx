@@ -1,21 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 import { ShieldCheck, FileText, Download, XCircle, CheckCircle, Clock, Check, X, Upload as UploadIcon, Eye } from 'lucide-react';
+import { NotificationBell } from '../../components/NotificationBell';
 
 interface Document {
   id: string;
   filename: string;
   user_id: string;
-  pages?: number;
+  pages?: number | null;
   status?: string;
-  translated_file_url?: string;
-  file_url?: string;
-  created_at?: string;
+  translated_file_url?: string | null;
+  file_url?: string | null;
+  created_at?: string | null;
   translation_status?: string;
-  total_cost?: number;
+  total_cost?: number | null;
   source_language?: string;
   target_language?: string;
   is_bank_statement?: boolean;
+  verification_code?: string;
+  // Campos de auditoria
+  authenticated_by?: string | null;
+  authenticated_by_name?: string | null;
+  authenticated_by_email?: string | null;
+  authentication_date?: string | null;
 }
 
 interface UserProfile {
@@ -26,6 +34,7 @@ interface UserProfile {
 }
 
 export default function AuthenticatorDashboard() {
+  const { user: currentUser } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +44,17 @@ export default function AuthenticatorDashboard() {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
+  
+  // Estatísticas separadas
+  const [stats, setStats] = useState({
+    pending: 0,
+    approved: 0,
+    rejected: 0
+  });
+  
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const documentsPerPage = 10;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -47,21 +67,43 @@ export default function AuthenticatorDashboard() {
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase
+        console.log('[AuthenticatorDashboard] Buscando documentos...');
+        
+        // Buscar todos os documentos para estatísticas
+        const { data: allDocs, error: statsError } = await supabase
           .from('documents_to_be_verified')
           .select('*')
-          .eq('status', 'pending')
           .order('created_at', { ascending: false });
-        if (error) {
-          console.error('[AuthenticatorDashboard] Error fetching documents:', error);
-          if (error.code === '42501' || error.code === 'PGRST301') {
+        
+        if (statsError) {
+          console.error('[AuthenticatorDashboard] Error fetching all documents:', statsError);
+          if (statsError.code === '42501' || statsError.code === 'PGRST301') {
             setError('You do not have permission to access this area.');
           } else {
-            setError(error.message);
+            setError(statsError.message);
           }
-        } else {
-          setDocuments(data || []);
+          return;
         }
+
+        // Calcular estatísticas
+        const allDocuments = allDocs as Document[] || [];
+        const pendingCount = allDocuments.filter(doc => doc.status === 'pending').length;
+        const approvedCount = allDocuments.filter(doc => doc.status === 'completed').length;
+        const rejectedCount = allDocuments.filter(doc => doc.status === 'rejected').length;
+        
+        setStats({
+          pending: pendingCount,
+          approved: approvedCount,
+          rejected: rejectedCount
+        });
+
+        // Filtrar apenas documentos pendentes para a lista
+        const pendingDocs = allDocuments.filter(doc => doc.status === 'pending');
+        setDocuments(pendingDocs);
+        
+        console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount, rejectedCount });
+        console.log('[AuthenticatorDashboard] Documentos pendentes:', pendingDocs.length);
+        
       } catch (err) {
         console.error('[AuthenticatorDashboard] Unexpected error:', err);
         setError('Unexpected error while fetching documents.');
@@ -73,17 +115,46 @@ export default function AuthenticatorDashboard() {
   }, []);
 
   async function handleApprove(id: string) {
+    if (!currentUser) return;
+    
+    console.log('[AuthenticatorDashboard] Aprovando documento:', id);
+    
     // Buscar o documento original
     const { data: doc, error: fetchError } = await supabase
       .from('documents_to_be_verified')
       .select('*')
       .eq('id', id)
       .single();
-    if (fetchError || !doc) return;
-    // Atualizar status para 'completed'
-    await supabase.from('documents_to_be_verified').update({ status: 'completed' }).eq('id', id);
-    // Inserir em translated_documents
-    await supabase.from('translated_documents').insert({
+    if (fetchError || !doc) {
+      console.error('[AuthenticatorDashboard] Erro ao buscar documento:', fetchError);
+      return;
+    }
+    
+    // Dados do autenticador
+    const authData = {
+      authenticated_by: currentUser.id,
+      authenticated_by_name: currentUser.user_metadata?.name || currentUser.email,
+      authenticated_by_email: currentUser.email,
+      authentication_date: new Date().toISOString()
+    };
+    
+    // Atualizar status para 'completed' com dados do autenticador
+    const { error: updateError } = await supabase
+      .from('documents_to_be_verified')
+      .update({ 
+        status: 'completed',
+        ...authData
+      })
+      .eq('id', id);
+    
+    if (updateError) {
+      console.error('[AuthenticatorDashboard] Erro ao atualizar documento:', updateError);
+      alert('Erro ao aprovar documento. Tente novamente.');
+      return;
+    }
+    
+    // Inserir em translated_documents com dados do autenticador
+    const { error: insertError } = await supabase.from('translated_documents').insert({
       original_document_id: doc.id,
       user_id: doc.user_id,
       filename: doc.filename,
@@ -94,14 +165,65 @@ export default function AuthenticatorDashboard() {
       status: 'completed',
       total_cost: doc.total_cost,
       is_authenticated: true,
-      verification_code: doc.verification_code
-    });
+      verification_code: doc.verification_code,
+      ...authData
+    } as any);
+    
+    if (insertError) {
+      console.error('[AuthenticatorDashboard] Erro ao inserir em translated_documents:', insertError);
+    }
+    
+    // Atualizar estatísticas
+    setStats(prev => ({
+      ...prev,
+      pending: prev.pending - 1,
+      approved: prev.approved + 1
+    }));
+    
+    // Remover documento da lista
     setDocuments(docs => docs.filter(d => d.id !== id));
+    
+    console.log('[AuthenticatorDashboard] Documento aprovado com sucesso');
   }
 
   async function handleReject(id: string) {
-    await supabase.from('documents_to_be_verified').update({ status: 'rejected' }).eq('id', id);
+    if (!currentUser) return;
+    
+    console.log('[AuthenticatorDashboard] Rejeitando documento:', id);
+    
+    // Dados do autenticador
+    const authData = {
+      authenticated_by: currentUser.id,
+      authenticated_by_name: currentUser.user_metadata?.name || currentUser.email,
+      authenticated_by_email: currentUser.email,
+      authentication_date: new Date().toISOString()
+    };
+    
+    const { error: updateError } = await supabase
+      .from('documents_to_be_verified')
+      .update({ 
+        status: 'rejected',
+        ...authData
+      })
+      .eq('id', id);
+    
+    if (updateError) {
+      console.error('[AuthenticatorDashboard] Erro ao rejeitar documento:', updateError);
+      alert('Erro ao rejeitar documento. Tente novamente.');
+      return;
+    }
+    
+    // Atualizar estatísticas
+    setStats(prev => ({
+      ...prev,
+      pending: prev.pending - 1,
+      rejected: prev.rejected + 1
+    }));
+    
+    // Remover documento da lista
     setDocuments(docs => docs.filter(doc => doc.id !== id));
+    
+    console.log('[AuthenticatorDashboard] Documento rejeitado com sucesso');
   }
 
   async function handleCorrectionUpload(doc: Document) {
@@ -124,22 +246,45 @@ export default function AuthenticatorDashboard() {
         .eq('id', doc.id)
         .single();
       if (fetchError || !originalDoc) throw new Error('Não foi possível obter o verification_code do documento original.');
-      // Inserir na tabela translated_documents
+      
+      // Dados do autenticador
+      const authData = {
+        authenticated_by: currentUser?.id,
+        authenticated_by_name: currentUser?.user_metadata?.name || currentUser?.email,
+        authenticated_by_email: currentUser?.email,
+        authentication_date: new Date().toISOString()
+      };
+      
+      // Inserir na tabela translated_documents com dados do autenticador
       const { error: insertError } = await supabase.from('translated_documents').insert({
         original_document_id: doc.id,
-        user_id: doc.user_id, // ou autenticador logado, se disponível
+        user_id: doc.user_id,
         filename: state.file.name,
         translated_file_url: publicUrl,
         source_language: doc.source_language,
         target_language: doc.target_language,
         pages: doc.pages,
-        status: 'completed', // sempre completed
+        status: 'completed',
         total_cost: doc.total_cost,
-        is_authenticated: true, // sempre true
-        verification_code: originalDoc.verification_code
-      });
+        is_authenticated: true,
+        verification_code: originalDoc.verification_code,
+        ...authData
+      } as any);
       if (insertError) throw insertError;
-      setUploadStates(prev => ({ ...prev, [doc.id]: { ...state, uploading: false, success: true, error: null } }));
+      
+      // Atualizar status do documento original para 'completed' com dados do autenticador
+      await supabase
+        .from('documents_to_be_verified')
+        .update({ 
+          status: 'completed',
+          ...authData
+        })
+        .eq('id', doc.id);
+      
+      // Remover o documento da lista após sucesso
+      setDocuments(docs => docs.filter(d => d.id !== doc.id));
+      setUploadStates(prev => ({ ...prev, [doc.id]: { file: null, uploading: false, success: false, error: null } }));
+      setRejectedRows(prev => ({ ...prev, [doc.id]: false }));
     } catch (err: any) {
       setUploadStates(prev => ({ ...prev, [doc.id]: { ...state, uploading: false, success: false, error: err.message || 'Upload failed' } }));
     }
@@ -168,94 +313,233 @@ export default function AuthenticatorDashboard() {
     }
   }
 
-  // Summary cards
-  const pendingCount = documents.filter(doc => doc.status === 'pending').length;
-  const approvedCount = documents.filter(doc => doc.status === 'completed').length;
-  const rejectedCount = documents.filter(doc => doc.status === 'rejected').length;
+  // Paginação
+  const totalPages = Math.ceil(documents.length / documentsPerPage);
+  const startIndex = (currentPage - 1) * documentsPerPage;
+  const endIndex = startIndex + documentsPerPage;
+  const currentDocuments = documents.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto py-10 px-4">
+      <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8 p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-          <ShieldCheck className="w-12 h-12 text-green-600" />
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Authenticator Dashboard</h1>
-            <p className="text-gray-600 mt-1">Approve or reject translated documents submitted for verification. Only authenticators have access to this panel.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Authenticator Dashboard</h1>
+              <p className="text-sm sm:text-base text-gray-600">Approve or reject translated documents submitted for verification. Only authenticators have access to this panel.</p>
+            </div>
           </div>
+          <NotificationBell />
         </div>
+
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex items-center gap-4">
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-900" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-10">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-900" />
             </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{pendingCount}</div>
-              <div className="text-sm text-gray-600">Pending</div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Check className="w-6 h-6 text-green-900" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{approvedCount}</div>
-              <div className="text-sm text-gray-600">Approved</div>
+            <div className="min-w-0 flex-1">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.pending}</div>
+              <div className="text-sm sm:text-base text-gray-600 font-medium">Pending</div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex items-center gap-4">
-            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <X className="w-6 h-6 text-red-900" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Check className="w-6 h-6 sm:w-7 sm:h-7 text-green-900" />
             </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{rejectedCount}</div>
-              <div className="text-sm text-gray-600">Rejected</div>
+            <div className="min-w-0 flex-1">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.approved}</div>
+              <div className="text-sm sm:text-base text-gray-600 font-medium">Approved</div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <X className="w-6 h-6 sm:w-7 sm:h-7 text-red-900" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.rejected}</div>
+              <div className="text-sm sm:text-base text-gray-600 font-medium">Rejected</div>
             </div>
           </div>
         </div>
+
         {/* Documents Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <FileText className="w-6 h-6 text-blue-700" /> Documents to Authenticate
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8">
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center gap-3">
+            <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-blue-700" /> Documents to Authenticate
           </h2>
-          {loading && <p className="text-blue-700">Loading documents...</p>}
-          {error && <p className="text-red-500">Error: {error}</p>}
-          <table className="min-w-full bg-white border rounded-lg shadow">
+          {loading && <p className="text-blue-700 text-base sm:text-lg">Loading documents...</p>}
+          {error && <p className="text-red-500 text-base sm:text-lg">Error: {error}</p>}
+          
+          {/* Mobile Cards View */}
+          <div className="block sm:hidden space-y-4">
+            {currentDocuments.map(doc => (
+              <div key={doc.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="space-y-3">
+                  {/* Document Name */}
+                  <div>
+                    <a href={doc.file_url || ''} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline font-medium hover:text-blue-900 transition-colors text-sm">
+                      {doc.filename}
+                    </a>
+                  </div>
+
+                  {/* Document Actions */}
+                  {doc.translated_file_url && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
+                        className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors font-medium"
+                        title="View PDF"
+                      >
+                        <FileText className="w-3 h-3" /> View
+                      </button>
+                      <button
+                        className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
+                        onClick={async e => {
+                          e.preventDefault();
+                          try {
+                            const response = await fetch(doc.translated_file_url || '');
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                          } catch (err) {
+                            alert('Failed to download file.');
+                          }
+                        }}
+                        title="Download PDF"
+                      >
+                        <Download className="w-3 h-3" /> Download
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Document Details */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="font-medium text-gray-600">Value:</span>
+                      <span className="ml-1">{typeof doc.total_cost === 'number' ? `$${doc.total_cost.toFixed(2)}` : '-'}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Pages:</span>
+                      <span className="ml-1">{doc.pages}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Language:</span>
+                      <span className="ml-1">{doc.source_language && doc.target_language ? `${doc.source_language} → ${doc.target_language}` : (doc.source_language || '-')}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Bank:</span>
+                      <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_bank_statement ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                        {doc.is_bank_statement ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* User Info */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-gray-600 truncate max-w-20" title={doc.user_id}>
+                        {doc.user_id.slice(0, 8)}...
+                      </span>
+                      <button
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                        title="View user information"
+                        onClick={() => handleViewUser(doc.user_id)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="pt-2 border-t border-gray-200">
+                    {rejectedRows[doc.id] ? (
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded px-2 py-1 bg-gray-50 hover:bg-gray-100 transition-colors text-xs">
+                          <UploadIcon className="w-3 h-3 text-blue-600" />
+                          <span className="text-gray-700">Select PDF</span>
+                          <input type="file" accept="application/pdf" className="hidden" onChange={e => {
+                            const file = e.target.files?.[0] || null;
+                            setUploadStates(prev => ({ ...prev, [doc.id]: { file, uploading: false, success: false, error: null } }));
+                          }} />
+                        </label>
+                        <button
+                          className="w-full bg-blue-600 text-white rounded px-3 py-2 font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs"
+                          disabled={!uploadStates[doc.id]?.file || uploadStates[doc.id]?.uploading}
+                          onClick={() => handleCorrectionUpload(doc)}
+                        >
+                          {uploadStates[doc.id]?.uploading ? 'Uploading...' : 'Send Correction'}
+                        </button>
+                        {uploadStates[doc.id]?.success && <span className="text-green-600 text-xs font-medium">Correction sent!</span>}
+                        {uploadStates[doc.id]?.error && <span className="text-red-600 text-xs">{uploadStates[doc.id]?.error}</span>}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button onClick={() => handleApprove(doc.id)} className="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded text-xs hover:bg-green-700 transition-colors font-medium">
+                          <CheckCircle className="w-3 h-3" />Approve
+                        </button>
+                        <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex-1 flex items-center justify-center gap-1 bg-red-600 text-white px-3 py-2 rounded text-xs hover:bg-red-700 transition-colors font-medium">
+                          <XCircle className="w-3 h-3" />Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full bg-white border rounded-lg shadow">
             <thead className="bg-blue-50">
               <tr>
-                <th className="px-4 py-2">Original File</th>
-                <th className="px-4 py-2">Translated File</th>
-                <th className="px-4 py-2">User</th>
-                <th className="px-4 py-2">View User</th>
-                <th className="px-4 py-2">Type</th>
-                <th className="px-4 py-2">Value</th>
-                <th className="px-4 py-2">Language</th>
-                <th className="px-4 py-2">Bank Statement?</th>
-                <th className="px-4 py-2">Pages</th>
-                <th className="px-4 py-2">Submitted At</th>
-                <th className="px-4 py-2">Actions</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Document</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Actions</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">User</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Value</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Language</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Details</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
               </tr>
             </thead>
             <tbody>
-              {documents.map(doc => {
+                {currentDocuments.map(doc => {
                 return (
                   <tr key={doc.id} className="border-t hover:bg-blue-50 transition-colors">
-                    <td className="px-4 py-2">
-                      <a href={doc.file_url || ''} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline font-medium">{doc.filename}</a>
-                    </td>
-                    <td className="px-4 py-2">
-                      {doc.translated_file_url ? (
+                      <td className="px-4 py-3">
+                        <div className="space-y-2">
+                          <div>
+                            <a href={doc.file_url || ''} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline font-medium hover:text-blue-900 transition-colors text-sm">
+                              {doc.filename}
+                            </a>
+                          </div>
+                          {doc.translated_file_url && (
                         <div className="flex gap-2">
                           <button
                             onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
-                            className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors font-medium shadow"
+                                className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors font-medium"
                             title="View PDF"
                           >
-                            <FileText className="inline w-4 h-4 mb-1" /> View
+                                <FileText className="w-3 h-3" /> View
                           </button>
                           <button
-                            className="flex items-center gap-1 bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700 transition-colors font-medium shadow"
+                                className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
                             onClick={async e => {
                               e.preventDefault();
                               try {
@@ -275,90 +559,170 @@ export default function AuthenticatorDashboard() {
                             }}
                             title="Download PDF"
                           >
-                            <Download className="inline w-4 h-4 mb-1" /> Download
+                                <Download className="w-3 h-3" /> Download
                           </button>
                         </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <span className="text-gray-400 mr-2">Not available</span>
-                          <button className="flex items-center gap-1 bg-gray-200 text-gray-400 px-3 py-1 rounded cursor-not-allowed" disabled title="No file to download">
-                            <Download className="inline w-4 h-4 mb-1" /> Download
-                          </button>
+                          )}
                         </div>
-                      )}
                     </td>
-                    <td className="px-4 py-2">{doc.user_id}</td>
-                    <td className="px-4 py-2">
-                      <button
-                        className="text-blue-600 hover:text-blue-900"
-                        title="View user information"
-                        onClick={() => handleViewUser(doc.user_id)}
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
-                    </td>
-                    <td className="px-4 py-2">{doc.translation_status || '-'}</td>
-                    <td className="px-4 py-2">{typeof doc.total_cost === 'number' ? `$${doc.total_cost.toFixed(2)}` : '-'}</td>
-                    <td className="px-4 py-2">{doc.source_language && doc.target_language ? `${doc.source_language} → ${doc.target_language}` : (doc.source_language || '-')}</td>
-                    <td className="px-4 py-2">{doc.is_bank_statement ? 'Yes' : 'No'}</td>
-                    <td className="px-4 py-2">{doc.pages}</td>
-                    <td className="px-4 py-2">{doc.created_at ? new Date(doc.created_at).toLocaleString() : '-'}</td>
-                    <td className="px-4 py-2 flex gap-2">
+                      <td className="px-4 py-3">
                       {rejectedRows[doc.id] ? (
-                        <div className="flex flex-col gap-2 w-56">
-                          <label className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded px-2 py-1 bg-gray-50 hover:bg-gray-100">
-                            <UploadIcon className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm text-gray-700">Select PDF</span>
+                          <div className="flex flex-col gap-2 w-48">
+                            <label className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded px-2 py-1 bg-gray-50 hover:bg-gray-100 transition-colors text-xs">
+                              <UploadIcon className="w-3 h-3 text-blue-600" />
+                              <span className="text-gray-700">Select PDF</span>
                             <input type="file" accept="application/pdf" className="hidden" onChange={e => {
                               const file = e.target.files?.[0] || null;
                               setUploadStates(prev => ({ ...prev, [doc.id]: { file, uploading: false, success: false, error: null } }));
                             }} />
                           </label>
                           <button
-                            className="bg-blue-600 text-white rounded px-3 py-1 font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                              className="bg-blue-600 text-white rounded px-3 py-1 font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs"
                             disabled={!uploadStates[doc.id]?.file || uploadStates[doc.id]?.uploading}
                             onClick={() => handleCorrectionUpload(doc)}
                           >
                             {uploadStates[doc.id]?.uploading ? 'Uploading...' : 'Send Correction'}
                           </button>
-                          {uploadStates[doc.id]?.success && <span className="text-green-600 text-xs">Correction sent!</span>}
+                            {uploadStates[doc.id]?.success && <span className="text-green-600 text-xs font-medium">Correction sent!</span>}
                           {uploadStates[doc.id]?.error && <span className="text-red-600 text-xs">{uploadStates[doc.id]?.error}</span>}
                         </div>
                       ) : (
-                        <>
-                          <button onClick={() => handleApprove(doc.id)} className="flex items-center gap-1 bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors"><CheckCircle className="w-4 h-4" />Approve</button>
-                          <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"><XCircle className="w-4 h-4" />Reject</button>
-                        </>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleApprove(doc.id)} className="flex items-center gap-1 bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors font-medium">
+                              <CheckCircle className="w-3 h-3" />Approve
+                            </button>
+                            <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors font-medium">
+                              <XCircle className="w-3 h-3" />Reject
+                            </button>
+                          </div>
                       )}
                     </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-gray-600 truncate max-w-24" title={doc.user_id}>
+                            {doc.user_id.slice(0, 8)}...
+                          </span>
+                          <button
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="View user information"
+                            onClick={() => handleViewUser(doc.user_id)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-sm">
+                        {typeof doc.total_cost === 'number' ? `$${doc.total_cost.toFixed(2)}` : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {doc.source_language && doc.target_language ? `${doc.source_language} → ${doc.target_language}` : (doc.source_language || '-')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-1 text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Pages:</span>
+                            <span>{doc.pages}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Type:</span>
+                            <span>{doc.translation_status || '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Bank:</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_bank_statement ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                              {doc.is_bank_statement ? 'Yes' : 'No'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
+                      </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-          {documents.length === 0 && !loading && <p className="mt-6 text-gray-500">No pending documents for authentication.</p>}
+          </div>
+
+          {documents.length === 0 && !loading && <p className="mt-8 text-gray-500 text-center text-base sm:text-lg">No pending documents for authentication.</p>}
+          
+          {/* Controles de Paginação */}
+          {documents.length > 0 && (
+            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="text-sm text-gray-700 text-center sm:text-left">
+                Showing {startIndex + 1} to {Math.min(endIndex, documents.length)} of {documents.length} documents
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
       {/* Modal de informações do usuário */}
       {userModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-xl shadow-lg p-8 min-w-[320px] relative animate-fade-in">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 w-full max-w-md sm:min-w-[400px] relative animate-fade-in">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+              className="absolute top-2 sm:top-4 right-2 sm:right-4 text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
               onClick={() => setUserModalOpen(false)}
               aria-label="Close modal"
             >
-              <XCircle className="w-6 h-6" />
+              <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
-            <h3 className="text-xl font-bold mb-4 text-gray-900">User Information</h3>
-            {userLoading && <p className="text-blue-700">Loading...</p>}
-            {userError && <p className="text-red-500">{userError}</p>}
+            <h3 className="text-xl font-bold mb-6 text-gray-900">User Information</h3>
+            {userLoading && <p className="text-blue-700 text-lg">Loading...</p>}
+            {userError && <p className="text-red-500 text-lg">{userError}</p>}
             {selectedUser && (
-              <div className="space-y-2">
-                <div><span className="font-medium text-gray-700">Name:</span> {selectedUser.name}</div>
-                <div><span className="font-medium text-gray-700">Email:</span> {selectedUser.email}</div>
-                <div><span className="font-medium text-gray-700">Role:</span> {selectedUser.role}</div>
-                <div><span className="font-medium text-gray-700">ID:</span> {selectedUser.id}</div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="font-medium text-gray-700">Name:</span>
+                  <span className="text-gray-900">{selectedUser.name}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="font-medium text-gray-700">Email:</span>
+                  <span className="text-gray-900">{selectedUser.email}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="font-medium text-gray-700">Role:</span>
+                  <span className="text-gray-900">{selectedUser.role}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-medium text-gray-700">ID:</span>
+                  <span className="text-gray-900 font-mono text-sm">{selectedUser.id}</span>
+                </div>
               </div>
             )}
           </div>

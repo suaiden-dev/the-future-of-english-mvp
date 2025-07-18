@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Document, Folder } from '../../App';
 import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
-import AuthenticatorDashboard from './AuthenticatorDashboard';
+import AuthenticatorLayout from './AuthenticatorLayout';
 import { useAuth } from '../../hooks/useAuth';
 
 interface DocumentManagerProps {
@@ -35,12 +35,15 @@ export default function DocumentManagerPage() {
   const { user, loading } = useAuth();
 
   console.log('[DocumentManager] Usuário logado:', user);
+  console.log('[DocumentManager] Role do usuário:', user?.role);
+  console.log('[DocumentManager] Loading:', loading);
+  
   if (loading) return <div>Carregando...</div>;
   if (!user) return <div>Você precisa estar logado para acessar esta página.</div>;
 
   if (user.role === 'authenticator' || user.role === 'admin') {
     console.log('[DocumentManager] Exibindo dashboard do autenticador para role:', user.role);
-    return <AuthenticatorDashboard />;
+    return <AuthenticatorLayout />;
   }
 
   console.log('[DocumentManager] Exibindo dashboard do cliente para role:', user.role);

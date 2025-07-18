@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Search, CheckCircle, XCircle, FileText, Calendar, DollarSign } from 'lucide-react';
+import { Search, CheckCircle, XCircle, FileText, Calendar } from 'lucide-react';
 import { db } from '../lib/supabase';
-import { Document } from '../App';
+import { Database } from '../lib/database.types';
+
+type Document = Database['public']['Tables']['translated_documents']['Row'];
 
 export function DocumentVerification() {
   const [verificationCode, setVerificationCode] = useState('');
@@ -105,7 +107,7 @@ export function DocumentVerification() {
                           <span className="text-sm font-medium text-gray-700">Translation Date</span>
                         </div>
                         <p className="text-gray-900 font-medium">
-                          {new Date(searchResult.upload_date).toLocaleDateString()}
+                          {searchResult.upload_date ? new Date(searchResult.upload_date).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
 
@@ -115,14 +117,6 @@ export function DocumentVerification() {
                           <span className="text-sm font-medium text-gray-700">Pages</span>
                         </div>
                         <p className="text-gray-900 font-medium">{searchResult.pages} pages</p>
-                      </div>
-
-                      <div className="bg-white p-4 rounded-lg">
-                        <div className="flex items-center mb-2">
-                          <DollarSign className="w-5 h-5 text-gray-500 mr-2" />
-                          <span className="text-sm font-medium text-gray-700">Translation Cost</span>
-                        </div>
-                        <p className="text-gray-900 font-medium">${searchResult.total_cost}</p>
                       </div>
                     </div>
 

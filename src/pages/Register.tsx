@@ -16,9 +16,14 @@ export function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(5);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Limpar erros anteriores
+    setErrors({});
+    
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
@@ -48,15 +53,46 @@ export function Register() {
 
     try {
       console.log('[Register] Tentando registrar:', formData.email);
-      await signUp(formData.email, formData.password, formData.name);
+      
+      // Chamar signUp sem depender do loading do contexto
+      const result = await signUp(formData.email, formData.password, formData.name);
+      
+      console.log('[Register] Registro bem-sucedido:', result);
+      
+      // Definir sucesso imediatamente
       setSuccess(true);
-    } catch (err) {
+      
+      // Iniciar countdown e redirecionar após 5 segundos
+      const countdownInterval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            navigate('/login');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+    } catch (err: any) {
       console.error('[Register] Erro no registro:', err);
-      if (err instanceof Error) {
-        setErrors({ general: err.message || 'Registration failed. Please try again.' });
-      } else {
-        setErrors({ general: 'Registration failed. Please try again.' });
+      
+      // Tratar diferentes tipos de erro
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (err?.message) {
+        if (err.message.includes('already registered')) {
+          errorMessage = 'This email is already registered. Please try logging in instead.';
+        } else if (err.message.includes('password')) {
+          errorMessage = 'Password must be at least 6 characters long.';
+        } else if (err.message.includes('email')) {
+          errorMessage = 'Please enter a valid email address.';
+        } else {
+          errorMessage = err.message;
+        }
       }
+      
+      setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);
     }
@@ -79,21 +115,44 @@ export function Register() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-              <UserPlus className="h-6 w-6 text-white" />
+            <div className="mx-auto h-16 w-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+              <UserPlus className="h-8 w-8 text-white" />
             </div>
             <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Account Created Successfully!
+              Account Created Successfully! 🎉
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
-              Please check your email to verify your account, then{' '}
+            <div className="mt-6 bg-white rounded-xl p-6 shadow-lg border border-green-100">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Mail className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">
+                Check Your Email
+              </h3>
+              <p className="text-sm text-gray-600 text-center mb-4">
+                We've sent a verification link to <strong>{formData.email}</strong>
+              </p>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <p className="text-sm text-blue-800 text-center font-medium">
+                  📧 A verification link has been sent to your email
+                </p>
+                <p className="text-xs text-blue-700 text-center mt-1">
+                  Please check your inbox and click the verification link to activate your account
+                </p>
+              </div>
+            </div>
+            <div className="mt-6">
+              <p className="text-sm text-gray-600">
+                Redirecting to login page in {countdown} seconds...
+              </p>
               <button
                 onClick={() => navigate('/login')}
-                className="font-medium text-blue-900 hover:text-blue-700 transition-colors"
+                className="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md"
               >
-                sign in
+                Go to Login Now
               </button>
-            </p>
+            </div>
           </div>
         </div>
       </div>
@@ -103,29 +162,32 @@ export function Register() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-            <UserPlus className="h-6 w-6 text-white" />
+        <div className="text-center">
+          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+            <UserPlus className="h-8 w-8 text-white" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
+            Create Your Account
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Join us for professional translation services
+          </p>
           <p className="mt-2 text-center text-sm text-gray-600">
             Already have an account?{' '}
             <button
               onClick={() => navigate('/login')}
-              className="font-medium text-blue-900 hover:text-blue-700 transition-colors"
+              className="font-medium text-blue-600 hover:text-blue-700 transition-colors underline"
             >
-              Sign in
+              Sign in here
             </button>
           </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
             <div>
-              <label htmlFor="name" className="sr-only">
-                Name
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -136,20 +198,22 @@ export function Register() {
                   name="name"
                   type="text"
                   required
-                  className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.name ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                  placeholder="Full name"
+                  className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
+                    errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
+                  placeholder="Enter your full name"
                   value={formData.name}
                   onChange={handleChange}
                 />
               </div>
-              {errors.name && <p className="mt-2 text-sm text-red-600">{errors.name}</p>}
+              {errors.name && <p className="mt-2 text-sm text-red-600 flex items-center">
+                <span className="mr-1">⚠️</span> {errors.name}
+              </p>}
             </div>
 
             <div>
-              <label htmlFor="email" className="sr-only">
-                Email
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -160,27 +224,31 @@ export function Register() {
                   name="email"
                   type="email"
                   required
-                  className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.email ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                  placeholder="Email address"
+                  className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
+                    errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
+                  placeholder="Enter your email address"
                   value={formData.email}
                   onChange={handleChange}
                 />
               </div>
-              {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email}</p>}
+              {errors.email && <p className="mt-2 text-sm text-red-600 flex items-center">
+                <span className="mr-1">⚠️</span> {errors.email}
+              </p>}
             </div>
           </div>
 
           {errors.general && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-sm text-red-600">{errors.general}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-600 flex items-center">
+                <span className="mr-2">❌</span> {errors.general}
+              </p>
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
               <div className="relative">
@@ -192,19 +260,21 @@ export function Register() {
                   name="password"
                   type="password"
                   required
-                  className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.password ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                  placeholder="Password"
+                  className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
+                    errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
+                  placeholder="Create a strong password"
                   value={formData.password}
                   onChange={handleChange}
                 />
               </div>
-              {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
+              {errors.password && <p className="mt-2 text-sm text-red-600 flex items-center">
+                <span className="mr-1">⚠️</span> {errors.password}
+              </p>}
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="sr-only">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm Password
               </label>
               <div className="relative">
@@ -216,16 +286,18 @@ export function Register() {
                   name="confirmPassword"
                   type="password"
                   required
-                  className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                  placeholder="Confirm password"
+                  className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
+                    errors.confirmPassword ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
+                  placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                 />
               </div>
               {errors.confirmPassword && (
-                <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="mr-1">⚠️</span> {errors.confirmPassword}
+                </p>
               )}
             </div>
           </div>
@@ -234,9 +306,19 @@ export function Register() {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-red-600 hover:from-blue-700 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating account...
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Create Account
+                </div>
+              )}
             </button>
           </div>
         </form>

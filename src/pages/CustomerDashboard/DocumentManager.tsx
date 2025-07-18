@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Folder as FolderIcon, 
   FileText, 
   Plus, 
-  MoreVertical, 
   Edit2, 
   Trash2, 
   Upload,
@@ -41,6 +40,10 @@ export function DocumentManager({
   const [newFolderName, setNewFolderName] = useState('');
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  console.log('[DocumentManager] isEditMode:', isEditMode);
+
 
   const folderColors = [
     'bg-blue-100 text-blue-800',
@@ -119,6 +122,8 @@ export function DocumentManager({
     }
   };
 
+
+
   const breadcrumbs = getCurrentPath();
 
   return (
@@ -156,10 +161,25 @@ export function DocumentManager({
             <Plus className="w-4 h-4" />
             <span>New Folder</span>
           </button>
+          <button
+            onClick={() => {
+              console.log('[DocumentManager] Toggle edit mode, current:', isEditMode);
+              setIsEditMode(!isEditMode);
+            }}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              isEditMode 
+                ? 'bg-orange-600 text-white hover:bg-orange-700' 
+                : 'bg-gray-600 text-white hover:bg-gray-700'
+            }`}
+          >
+            <Edit2 className="w-4 h-4" />
+            <span>{isEditMode ? 'Exit Edit' : 'Edit Folders'}</span>
+          </button>
           <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
             <Upload className="w-4 h-4" />
             <span>Upload</span>
           </button>
+          <span className="text-sm text-gray-500">DEBUG: EditMode={isEditMode ? 'ON' : 'OFF'}</span>
         </div>
       </div>
 
@@ -173,6 +193,8 @@ export function DocumentManager({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80"
+            aria-label="Search documents and folders"
+            title="Search documents and folders"
           />
         </div>
         
@@ -228,6 +250,8 @@ export function DocumentManager({
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     autoFocus
                     onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
+                    aria-label="New folder name"
+                    title="Enter folder name"
                   />
                   <div className="flex space-x-1">
                     <button
@@ -264,6 +288,8 @@ export function DocumentManager({
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                         autoFocus
                         onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
+                        aria-label="Edit folder name"
+                        title="Edit folder name"
                       />
                       <div className="flex space-x-1">
                         <button
@@ -297,37 +323,34 @@ export function DocumentManager({
                         </span>
                       </div>
                       
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="relative">
-                          <button className="p-1 text-gray-400 hover:text-gray-600 rounded" aria-label="Mais opções">
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                          <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px] opacity-0 group-hover:opacity-100">
+                      {isEditMode && (
+                        <div className="absolute top-2 right-2 bg-white border border-gray-200 rounded-lg shadow-sm p-1">
+                          <div className="flex space-x-1">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditFolder(folder.id);
                               }}
-                              className="w-full px-3 py-1 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
                               aria-label="Renomear pasta"
+                              title="Rename folder"
                             >
                               <Edit2 className="w-3 h-3" />
-                              <span>Rename</span>
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteFolder(folder.id);
                               }}
-                              className="w-full px-3 py-1 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
                               aria-label="Excluir pasta"
+                              title="Delete folder"
                             >
                               <Trash2 className="w-3 h-3" />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -396,7 +419,7 @@ export function DocumentManager({
                       Folder
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(folder.created_at).toLocaleDateString()}
+                      {folder.created_at ? new Date(folder.created_at).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-500">-</span>
@@ -437,7 +460,7 @@ export function DocumentManager({
                       Document
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(document.upload_date).toLocaleDateString()}
+                      {document.upload_date ? new Date(document.upload_date).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -487,6 +510,8 @@ export function DocumentManager({
           </div>
         )}
       </div>
+
+
     </div>
   );
 }

@@ -51,7 +51,7 @@ export function useFolders(userId?: string) {
     }
   };
 
-  const updateFolder = async (folderId: string, updates: { name?: string; color?: string }) => {
+  const updateFolder = async (folderId: string, updates: { name?: string; color?: string; parent_id?: string | null }) => {
     try {
       const updatedFolder = await db.updateFolder(folderId, updates);
       setFolders(prev => 

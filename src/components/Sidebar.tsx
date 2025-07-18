@@ -2,7 +2,7 @@ import React from 'react';
 import { LogOut, User } from 'lucide-react';
 import type { CustomUser } from '../hooks/useAuth';
 import { FileText as FileTextIcon } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Upload } from 'lucide-react';
 
 export interface NavItem {
@@ -20,20 +20,44 @@ interface SidebarProps {
 
 export function Sidebar({ navItems, user, onLogout }: SidebarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  console.log('DEBUG: Sidebar renderizada com navItems:', navItems);
+  console.log('DEBUG: User role:', user?.role);
+
+  const handleNavigation = (page: string) => {
+    console.log('DEBUG: Navegando para:', page);
+    if (page.startsWith('/')) {
+      navigate(page);
+    } else {
+      navigate(`/${page}`);
+    }
+  };
+
+  const isActivePage = (page: string) => {
+    if (page.startsWith('/')) {
+      return location.pathname === page;
+    }
+    return location.pathname === `/${page}`;
+  };
+
   return (
     <div className="w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen">
       <div className="p-6">
         <div className="mb-6">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center space-x-2 mb-4 focus:outline-none group"
-            aria-label="Ir para Home"
-          >
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-              <span className="text-white font-bold text-sm">TFE</span>
-            </div>
-            <span className="text-lg font-bold text-gray-900 group-hover:underline">TheFutureOfEnglish</span>
-          </button>
+          <div className="flex justify-center mb-4">
+            <button
+              onClick={() => navigate('/')}
+              className="focus:outline-none group"
+              aria-label="Ir para Home"
+            >
+              <img 
+                src="/logo_tfoe.png" 
+                alt="The Future of English Logo" 
+                className="h-24 w-auto group-hover:scale-105 transition-transform"
+              />
+            </button>
+          </div>
           {user && (
             <div className="bg-gray-50 p-3 rounded-lg">
               <p className="text-sm font-medium text-gray-900">{user.user_metadata?.name || 'Usuário'}</p>
@@ -55,38 +79,28 @@ export function Sidebar({ navItems, user, onLogout }: SidebarProps) {
           )}
         </div>
         <nav className="space-y-2">
-          {user && user.role === 'user' && (
-            <>
+          {/* Renderizar itens de navegação dinâmicos */}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = isActivePage(item.page);
+            
+            return (
               <button
-                onClick={() => navigate('/dashboard')}
-                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                key={item.id}
+                onClick={() => handleNavigation(item.page)}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-900 border border-blue-200'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
               >
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6m-6 0v6m0 0H7m6 0h6" /></svg>
-                <span className="font-medium">Overview</span>
+                <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                <span className="font-medium">{item.label}</span>
               </button>
-              <button
-                onClick={() => navigate('/dashboard/my-documents')}
-                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              >
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5" /></svg>
-                <span className="font-medium">My Documents</span>
-              </button>
-              <button
-                onClick={() => navigate('/dashboard/upload')}
-                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              >
-                <Upload className="w-5 h-5 text-gray-400" />
-                <span className="font-medium">Upload Document</span>
-              </button>
-              <button
-                onClick={() => navigate('/dashboard/profile')}
-                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              >
-                <User className="w-5 h-5 text-gray-400" />
-                <span className="font-medium">Profile</span>
-              </button>
-            </>
-          )}
+            );
+          })}
+
+          {/* Seção de logout e voltar para home */}
           {user && (
             <div className="mt-8 pt-4 border-t border-gray-200">
               <button

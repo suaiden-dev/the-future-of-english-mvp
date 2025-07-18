@@ -22,10 +22,11 @@ export function Header({ user, onLogout, currentPage }: HeaderProps) {
               onClick={() => navigate('/')}
               className="flex items-center space-x-2 text-blue-900 hover:text-blue-700 transition-colors"
             >
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TFE</span>
-              </div>
-              <span className="text-xl font-bold">TheFutureOfEnglish</span>
+              <img 
+                src="/logo_tfoe.png" 
+                alt="The Future of English Logo" 
+                className="h-20 w-auto"
+              />
             </button>
           </div>
 
