@@ -138,28 +138,37 @@ Deno.serve(async (req: Request) => {
           .single();
 
         if (docData && !docError) {
+          console.log("Found document data:", docData);
+          
+          const insertData = {
+            user_id: user_id,
+            filename: filename,
+            pages: docData.pages || paginas || 1,
+            status: 'pending',
+            total_cost: docData.total_cost || parseFloat(valor) || 0,
+            is_bank_statement: docData.is_bank_statement || is_bank_statement || false,
+            source_language: docData.idioma_raiz?.toLowerCase() || 'portuguese',
+            target_language: 'english',
+            translation_status: 'pending',
+            file_id: docData.id,
+            verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`
+          };
+          
+          console.log("Attempting to insert data:", JSON.stringify(insertData, null, 2));
+          
           const { data: verifyData, error: verifyError } = await supabase
             .from('documents_to_be_verified')
-            .insert({
-              user_id: user_id,
-              filename: filename,
-              pages: docData.pages || paginas || 1,
-              status: 'pending',
-              total_cost: docData.total_cost || parseFloat(valor) || 0,
-              is_bank_statement: docData.is_bank_statement || is_bank_statement || false,
-              source_language: docData.idioma_raiz?.toLowerCase() || 'portuguese',
-              target_language: 'english',
-              translation_status: 'pending',
-              file_id: docData.id,
-              verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`
-            })
+            .insert(insertData)
             .select();
 
           if (verifyError) {
             console.error("Error inserting into documents_to_be_verified:", verifyError);
+            console.error("Error details:", JSON.stringify(verifyError, null, 2));
           } else {
             console.log("Inserted into documents_to_be_verified successfully:", verifyData);
           }
+        } else {
+          console.error("Error finding document:", docError);
         }
       } catch (verifyError) {
         console.error("Exception inserting into documents_to_be_verified:", verifyError);
