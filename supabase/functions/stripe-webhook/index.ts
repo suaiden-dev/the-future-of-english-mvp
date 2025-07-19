@@ -161,9 +161,9 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
 
     console.log('DEBUG: Documento atualizado com sucesso:', updatedDocument);
 
-    // Criar registro na tabela documents_to_be_verified
+    // Criar registro na tabela documents_to_verify
     const { data: verificationDoc, error: verificationError } = await supabase
-      .from('documents_to_be_verified')
+      .from('documents_to_verify')
       .insert({
         user_id: userId,
         filename: filename,
@@ -225,27 +225,8 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
       console.error('ERROR: Detalhes do erro:', updateError.message);
       console.error('ERROR: Stack trace:', updateError.stack);
       
-      // Tentar uma abordagem alternativa - salvar o documentId em uma tabela separada
-      try {
-        const { data: sessionData, error: sessionError } = await supabase
-          .from('stripe_sessions')
-          .upsert({
-            session_id: session.id,
-            document_id: realDocumentId,
-            metadata: session.metadata,
-            created_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-          
-        if (sessionError) {
-          console.error('ERROR: Erro ao salvar sessão na tabela:', sessionError);
-        } else {
-          console.log('DEBUG: Sessão salva na tabela como fallback:', sessionData);
-        }
-      } catch (fallbackError) {
-        console.error('ERROR: Erro no fallback:', fallbackError);
-      }
+      // Log do erro de atualização da sessão (não crítico)
+      console.log('WARNING: Não foi possível atualizar a sessão do Stripe, mas o documento foi criado com sucesso');
       
       // Não falhar se isso der erro
     }
