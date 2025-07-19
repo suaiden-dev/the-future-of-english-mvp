@@ -161,31 +161,8 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
 
     console.log('DEBUG: Documento atualizado com sucesso:', updatedDocument);
 
-    // Criar registro na tabela documents_to_be_verified
-    const { data: verificationDoc, error: verificationError } = await supabase
-      .from('documents_to_be_verified')
-      .insert({
-        user_id: userId,
-        filename: filename,
-        pages: parseInt(pages),
-        status: 'pending',
-        total_cost: parseFloat(totalPrice),
-        is_bank_statement: isBankStatement === 'true',
-        source_language: 'portuguese', // Assumindo português como idioma fonte
-        target_language: 'english', // Assumindo inglês como idioma destino
-        translation_status: 'pending',
-        file_id: fileId, // Salvar o fileId para referência
-        verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}` // Gerar código único
-      })
-      .select()
-      .single();
-
-    if (verificationError) {
-      console.error('ERROR: Erro ao criar documento para verificação:', verificationError);
-      throw new Error('Failed to create verification document');
-    }
-
-    console.log('DEBUG: Documento para verificação criado:', verificationDoc);
+    // Nota: A inserção na tabela documents_to_be_verified será feita pelo n8n
+    console.log('DEBUG: Documento criado. A inserção em documents_to_be_verified será feita pelo n8n.');
     
     const realDocumentId = newDocument.id;
 
