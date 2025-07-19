@@ -161,9 +161,9 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
 
     console.log('DEBUG: Documento atualizado com sucesso:', updatedDocument);
 
-    // Criar registro na tabela documents_to_verify
+    // Criar registro na tabela documents_to_be_verified
     const { data: verificationDoc, error: verificationError } = await supabase
-      .from('documents_to_verify')
+      .from('documents_to_be_verified')
       .insert({
         user_id: userId,
         filename: filename,
