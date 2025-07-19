@@ -124,37 +124,45 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Also insert into documents_to_verify table if needed
+    // Also insert into documents_to_be_verified table if needed
     if (webhookResponse.ok && user_id && url) {
       try {
-        console.log("Inserting into documents_to_verify...");
+        console.log("Inserting into documents_to_be_verified...");
         
         // First, find the document ID
         const { data: docData, error: docError } = await supabase
           .from('documents')
-          .select('id')
+          .select('id, total_cost, tipo_trad, idioma_raiz, is_bank_statement, pages')
           .eq('user_id', user_id)
           .eq('filename', filename)
           .single();
 
         if (docData && !docError) {
           const { data: verifyData, error: verifyError } = await supabase
-            .from('documents_to_verify')
+            .from('documents_to_be_verified')
             .insert({
-              doc_url: url,
-              doc_id: docData.id,
-              user_id: user_id
+              user_id: user_id,
+              filename: filename,
+              pages: docData.pages || paginas || 1,
+              status: 'pending',
+              total_cost: docData.total_cost || parseFloat(valor) || 0,
+              is_bank_statement: docData.is_bank_statement || is_bank_statement || false,
+              source_language: docData.idioma_raiz?.toLowerCase() || 'portuguese',
+              target_language: 'english',
+              translation_status: 'pending',
+              file_id: docData.id,
+              verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`
             })
             .select();
 
           if (verifyError) {
-            console.error("Error inserting into documents_to_verify:", verifyError);
+            console.error("Error inserting into documents_to_be_verified:", verifyError);
           } else {
-            console.log("Inserted into documents_to_verify successfully:", verifyData);
+            console.log("Inserted into documents_to_be_verified successfully:", verifyData);
           }
         }
       } catch (verifyError) {
-        console.error("Exception inserting into documents_to_verify:", verifyError);
+        console.error("Exception inserting into documents_to_be_verified:", verifyError);
       }
     }
 
