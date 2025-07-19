@@ -58,7 +58,22 @@ Deno.serve(async (req: Request) => {
       console.log("Processing storage trigger payload");
       const bucket = record.bucket_id || record.bucket || record.bucketId;
       const path = record.name || record.path || record.file_name;
-      const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+      
+      // Corrigir a geração da URL pública
+      let publicUrl;
+      if (url && url.startsWith('http')) {
+        // Se já temos uma URL válida, usar ela
+        publicUrl = url;
+      } else {
+        // Gerar URL pública corretamente
+        const { data: { publicUrl: generatedUrl } } = supabase.storage
+          .from(bucket || 'documents')
+          .getPublicUrl(path);
+        publicUrl = generatedUrl;
+      }
+      
+      console.log("Generated public URL:", publicUrl);
+      
       payload = {
         filename: path,
         url: publicUrl,
@@ -74,9 +89,36 @@ Deno.serve(async (req: Request) => {
     } else {
       // Called from frontend
       console.log("Processing frontend payload");
+      
+      // Verificar se a URL já é válida
+      let finalUrl = url;
+      if (url && !url.startsWith('http')) {
+        // Se a URL não é completa, tentar gerar uma URL pública
+        try {
+          // Extrair o caminho do arquivo da URL
+          const urlParts = url.split('/');
+          const fileName = urlParts[urlParts.length - 1];
+          const userFolder = urlParts[urlParts.length - 2];
+          const filePath = `${userFolder}/${fileName}`;
+          
+          console.log("Extracted file path:", filePath);
+          
+          const { data: { publicUrl: generatedUrl } } = supabase.storage
+            .from('documents')
+            .getPublicUrl(filePath);
+          
+          finalUrl = generatedUrl;
+          console.log("Generated public URL from path:", finalUrl);
+        } catch (urlError) {
+          console.error("Error generating public URL:", urlError);
+          // Usar a URL original se não conseguir gerar
+          finalUrl = url;
+        }
+      }
+      
       payload = { 
         filename, 
-        url, 
+        url: finalUrl, 
         mimetype, 
         size, 
         user_id: user_id || null, 

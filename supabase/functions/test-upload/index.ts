@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-Deno.serve(async (req: Request) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -19,96 +19,91 @@ Deno.serve(async (req: Request) => {
     }
 
     // Obter variáveis de ambiente
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    console.log('DEBUG: Verificando variáveis de ambiente...');
-    console.log('DEBUG: SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET');
-    console.log('DEBUG: SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'SET' : 'NOT SET');
+    const supabaseUrl = Deno.env.get('PROJECT_URL');
+    const supabaseServiceKey = Deno.env.get('SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Environment variables not configured');
     }
 
-    // Criar cliente Supabase
+    // Criar cliente Supabase com service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verificar se o bucket 'documents' existe
-    console.log('DEBUG: Verificando se o bucket documents existe...');
-    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-    
-    if (bucketsError) {
-      console.error('ERROR: Erro ao listar buckets:', bucketsError);
-      throw new Error(`Failed to list buckets: ${bucketsError.message}`);
+    // Obter dados da requisição
+    const { userId, fileName, fileContent, fileType } = await req.json();
+
+    if (!userId || !fileName || !fileContent) {
+      throw new Error('Missing required parameters: userId, fileName, fileContent');
     }
 
-    console.log('DEBUG: Buckets encontrados:', buckets.map(b => b.name));
+    console.log('DEBUG: Testando upload para usuário:', userId);
+    console.log('DEBUG: Nome do arquivo:', fileName);
+    console.log('DEBUG: Tipo do arquivo:', fileType);
+
+    // Criar um arquivo de teste simples
+    const testContent = fileContent || 'Test file content';
+    const testFile = new Blob([testContent], { type: fileType || 'text/plain' });
     
-    const documentsBucket = buckets.find(b => b.name === 'documents');
-    if (!documentsBucket) {
-      console.log('DEBUG: Bucket documents não encontrado, criando...');
-      
-      const { data: newBucket, error: createBucketError } = await supabase.storage.createBucket('documents', {
-        public: true,
-        fileSizeLimit: 52428800, // 50MB
-        allowedMimeTypes: ['application/pdf', 'image/*']
-      });
+    // Gerar nome único para o arquivo
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substr(2, 9);
+    const fileExt = fileName.split('.').pop() || 'txt';
+    const uniqueFileName = `${timestamp}_${randomId}.${fileExt}`;
+    const filePath = `${userId}/${uniqueFileName}`;
 
-      if (createBucketError) {
-        console.error('ERROR: Erro ao criar bucket:', createBucketError);
-        throw new Error(`Failed to create bucket: ${createBucketError.message}`);
-      }
+    console.log('DEBUG: Caminho do arquivo:', filePath);
 
-      console.log('DEBUG: Bucket documents criado:', newBucket);
-    } else {
-      console.log('DEBUG: Bucket documents já existe:', documentsBucket);
-    }
-
-    // Testar upload de um arquivo simples
-    console.log('DEBUG: Testando upload de arquivo...');
-    
-    const testContent = 'Test file content';
-    const testFileName = `test_${Date.now()}.txt`;
-    const testFilePath = `test/${testFileName}`;
-
+    // Fazer upload do arquivo
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('documents')
-      .upload(testFilePath, new Blob([testContent], { type: 'text/plain' }), {
+      .upload(filePath, testFile, {
         cacheControl: '3600',
         upsert: false
       });
 
     if (uploadError) {
-      console.error('ERROR: Erro no upload de teste:', uploadError);
-      throw new Error(`Test upload failed: ${uploadError.message}`);
+      console.error('ERROR: Erro no upload:', uploadError);
+      throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
-    console.log('DEBUG: Upload de teste bem-sucedido:', uploadData);
+    console.log('DEBUG: Upload bem-sucedido:', uploadData);
 
-    // Obter URL pública
+    // Gerar URL pública
     const { data: { publicUrl } } = supabase.storage
       .from('documents')
-      .getPublicUrl(testFilePath);
+      .getPublicUrl(filePath);
 
-    console.log('DEBUG: URL pública do arquivo de teste:', publicUrl);
+    console.log('DEBUG: URL pública gerada:', publicUrl);
 
-    // Verificar se o arquivo pode ser baixado
-    const downloadResponse = await fetch(publicUrl);
-    if (!downloadResponse.ok) {
-      console.error('ERROR: Não foi possível baixar o arquivo de teste');
+    // Testar se a URL é acessível
+    let urlAccessible = false;
+    try {
+      const response = await fetch(publicUrl);
+      urlAccessible = response.ok;
+      console.log('DEBUG: URL acessível:', urlAccessible, 'Status:', response.status);
+    } catch (urlError) {
+      console.error('ERROR: Erro ao testar URL:', urlError);
+    }
+
+    // Listar arquivos do usuário
+    const { data: fileList, error: listError } = await supabase.storage
+      .from('documents')
+      .list(userId);
+
+    if (listError) {
+      console.error('ERROR: Erro ao listar arquivos:', listError);
     } else {
-      console.log('DEBUG: Arquivo de teste pode ser baixado com sucesso');
+      console.log('DEBUG: Arquivos do usuário:', fileList);
     }
 
     return new Response(
       JSON.stringify({ 
-        success: true,
-        message: 'Upload test completed successfully',
-        testFile: {
-          path: testFilePath,
-          url: publicUrl,
-          size: testContent.length
-        }
+        success: true, 
+        uploadData,
+        publicUrl,
+        urlAccessible,
+        fileList,
+        filePath
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -121,8 +116,7 @@ Deno.serve(async (req: Request) => {
     
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Erro interno do servidor',
-        details: error.toString()
+        error: error.message || 'Erro interno do servidor' 
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

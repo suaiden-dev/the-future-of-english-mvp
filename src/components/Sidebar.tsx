@@ -46,18 +46,18 @@ export function Sidebar({ navItems, user, onLogout }: SidebarProps) {
       <div className="p-6">
         <div className="mb-6">
           <div className="flex justify-center mb-4">
-            <button
-              onClick={() => navigate('/')}
+          <button
+            onClick={() => navigate('/')}
               className="focus:outline-none group"
-              aria-label="Ir para Home"
-            >
+            aria-label="Ir para Home"
+          >
               <img 
                 src="/logo_tfoe.png" 
                 alt="The Future of English Logo" 
                 className="h-24 w-auto group-hover:scale-105 transition-transform"
               />
             </button>
-          </div>
+            </div>
           {user && (
             <div className="bg-gray-50 p-3 rounded-lg">
               <p className="text-sm font-medium text-gray-900">{user.user_metadata?.name || 'Usuário'}</p>

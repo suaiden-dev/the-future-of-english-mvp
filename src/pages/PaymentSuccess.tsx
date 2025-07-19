@@ -75,10 +75,13 @@ export function PaymentSuccess() {
 
             const fileExt = storedFile.file.name.split('.').pop();
             const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-            filePath = `documents/${userId}/${fileName}`;
+            filePath = `${userId}/${fileName}`;
 
             console.log('DEBUG: Fazendo upload para:', filePath);
             console.log('DEBUG: Configuração do Supabase verificada');
+            console.log('DEBUG: Nome do arquivo original:', storedFile.file.name);
+            console.log('DEBUG: Tamanho do arquivo:', storedFile.file.size);
+            console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
 
             // Simular progresso do upload
             const progressInterval = setInterval(() => {
@@ -116,7 +119,12 @@ export function PaymentSuccess() {
               .getPublicUrl(filePath);
 
             publicUrl = desktopPublicUrl;
-            console.log('DEBUG: URL pública:', publicUrl);
+            console.log('DEBUG: URL pública gerada:', publicUrl);
+            
+            // Verificar se o upload foi bem-sucedido
+            if (uploadData) {
+              console.log('DEBUG: Upload bem-sucedido:', uploadData);
+            }
           } else {
             console.log('DEBUG: Arquivo NÃO encontrado no IndexedDB');
           }
@@ -167,10 +175,13 @@ export function PaymentSuccess() {
 
         const fileExt = storedFile.file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-        filePath = `documents/${userId}/${fileName}`;
+        filePath = `${userId}/${fileName}`;
 
         console.log('DEBUG: Fazendo upload para:', filePath);
         console.log('DEBUG: Iniciando upload para Supabase Storage (desktop)...');
+        console.log('DEBUG: Nome do arquivo original:', storedFile.file.name);
+        console.log('DEBUG: Tamanho do arquivo:', storedFile.file.size);
+        console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
 
         // Simular progresso do upload
         const progressInterval = setInterval(() => {
@@ -207,7 +218,12 @@ export function PaymentSuccess() {
           .getPublicUrl(filePath);
 
         publicUrl = desktopPublicUrl;
-        console.log('DEBUG: URL pública:', publicUrl);
+        console.log('DEBUG: URL pública gerada:', publicUrl);
+        
+        // Verificar se o upload foi bem-sucedido
+        if (uploadData) {
+          console.log('DEBUG: Upload bem-sucedido:', uploadData);
+        }
       }
 
       // Verificar se documentId existe nos metadados da sessão
@@ -331,9 +347,18 @@ export function PaymentSuccess() {
       // Chamar send-translation-webhook para enviar para n8n
       console.log('DEBUG: Chamando send-translation-webhook para enviar para n8n');
       
+      // Garantir que a URL seja válida
+      let finalUrl = publicUrl;
+      if (publicUrl && !publicUrl.startsWith('http')) {
+        console.error('ERROR: URL inválida gerada:', publicUrl);
+        throw new Error('URL do arquivo inválida');
+      }
+      
+      console.log('DEBUG: URL final para n8n:', finalUrl);
+      
       const webhookPayload = {
         filename: storedFile?.file.name || filename,
-        url: publicUrl,
+        url: finalUrl,
         mimetype: storedFile?.file.type || 'application/pdf',
         size: storedFile?.file.size || 0,
         user_id: userId,
