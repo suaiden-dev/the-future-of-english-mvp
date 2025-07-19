@@ -29,14 +29,8 @@ Deno.serve(async (req: Request) => {
     // Obter chaves do Stripe das variáveis de ambiente
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    console.log('DEBUG: Verificando variáveis de ambiente...');
-    console.log('DEBUG: STRIPE_SECRET_KEY:', stripeSecretKey ? 'SET' : 'NOT SET');
-    console.log('DEBUG: STRIPE_WEBHOOK_SECRET:', stripeWebhookSecret ? 'SET' : 'NOT SET');
-    console.log('DEBUG: SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET');
-    console.log('DEBUG: SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'SET' : 'NOT SET');
+    const supabaseUrl = Deno.env.get('PROJECT_URL');
+    const supabaseServiceKey = Deno.env.get('SERVICE_ROLE_KEY');
 
     if (!stripeSecretKey || !stripeWebhookSecret || !supabaseUrl || !supabaseServiceKey) {
       throw new Error('Environment variables not configured');
@@ -121,26 +115,9 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
       fileId, userId, filename, pages, isCertified, isNotarized, isBankStatement, totalPrice
     });
 
-    // Verificar se o usuário existe na tabela profiles
-    console.log('DEBUG: Verificando se usuário existe...');
-    const { data: userProfile, error: userError } = await supabase
-      .from('profiles')
-      .select('id, email, role')
-      .eq('id', userId)
-      .single();
-
-    if (userError || !userProfile) {
-      console.error('ERROR: Usuário não encontrado:', userError);
-      throw new Error('User not found');
-    }
-
-    console.log('DEBUG: Usuário encontrado:', userProfile);
-
     // Criar documento real no banco (sem file_url por enquanto)
     // O arquivo será enviado posteriormente na página de sucesso
     console.log('DEBUG: Criando documento real no banco');
-    
-    const verificationCode = `TFE${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
     
     const { data: newDocument, error: createError } = await supabase
       .from('documents')
@@ -154,8 +131,7 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
         valor: parseFloat(totalPrice),
         is_bank_statement: isBankStatement === 'true',
         idioma_raiz: 'Portuguese', // Assumindo português
-        file_id: fileId, // Salvar o fileId para referência
-        verification_code: verificationCode // Gerar código único
+        file_id: fileId // Salvar o fileId para referência
       })
       .select()
       .single();
@@ -186,7 +162,6 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
     console.log('DEBUG: Documento atualizado com sucesso:', updatedDocument);
 
     // Criar registro na tabela documents_to_be_verified
-    console.log('DEBUG: Criando documento para verificação...');
     const { data: verificationDoc, error: verificationError } = await supabase
       .from('documents_to_be_verified')
       .insert({
@@ -200,14 +175,13 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
         target_language: 'english', // Assumindo inglês como idioma destino
         translation_status: 'pending',
         file_id: fileId, // Salvar o fileId para referência
-        verification_code: verificationCode // Usar o mesmo código do documento principal
+        verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}` // Gerar código único
       })
       .select()
       .single();
 
     if (verificationError) {
       console.error('ERROR: Erro ao criar documento para verificação:', verificationError);
-      console.error('ERROR: Detalhes do erro:', JSON.stringify(verificationError, null, 2));
       throw new Error('Failed to create verification document');
     }
 
@@ -215,23 +189,65 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
     
     const realDocumentId = newDocument.id;
 
-    // Salvar a sessão na tabela stripe_sessions
-    console.log('DEBUG: Salvando sessão na tabela...');
-    const { data: sessionData, error: sessionError } = await supabase
-      .from('stripe_sessions')
-      .upsert({
-        session_id: session.id,
-        document_id: realDocumentId,
-        metadata: session.metadata,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+    // Atualizar a sessão do Stripe com o documentId real
+    try {
+      const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+      if (!stripeSecretKey) {
+        throw new Error('STRIPE_SECRET_KEY not configured');
+      }
       
-    if (sessionError) {
-      console.error('ERROR: Erro ao salvar sessão na tabela:', sessionError);
-    } else {
-      console.log('DEBUG: Sessão salva na tabela:', sessionData);
+      const stripeInstance = new (await import('https://esm.sh/stripe@14.21.0')).default(stripeSecretKey, {
+        apiVersion: '2024-12-18.acacia',
+      });
+      
+      console.log('DEBUG: Tentando atualizar sessão:', session.id);
+      console.log('DEBUG: Metadados atuais:', session.metadata);
+      
+      // Usar a API correta do Stripe
+      const updatedSession = await stripeInstance.checkout.sessions.update(session.id, {
+        metadata: {
+          fileId: session.metadata.fileId,
+          userId: session.metadata.userId,
+          filename: session.metadata.filename,
+          pages: session.metadata.pages,
+          isCertified: session.metadata.isCertified,
+          isNotarized: session.metadata.isNotarized,
+          isBankStatement: session.metadata.isBankStatement,
+          totalPrice: session.metadata.totalPrice,
+          documentId: realDocumentId
+        }
+      });
+      
+      console.log('DEBUG: Sessão do Stripe atualizada com sucesso:', updatedSession.id);
+      console.log('DEBUG: Novos metadados:', updatedSession.metadata);
+    } catch (updateError) {
+      console.error('ERROR: Erro ao atualizar sessão do Stripe:', updateError);
+      console.error('ERROR: Detalhes do erro:', updateError.message);
+      console.error('ERROR: Stack trace:', updateError.stack);
+      
+      // Tentar uma abordagem alternativa - salvar o documentId em uma tabela separada
+      try {
+        const { data: sessionData, error: sessionError } = await supabase
+          .from('stripe_sessions')
+          .upsert({
+            session_id: session.id,
+            document_id: realDocumentId,
+            metadata: session.metadata,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+          
+        if (sessionError) {
+          console.error('ERROR: Erro ao salvar sessão na tabela:', sessionError);
+        } else {
+          console.log('DEBUG: Sessão salva na tabela como fallback:', sessionData);
+        }
+      } catch (fallbackError) {
+        console.error('ERROR: Erro no fallback:', fallbackError);
+      }
+      
+      // Não falhar se isso der erro
     }
 
     // Log do pagamento bem-sucedido

@@ -55,6 +55,8 @@ export function PaymentSuccess() {
       if (isMobile) {
         // Mobile: Verificar se arquivo está no IndexedDB ou no Storage
         console.log('DEBUG: Mobile detectado, verificando localização do arquivo');
+        console.log('DEBUG: fileId recebido:', fileId);
+        console.log('DEBUG: userId recebido:', userId);
         
         // Tentar recuperar do IndexedDB primeiro
         try {
@@ -63,6 +65,9 @@ export function PaymentSuccess() {
           
           if (storedFile) {
             console.log('DEBUG: Arquivo encontrado no IndexedDB');
+            console.log('DEBUG: Nome do arquivo:', storedFile.file.name);
+            console.log('DEBUG: Tamanho do arquivo:', storedFile.file.size);
+            console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
             
             // Fazer upload do arquivo para o Supabase Storage
             setIsUploading(true);
@@ -73,6 +78,7 @@ export function PaymentSuccess() {
             filePath = `documents/${userId}/${fileName}`;
 
             console.log('DEBUG: Fazendo upload para:', filePath);
+            console.log('DEBUG: Configuração do Supabase verificada');
 
             // Simular progresso do upload
             const progressInterval = setInterval(() => {
@@ -85,6 +91,7 @@ export function PaymentSuccess() {
               });
             }, 200);
 
+            console.log('DEBUG: Iniciando upload para Supabase Storage...');
             const { data: uploadData, error: uploadError } = await supabase.storage
               .from('documents')
               .upload(filePath, storedFile.file, {
@@ -97,7 +104,8 @@ export function PaymentSuccess() {
 
             if (uploadError) {
               console.error('ERROR: Erro no upload:', uploadError);
-              throw new Error('Error uploading file');
+              console.error('ERROR: Detalhes do erro:', JSON.stringify(uploadError, null, 2));
+              throw new Error(`Error uploading file: ${uploadError.message}`);
             }
 
             console.log('DEBUG: Upload completed:', uploadData);
@@ -109,6 +117,8 @@ export function PaymentSuccess() {
 
             publicUrl = desktopPublicUrl;
             console.log('DEBUG: URL pública:', publicUrl);
+          } else {
+            console.log('DEBUG: Arquivo NÃO encontrado no IndexedDB');
           }
         } catch (indexedDBError) {
           console.log('DEBUG: Arquivo não encontrado no IndexedDB, verificando se está no Storage');
@@ -138,13 +148,18 @@ export function PaymentSuccess() {
       } else {
         // Desktop: recuperar arquivo do IndexedDB
         console.log('DEBUG: Desktop detectado, recuperando arquivo do IndexedDB:', fileId);
+        console.log('DEBUG: userId recebido:', userId);
+        
         storedFile = await fileStorage.getFile(fileId);
 
         if (!storedFile) {
+          console.error('ERROR: Arquivo não encontrado no IndexedDB para desktop');
           throw new Error('Arquivo não encontrado no IndexedDB');
         }
 
         console.log('DEBUG: Arquivo recuperado:', storedFile.file.name);
+        console.log('DEBUG: Tamanho do arquivo:', storedFile.file.size);
+        console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
 
         // Fazer upload do arquivo para o Supabase Storage
         setIsUploading(true);
@@ -155,6 +170,7 @@ export function PaymentSuccess() {
         filePath = `documents/${userId}/${fileName}`;
 
         console.log('DEBUG: Fazendo upload para:', filePath);
+        console.log('DEBUG: Iniciando upload para Supabase Storage (desktop)...');
 
         // Simular progresso do upload
         const progressInterval = setInterval(() => {
@@ -178,8 +194,9 @@ export function PaymentSuccess() {
         setUploadProgress(100);
 
         if (uploadError) {
-          console.error('ERROR: Erro no upload:', uploadError);
-          throw new Error('Error uploading file');
+          console.error('ERROR: Erro no upload (desktop):', uploadError);
+          console.error('ERROR: Detalhes do erro (desktop):', JSON.stringify(uploadError, null, 2));
+          throw new Error(`Error uploading file: ${uploadError.message}`);
         }
 
         console.log('DEBUG: Upload completed:', uploadData);

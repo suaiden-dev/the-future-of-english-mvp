@@ -1,7 +1,6 @@
 import React from 'react';
 import { Clock, FileText, Image as ImageIcon, Download } from 'lucide-react';
 import { Document } from '../../App';
-import { formatDistanceToNow } from 'date-fns';
 
 interface RecentActivityProps {
   documents: Document[];
@@ -11,7 +10,11 @@ interface RecentActivityProps {
 export function RecentActivity({ documents, onViewDocument }: RecentActivityProps) {
   // Sort documents by upload date (most recent first) and take the last 5
   const recentDocuments = documents
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    })
     .slice(0, 5);
 
   const getStatusBadge = (status: string) => {
