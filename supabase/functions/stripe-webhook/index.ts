@@ -140,6 +140,8 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
     // O arquivo será enviado posteriormente na página de sucesso
     console.log('DEBUG: Criando documento real no banco');
     
+    const verificationCode = `TFE${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    
     const { data: newDocument, error: createError } = await supabase
       .from('documents')
       .insert({
@@ -153,7 +155,7 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
         is_bank_statement: isBankStatement === 'true',
         idioma_raiz: 'Portuguese', // Assumindo português
         file_id: fileId, // Salvar o fileId para referência
-        verification_code: `TFE${Math.random().toString(36).substr(2, 6).toUpperCase()}` // Gerar código único
+        verification_code: verificationCode // Gerar código único
       })
       .select()
       .single();
@@ -198,13 +200,14 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
         target_language: 'english', // Assumindo inglês como idioma destino
         translation_status: 'pending',
         file_id: fileId, // Salvar o fileId para referência
-        verification_code: newDocument.verification_code // Usar o mesmo código do documento principal
+        verification_code: verificationCode // Usar o mesmo código do documento principal
       })
       .select()
       .single();
 
     if (verificationError) {
       console.error('ERROR: Erro ao criar documento para verificação:', verificationError);
+      console.error('ERROR: Detalhes do erro:', JSON.stringify(verificationError, null, 2));
       throw new Error('Failed to create verification document');
     }
 
