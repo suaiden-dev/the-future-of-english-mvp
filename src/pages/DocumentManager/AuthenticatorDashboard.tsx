@@ -115,75 +115,109 @@ export default function AuthenticatorDashboard() {
   }, []);
 
   async function handleApprove(id: string) {
-    if (!currentUser) return;
+    if (!currentUser) {
+      console.error('[AuthenticatorDashboard] Usuário não autenticado');
+      return;
+    }
     
     console.log('[AuthenticatorDashboard] Aprovando documento:', id);
+    console.log('[AuthenticatorDashboard] Usuário atual:', currentUser);
     
-    // Buscar o documento original
-    const { data: doc, error: fetchError } = await supabase
-      .from('documents_to_be_verified')
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (fetchError || !doc) {
-      console.error('[AuthenticatorDashboard] Erro ao buscar documento:', fetchError);
-      return;
-    }
-    
-    // Dados do autenticador
-    const authData = {
-      authenticated_by: currentUser.id,
-      authenticated_by_name: currentUser.user_metadata?.name || currentUser.email,
-      authenticated_by_email: currentUser.email,
-      authentication_date: new Date().toISOString()
-    };
-    
-    // Atualizar status para 'completed' com dados do autenticador
-    const { error: updateError } = await supabase
-      .from('documents_to_be_verified')
-      .update({ 
+    try {
+      // Verificar sessão atual
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('[AuthenticatorDashboard] Erro ao obter sessão:', sessionError);
+        alert('Erro de autenticação. Faça login novamente.');
+        return;
+      }
+      
+      if (!session) {
+        console.error('[AuthenticatorDashboard] Nenhuma sessão ativa');
+        alert('Sessão expirada. Faça login novamente.');
+        return;
+      }
+      
+      console.log('[AuthenticatorDashboard] Sessão válida:', session.user.id);
+      
+      // Buscar o documento original
+      const { data: doc, error: fetchError } = await supabase
+        .from('documents_to_be_verified')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (fetchError || !doc) {
+        console.error('[AuthenticatorDashboard] Erro ao buscar documento:', fetchError);
+        return;
+      }
+      
+      console.log('[AuthenticatorDashboard] Documento encontrado:', doc);
+      
+      // Dados do autenticador
+      const authData = {
+        authenticated_by: currentUser.id,
+        authenticated_by_name: currentUser.user_metadata?.name || currentUser.email,
+        authenticated_by_email: currentUser.email,
+        authentication_date: new Date().toISOString()
+      };
+      
+      console.log('[AuthenticatorDashboard] Dados de autenticação:', authData);
+      
+      // Atualizar status para 'completed' com dados do autenticador
+      const { data: updateData, error: updateError } = await supabase
+        .from('documents_to_be_verified')
+        .update({ 
+          status: 'completed',
+          ...authData
+        })
+        .eq('id', id)
+        .select();
+      
+      if (updateError) {
+        console.error('[AuthenticatorDashboard] Erro ao atualizar documento:', updateError);
+        console.error('[AuthenticatorDashboard] Detalhes do erro:', JSON.stringify(updateError, null, 2));
+        alert('Erro ao aprovar documento. Tente novamente.');
+        return;
+      }
+      
+      console.log('[AuthenticatorDashboard] Documento atualizado com sucesso:', updateData);
+      
+      // Inserir em translated_documents com dados do autenticador
+      const { error: insertError } = await supabase.from('translated_documents').insert({
+        original_document_id: doc.id,
+        user_id: doc.user_id,
+        filename: doc.filename,
+        translated_file_url: doc.translated_file_url,
+        source_language: doc.source_language,
+        target_language: doc.target_language,
+        pages: doc.pages,
         status: 'completed',
+        total_cost: doc.total_cost,
+        is_authenticated: true,
+        verification_code: doc.verification_code,
         ...authData
-      })
-      .eq('id', id);
-    
-    if (updateError) {
-      console.error('[AuthenticatorDashboard] Erro ao atualizar documento:', updateError);
-      alert('Erro ao aprovar documento. Tente novamente.');
-      return;
+      } as any);
+      
+      if (insertError) {
+        console.error('[AuthenticatorDashboard] Erro ao inserir em translated_documents:', insertError);
+      }
+      
+      // Atualizar estatísticas
+      setStats(prev => ({
+        ...prev,
+        pending: prev.pending - 1,
+        approved: prev.approved + 1
+      }));
+      
+      // Remover documento da lista
+      setDocuments(docs => docs.filter(d => d.id !== id));
+      
+      console.log('[AuthenticatorDashboard] Documento aprovado com sucesso');
+    } catch (error) {
+      console.error('[AuthenticatorDashboard] Erro geral:', error);
+      alert('Erro inesperado. Tente novamente.');
     }
-    
-    // Inserir em translated_documents com dados do autenticador
-    const { error: insertError } = await supabase.from('translated_documents').insert({
-      original_document_id: doc.id,
-      user_id: doc.user_id,
-      filename: doc.filename,
-      translated_file_url: doc.translated_file_url,
-      source_language: doc.source_language,
-      target_language: doc.target_language,
-      pages: doc.pages,
-      status: 'completed',
-      total_cost: doc.total_cost,
-      is_authenticated: true,
-      verification_code: doc.verification_code,
-      ...authData
-    } as any);
-    
-    if (insertError) {
-      console.error('[AuthenticatorDashboard] Erro ao inserir em translated_documents:', insertError);
-    }
-    
-    // Atualizar estatísticas
-    setStats(prev => ({
-      ...prev,
-      pending: prev.pending - 1,
-      approved: prev.approved + 1
-    }));
-    
-    // Remover documento da lista
-    setDocuments(docs => docs.filter(d => d.id !== id));
-    
-    console.log('[AuthenticatorDashboard] Documento aprovado com sucesso');
   }
 
   async function handleReject(id: string) {
