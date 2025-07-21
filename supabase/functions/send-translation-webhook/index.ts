@@ -227,6 +227,7 @@ Deno.serve(async (req: Request) => {
             console.error("Error details:", JSON.stringify(verifyError, null, 2));
           } else {
             console.log("Inserted into documents_to_be_verified successfully:", verifyData);
+            console.log("Notifications will be created automatically by database trigger");
           }
         } else {
           console.error("Error finding document:", docError);
