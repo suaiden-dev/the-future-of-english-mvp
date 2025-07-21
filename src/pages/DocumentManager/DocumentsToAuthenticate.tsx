@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { CheckCircle, XCircle, Clock, AlertTriangle, FileText, User, Calendar, DollarSign, Globe, FileImage } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertTriangle, FileText, User, Calendar, DollarSign, Globe, FileImage, Phone, Eye } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -48,6 +48,11 @@ export default function DocumentsToAuthenticate({ user }: Props) {
   const [rejectionComment, setRejectionComment] = useState('');
   const [rejectionOtherReason, setRejectionOtherReason] = useState('');
   const [rejectionLoading, setRejectionLoading] = useState(false);
+  
+  // Estados para informações do usuário
+  const [userProfile, setUserProfile] = useState<{ name: string; email: string; phone: string | null } | null>(null);
+  const [showUserInfo, setShowUserInfo] = useState(false);
+  const [loadingUserInfo, setLoadingUserInfo] = useState(false);
 
   useEffect(() => {
     async function fetchPendingDocuments() {
@@ -183,6 +188,30 @@ export default function DocumentsToAuthenticate({ user }: Props) {
     setRejectionReason('');
     setRejectionComment('');
     setRejectionOtherReason('');
+    setUserProfile(null);
+    setShowUserInfo(false);
+  };
+
+  const fetchUserProfile = async (userId: string) => {
+    setLoadingUserInfo(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('name, email, phone')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching user profile:', error);
+      } else {
+        setUserProfile(data);
+        setShowUserInfo(true);
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+    } finally {
+      setLoadingUserInfo(false);
+    }
   };
 
   return (
@@ -356,10 +385,52 @@ export default function DocumentsToAuthenticate({ user }: Props) {
 
              {/* Document Info */}
              <div className="p-6 bg-gray-50 border-b border-gray-200">
-               <div className="flex items-center gap-3 mb-3">
-                 <FileText className="w-5 h-5 text-blue-600" />
-                 <span className="font-medium text-gray-900">{selectedDocForRejection.filename}</span>
+               <div className="flex items-center justify-between mb-3">
+                 <div className="flex items-center gap-3">
+                   <FileText className="w-5 h-5 text-blue-600" />
+                   <span className="font-medium text-gray-900">{selectedDocForRejection.filename}</span>
+                 </div>
+                 <button
+                   onClick={() => fetchUserProfile(selectedDocForRejection.user_id)}
+                   disabled={loadingUserInfo}
+                   className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                 >
+                   <Eye className="w-4 h-4" />
+                   {loadingUserInfo ? 'Loading...' : 'View User Info'}
+                 </button>
                </div>
+               
+               {/* User Information Display */}
+               {showUserInfo && userProfile && (
+                 <div className="mb-4 p-4 bg-white rounded-lg border border-blue-200">
+                   <div className="flex items-center gap-2 mb-3">
+                     <User className="w-4 h-4 text-blue-600" />
+                     <span className="font-medium text-gray-900">Client Information</span>
+                   </div>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                     <div>
+                       <label className="text-xs font-medium text-gray-600">Name</label>
+                       <p className="text-gray-900">{userProfile.name || 'Not provided'}</p>
+                     </div>
+                     <div>
+                       <label className="text-xs font-medium text-gray-600">Email</label>
+                       <p className="text-gray-900 break-all">{userProfile.email}</p>
+                     </div>
+                     <div>
+                       <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                         <Phone className="w-3 h-3" />
+                         Phone Number
+                       </label>
+                       <p className="text-gray-900">{userProfile.phone || 'Not provided'}</p>
+                     </div>
+                     <div>
+                       <label className="text-xs font-medium text-gray-600">User ID</label>
+                       <p className="text-gray-900 font-mono text-xs break-all">{selectedDocForRejection.user_id}</p>
+                     </div>
+                   </div>
+                 </div>
+               )}
+               
                <div className="grid grid-cols-2 gap-4 text-sm">
                  <div className="flex items-center gap-2">
                    <User className="w-4 h-4 text-gray-500" />

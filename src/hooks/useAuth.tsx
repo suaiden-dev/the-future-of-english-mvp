@@ -4,6 +4,7 @@ import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface CustomUser extends SupabaseUser {
   role: 'user' | 'authenticator' | 'admin';
+  phone?: string;
 }
 
 interface AuthContextType {
@@ -12,7 +13,8 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string, name: string, role?: 'user' | 'authenticator') => Promise<any>;
+  signUp: (email: string, password: string, name: string, phone: string, role?: 'user' | 'authenticator') => Promise<any>;
+  resetPassword: (email: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,7 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [sessionExpired, setSessionExpired] = useState(false);
 
   // Busca ou cria perfil na tabela profiles
-  const fetchOrCreateProfile = async (userId: string, email: string, name: string, role: 'user' | 'authenticator' | 'admin' = 'user') => {
+  const fetchOrCreateProfile = async (userId: string, email: string, name: string, role: 'user' | 'authenticator' | 'admin' = 'user', phone?: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -43,6 +45,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!data.name || data.name !== name) {
           updates.name = name;
         }
+        if (phone && (!data.phone || data.phone !== phone)) {
+          updates.phone = phone;
+        }
         if (Object.keys(updates).length > 0) {
           await supabase.from('profiles').update(updates).eq('id', userId);
           return { ...data, ...updates };
@@ -51,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
-          .insert({ id: userId, email, name, role })
+          .insert({ id: userId, email, name, role, phone })
           .select()
           .single();
         if (createError) {
@@ -71,9 +76,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (session?.user) {
       const userObj = session.user;
       try {
-        const profile = await fetchOrCreateProfile(userObj.id, userObj.email ?? '', userObj.user_metadata?.name ?? '', 'user');
+        const profile = await fetchOrCreateProfile(userObj.id, userObj.email ?? '', userObj.user_metadata?.name ?? '', 'user', userObj.user_metadata?.phone);
         const role = profile?.role || 'user';
-        const customUser: CustomUser = { ...userObj, role };
+        const customUser: CustomUser = { ...userObj, role, phone: profile?.phone };
         setUser(customUser);
         setSession(session);
         setSessionExpired(false);
@@ -127,24 +132,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   };
 
-  const signUp = async (email: string, password: string, name: string, role: 'user' | 'authenticator' = 'user') => {
+  const signUp = async (email: string, password: string, name: string, phone: string, role: 'user' | 'authenticator' = 'user') => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name, role } }
+      options: { data: { name, role, phone } }
     });
     if (error) {
       throw error;
     }
     // Cria perfil imediatamente após registro
     if (data.user) {
-      await fetchOrCreateProfile(data.user.id, email, name, role);
+      await fetchOrCreateProfile(data.user.id, email, name, role, phone);
+    }
+    return data;
+  };
+
+  const resetPassword = async (email: string) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+    if (error) {
+      throw error;
     }
     return data;
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut, signUp }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signOut, signUp, resetPassword }}>
       {/* Mensagem de sessão expirada removida */}
       {children}
     </AuthContext.Provider>

@@ -200,6 +200,8 @@ Deno.serve(async (req: Request) => {
 
         if (docData && !docError) {
           console.log("Found document data:", docData);
+          console.log("N8N validated is_bank_statement:", is_bank_statement);
+          console.log("Client marked is_bank_statement:", docData.is_bank_statement);
           
           const insertData = {
             user_id: user_id,
@@ -207,7 +209,12 @@ Deno.serve(async (req: Request) => {
             pages: docData.pages || paginas || 1,
             status: 'pending',
             total_cost: docData.total_cost || parseFloat(valor) || 0,
-            is_bank_statement: docData.is_bank_statement || is_bank_statement || false,
+            // Usar o valor validado pelo N8N se disponível, senão usar o valor do cliente
+            is_bank_statement: (() => {
+              const finalValue = is_bank_statement !== undefined ? is_bank_statement : (docData.is_bank_statement || false);
+              console.log("Final is_bank_statement value being used:", finalValue);
+              return finalValue;
+            })(),
             source_language: docData.idioma_raiz?.toLowerCase() || 'portuguese',
             target_language: 'english',
             translation_status: 'pending',

@@ -10,6 +10,7 @@ export function Register() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: ''
   });
@@ -36,6 +37,12 @@ export function Register() {
       newErrors.email = 'Please enter a valid email';
     }
 
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/[\s\-\(\)]/g, ''))) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
     }
@@ -55,7 +62,7 @@ export function Register() {
       console.log('[Register] Tentando registrar:', formData.email);
       
       // Chamar signUp sem depender do loading do contexto
-      const result = await signUp(formData.email, formData.password, formData.name);
+      const result = await signUp(formData.email, formData.password, formData.name, formData.phone);
       
       console.log('[Register] Registro bem-sucedido:', result);
       
@@ -172,15 +179,18 @@ export function Register() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Join us for professional translation services
           </p>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <button
-              onClick={() => navigate('/login')}
-              className="font-medium text-blue-600 hover:text-blue-700 transition-colors underline"
-            >
-              Sign in here
-            </button>
+          <p className="mt-2 text-center text-sm text-gray-600 mb-4">
+            Already have an account?
           </p>
+          <button
+            onClick={() => navigate('/login')}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 border border-transparent rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+            Sign In
+          </button>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -234,6 +244,34 @@ export function Register() {
               </div>
               {errors.email && <p className="mt-2 text-sm text-red-600 flex items-center">
                 <span className="mr-1">⚠️</span> {errors.email}
+              </p>}
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </div>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  required
+                  className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
+                    errors.phone ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
+                  placeholder="Enter your phone number"
+                  value={formData.phone}
+                  onChange={handleChange}
+                />
+              </div>
+              {errors.phone && <p className="mt-2 text-sm text-red-600 flex items-center">
+                <span className="mr-1">⚠️</span> {errors.phone}
               </p>}
             </div>
           </div>

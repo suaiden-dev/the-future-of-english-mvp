@@ -15,6 +15,8 @@ import { CustomerDashboard } from './pages/CustomerDashboard';
 import { DocumentVerification } from './pages/DocumentVerification';
 import Login from './pages/Login';
 import { Register } from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { DocumentManager } from './pages/DocumentManager';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentCancelled } from './pages/PaymentCancelled';
@@ -256,6 +258,8 @@ function App() {
           <Route path="/verify" element={<DocumentVerification />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-cancelled" element={<PaymentCancelled />} />
           <Route path="/dashboard/*" element={user && user.role === 'user' ? (

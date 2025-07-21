@@ -1,7 +1,8 @@
-import React from 'react';
-import { XCircle, FileText, User, Calendar, DollarSign, Hash, Eye, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { XCircle, FileText, User, Calendar, DollarSign, Hash, Eye, Download, Phone } from 'lucide-react';
 import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
 import { Document } from '../../App';
+import { supabase } from '../../lib/supabase';
 
 interface DocumentDetailsModalProps {
   document: Document | null;
@@ -9,6 +10,38 @@ interface DocumentDetailsModalProps {
 }
 
 export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModalProps) {
+  const [userProfile, setUserProfile] = useState<{ name: string; email: string; phone: string | null } | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  useEffect(() => {
+    if (document) {
+      fetchUserProfile();
+    }
+  }, [document]);
+
+  const fetchUserProfile = async () => {
+    if (!document) return;
+    
+    setLoadingProfile(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('name, email, phone')
+        .eq('id', document.user_id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching user profile:', error);
+      } else {
+        setUserProfile(data);
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
   if (!document) return null;
 
   const handleDownload = async () => {
@@ -89,10 +122,33 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
               <User className="w-6 h-6 text-green-600" />
               <h4 className="text-lg font-semibold text-gray-900">User Information</h4>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">User ID</label>
-              <p className="text-gray-900 font-mono text-sm break-all">{document.user_id}</p>
-            </div>
+            {loadingProfile ? (
+              <div className="text-gray-500">Loading user information...</div>
+            ) : userProfile ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Name</label>
+                  <p className="text-gray-900">{userProfile.name || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Email</label>
+                  <p className="text-gray-900 break-all">{userProfile.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <Phone className="w-4 h-4" />
+                    Phone Number
+                  </label>
+                  <p className="text-gray-900">{userProfile.phone || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">User ID</label>
+                  <p className="text-gray-900 font-mono text-sm break-all">{document.user_id}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-gray-500">User information not available</div>
+            )}
           </div>
           
           {/* Document Details */}

@@ -106,6 +106,10 @@ export type Database = {
           is_authenticated: boolean | null
           is_bank_statement: boolean | null
           pages: number | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_comment: string | null
+          rejection_reason: string | null
           source_language: string | null
           status: string
           target_language: string | null
@@ -130,6 +134,10 @@ export type Database = {
           is_authenticated?: boolean | null
           is_bank_statement?: boolean | null
           pages?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_comment?: string | null
+          rejection_reason?: string | null
           source_language?: string | null
           status?: string
           target_language?: string | null
@@ -154,6 +162,10 @@ export type Database = {
           is_authenticated?: boolean | null
           is_bank_statement?: boolean | null
           pages?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_comment?: string | null
+          rejection_reason?: string | null
           source_language?: string | null
           status?: string
           target_language?: string | null
@@ -183,6 +195,13 @@ export type Database = {
           {
             foreignKeyName: "documents_to_be_verified_authenticated_by_fkey"
             columns: ["authenticated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_to_be_verified_rejected_by_fkey"
+            columns: ["rejected_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -284,6 +303,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          phone: string | null
           role: string
           updated_at: string | null
         }
@@ -292,6 +312,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          phone?: string | null
           role?: string
           updated_at?: string | null
         }
@@ -300,10 +321,19 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          phone?: string | null
           role?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stripe_sessions: {
         Row: {
@@ -435,12 +465,54 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      auth_users_view: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string | null
+          last_sign_in_at: string | null
+          raw_app_meta_data: Json | null
+          raw_user_meta_data: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          last_sign_in_at?: string | null
+          raw_app_meta_data?: Json | null
+          raw_user_meta_data?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          last_sign_in_at?: string | null
+          raw_app_meta_data?: Json | null
+          raw_user_meta_data?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      debug_auth_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          current_user_id: string
+          current_user_role: string
+          auth_role: string
+          is_authenticated: boolean
+        }[]
+      }
       generate_verification_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never> | { user_id: string }
+        Returns: boolean
       }
     }
     Enums: {

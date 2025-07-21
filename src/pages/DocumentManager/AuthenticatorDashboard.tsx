@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { FileText, Check, X, Clock, ShieldCheck, Download, User, Mail, Calendar, DollarSign, AlertCircle, CheckCircle, XCircle, Eye, Trash2, Upload, RefreshCw, Upload as UploadIcon } from 'lucide-react';
+import { FileText, Check, X, Clock, ShieldCheck, Download, User, Mail, Calendar, DollarSign, AlertCircle, CheckCircle, XCircle, Eye, Trash2, Upload, RefreshCw, Upload as UploadIcon, Phone } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -32,6 +32,7 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   role: string;
 }
 
@@ -99,6 +100,12 @@ export default function AuthenticatorDashboard() {
           user_name: doc.profiles?.name || null,
           user_email: doc.profiles?.email || null
         })) as Document[];
+        
+        // Log para debug do is_bank_statement
+        console.log('[AuthenticatorDashboard] Documentos com is_bank_statement:');
+        allDocuments.forEach((doc, index) => {
+          console.log(`  ${index + 1}. ${doc.filename}: is_bank_statement = ${doc.is_bank_statement}`);
+        });
         
         const pendingCount = allDocuments.filter(doc => doc.status === 'pending').length;
         const approvedCount = allDocuments.filter(doc => doc.status === 'completed').length;
@@ -311,7 +318,7 @@ export default function AuthenticatorDashboard() {
     try {
       const { data: user, error } = await supabase
         .from('profiles')
-        .select('id, name, email, role')
+        .select('id, name, email, phone, role')
         .eq('id', userId)
         .single();
       if (error || !user) {
@@ -823,6 +830,13 @@ export default function AuthenticatorDashboard() {
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700">Email:</span>
                   <span className="text-gray-900">{selectedUser.email}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="font-medium text-gray-700 flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    Phone:
+                  </span>
+                  <span className="text-gray-900">{selectedUser.phone || 'Not provided'}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700">Role:</span>

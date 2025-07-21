@@ -3,11 +3,11 @@ import { supabase } from '../../lib/supabase';
 import { RefreshCw } from 'lucide-react';
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<{ name: string; email: string } | null>(null);
+  const [profile, setProfile] = useState<{ name: string; email: string; phone: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', email: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '' });
 
   useEffect(() => {
     async function fetchProfile() {
@@ -19,12 +19,12 @@ export default function ProfilePage() {
         if (userError || !user) throw new Error('User not found');
         const { data, error } = await supabase
           .from('profiles')
-          .select('name, email')
+          .select('name, email, phone')
           .eq('id', user.id)
           .single();
         if (error || !data) throw new Error('Profile not found');
         setProfile(data);
-        setForm({ name: data.name || '', email: data.email || '' });
+        setForm({ name: data.name || '', email: data.email || '', phone: data.phone || '' });
       } catch (err: any) {
         setError(err.message || 'Error loading profile');
       } finally {
@@ -48,11 +48,11 @@ export default function ProfilePage() {
       if (userError || !user) throw new Error('User not found');
       const { error } = await supabase
         .from('profiles')
-        .update({ name: form.name, email: form.email })
+        .update({ name: form.name, email: form.email, phone: form.phone })
         .eq('id', user.id);
       if (error) throw error;
       setSuccess('Profile updated successfully!');
-      setProfile({ name: form.name, email: form.email });
+      setProfile({ name: form.name, email: form.email, phone: form.phone });
     } catch (err: any) {
       setError(err.message || 'Error updating profile');
     } finally {
@@ -94,6 +94,17 @@ export default function ProfilePage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
               placeholder="Enter your email"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <input
+              type="tel"
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter your phone number"
             />
           </div>
           <button

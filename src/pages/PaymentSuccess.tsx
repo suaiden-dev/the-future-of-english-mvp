@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -11,6 +11,7 @@ export function PaymentSuccess() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const hasProcessedRef = useRef(false);
 
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -22,6 +23,14 @@ export function PaymentSuccess() {
       return;
     }
 
+    // Evitar processamento múltiplo (usando ref síncrono)
+    if (hasProcessedRef.current) {
+      console.log('DEBUG: Processamento já realizado, ignorando chamada duplicada');
+      return;
+    }
+
+    console.log('DEBUG: Iniciando processamento do pagamento');
+    hasProcessedRef.current = true;
     handlePaymentSuccess(sessionId);
   }, [searchParams]);
 
@@ -52,104 +61,112 @@ export function PaymentSuccess() {
       let filePath = null;
       let publicUrl = null;
 
+      // Função consolidada para fazer upload do arquivo
+      const uploadFileToStorage = async (file: File, userId: string) => {
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+        const uploadPath = `${userId}/${fileName}`;
+
+        console.log('DEBUG: Fazendo upload para:', uploadPath);
+        console.log('DEBUG: Nome do arquivo:', file.name);
+        console.log('DEBUG: Tamanho do arquivo:', file.size);
+        console.log('DEBUG: Tipo do arquivo:', file.type);
+
+        // Simular progresso do upload
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => {
+            if (prev >= 90) {
+              clearInterval(progressInterval);
+              return 90;
+            }
+            return prev + 10;
+          });
+        }, 200);
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(uploadPath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        clearInterval(progressInterval);
+        setUploadProgress(100);
+
+        if (uploadError) {
+          console.error('ERROR: Erro no upload:', uploadError);
+          console.error('ERROR: Detalhes do erro:', JSON.stringify(uploadError, null, 2));
+          throw new Error(`Error uploading file: ${uploadError.message}`);
+        }
+
+        console.log('DEBUG: Upload completed:', uploadData);
+
+        // Obter URL pública do arquivo
+        const { data: { publicUrl: generatedPublicUrl } } = supabase.storage
+          .from('documents')
+          .getPublicUrl(uploadPath);
+
+        console.log('DEBUG: URL pública gerada:', generatedPublicUrl);
+        
+        return { uploadData, publicUrl: generatedPublicUrl, filePath: uploadPath };
+      };
+
+      // Lógica unificada para recuperar e fazer upload do arquivo
       if (isMobile) {
         // Mobile: Verificar se arquivo está no IndexedDB ou no Storage
         console.log('DEBUG: Mobile detectado, verificando localização do arquivo');
         console.log('DEBUG: fileId recebido:', fileId);
         console.log('DEBUG: userId recebido:', userId);
         
-        // Tentar recuperar do IndexedDB primeiro
+        // Verificar se fileId é na verdade um filePath no Storage (upload direto do DocumentUploadModal)
         try {
-          console.log('DEBUG: Tentando recuperar do IndexedDB:', fileId);
-          storedFile = await fileStorage.getFile(fileId);
+          console.log('DEBUG: Verificando se fileId é um filePath no Storage');
+          const { data: { publicUrl: storagePublicUrl } } = supabase.storage
+            .from('documents')
+            .getPublicUrl(fileId);
           
-          if (storedFile) {
-            console.log('DEBUG: Arquivo encontrado no IndexedDB');
-            console.log('DEBUG: Nome do arquivo:', storedFile.file.name);
-            console.log('DEBUG: Tamanho do arquivo:', storedFile.file.size);
-            console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
-            
-            // Fazer upload do arquivo para o Supabase Storage
-            setIsUploading(true);
-            setUploadProgress(0);
-
-            const fileExt = storedFile.file.name.split('.').pop();
-            const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-            filePath = `${userId}/${fileName}`;
-
-            console.log('DEBUG: Fazendo upload para:', filePath);
-            console.log('DEBUG: Configuração do Supabase verificada');
-            console.log('DEBUG: Nome do arquivo original:', storedFile.file.name);
-            console.log('DEBUG: Tamanho do arquivo:', storedFile.file.size);
-            console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
-
-            // Simular progresso do upload
-            const progressInterval = setInterval(() => {
-              setUploadProgress(prev => {
-                if (prev >= 90) {
-                  clearInterval(progressInterval);
-                  return 90;
-                }
-                return prev + 10;
-              });
-            }, 200);
-
-            console.log('DEBUG: Iniciando upload para Supabase Storage...');
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('documents')
-              .upload(filePath, storedFile.file, {
-                cacheControl: '3600',
-                upsert: false
-              });
-
-            clearInterval(progressInterval);
-            setUploadProgress(100);
-
-            if (uploadError) {
-              console.error('ERROR: Erro no upload:', uploadError);
-              console.error('ERROR: Detalhes do erro:', JSON.stringify(uploadError, null, 2));
-              throw new Error(`Error uploading file: ${uploadError.message}`);
-            }
-
-            console.log('DEBUG: Upload completed:', uploadData);
-
-            // Obter URL pública do arquivo
-            const { data: { publicUrl: desktopPublicUrl } } = supabase.storage
-              .from('documents')
-              .getPublicUrl(filePath);
-
-            publicUrl = desktopPublicUrl;
-            console.log('DEBUG: URL pública gerada:', publicUrl);
-            
-            // Verificar se o upload foi bem-sucedido
-            if (uploadData) {
-              console.log('DEBUG: Upload bem-sucedido:', uploadData);
-            }
-          } else {
-            console.log('DEBUG: Arquivo NÃO encontrado no IndexedDB');
-          }
-        } catch (indexedDBError) {
-          console.log('DEBUG: Arquivo não encontrado no IndexedDB, verificando se está no Storage');
+          publicUrl = storagePublicUrl;
+          console.log('DEBUG: ✅ Arquivo encontrado no Storage (upload direto):', publicUrl);
           
-          // Verificar se fileId é na verdade um filePath no Storage
+          // Criar objeto simulado para compatibilidade
+          storedFile = {
+            file: { name: filename, type: 'application/pdf', size: 0 },
+            metadata: {
+              pageCount: parseInt(sessionData.metadata.pages),
+              documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado'
+            }
+          };
+          
+          console.log('DEBUG: ✅ USANDO ARQUIVO DO STORAGE - SEM UPLOAD DUPLICADO');
+        } catch (storageError) {
+          console.log('DEBUG: fileId não é um filePath no Storage, tentando IndexedDB');
+          
+          // Tentar recuperar do IndexedDB como fallback
           try {
-            const { data: { publicUrl: storagePublicUrl } } = supabase.storage
-              .from('documents')
-              .getPublicUrl(fileId);
+            console.log('DEBUG: Tentando recuperar do IndexedDB:', fileId);
+            storedFile = await fileStorage.getFile(fileId);
             
-            publicUrl = storagePublicUrl;
-            console.log('DEBUG: Arquivo encontrado no Storage:', publicUrl);
-            
-            // Criar objeto simulado para compatibilidade
-            storedFile = {
-              file: { name: filename, type: 'application/pdf', size: 0 },
-              metadata: {
-                pageCount: parseInt(sessionData.metadata.pages),
-                documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado'
-              }
-            };
-          } catch (storageError) {
-            console.error('ERROR: Arquivo não encontrado nem no IndexedDB nem no Storage');
+            if (storedFile) {
+              console.log('DEBUG: Arquivo encontrado no IndexedDB');
+              console.log('DEBUG: Nome do arquivo:', storedFile.file.name);
+              console.log('DEBUG: Tamanho do arquivo:', storedFile.file.size);
+              console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
+              
+              // Fazer upload do arquivo para o Supabase Storage
+              const uploadResult = await uploadFileToStorage(storedFile.file, userId);
+              publicUrl = uploadResult.publicUrl;
+              filePath = uploadResult.filePath;
+              
+              console.log('DEBUG: Upload bem-sucedido:', uploadResult.uploadData);
+            } else {
+              console.log('DEBUG: Arquivo NÃO encontrado no IndexedDB');
+              throw new Error('Arquivo não encontrado');
+            }
+          } catch (indexedDBError) {
+            console.error('ERROR: Arquivo não encontrado nem no Storage nem no IndexedDB');
             throw new Error('Arquivo não encontrado');
           }
         }
@@ -170,60 +187,11 @@ export function PaymentSuccess() {
         console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
 
         // Fazer upload do arquivo para o Supabase Storage
-        setIsUploading(true);
-        setUploadProgress(0);
-
-        const fileExt = storedFile.file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-        filePath = `${userId}/${fileName}`;
-
-        console.log('DEBUG: Fazendo upload para:', filePath);
-        console.log('DEBUG: Iniciando upload para Supabase Storage (desktop)...');
-        console.log('DEBUG: Nome do arquivo original:', storedFile.file.name);
-        console.log('DEBUG: Tamanho do arquivo:', storedFile.file.size);
-        console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
-
-        // Simular progresso do upload
-        const progressInterval = setInterval(() => {
-          setUploadProgress(prev => {
-            if (prev >= 90) {
-              clearInterval(progressInterval);
-              return 90;
-            }
-            return prev + 10;
-          });
-        }, 200);
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('documents')
-          .upload(filePath, storedFile.file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        clearInterval(progressInterval);
-        setUploadProgress(100);
-
-        if (uploadError) {
-          console.error('ERROR: Erro no upload (desktop):', uploadError);
-          console.error('ERROR: Detalhes do erro (desktop):', JSON.stringify(uploadError, null, 2));
-          throw new Error(`Error uploading file: ${uploadError.message}`);
-        }
-
-        console.log('DEBUG: Upload completed:', uploadData);
-
-        // Obter URL pública do arquivo
-        const { data: { publicUrl: desktopPublicUrl } } = supabase.storage
-          .from('documents')
-          .getPublicUrl(filePath);
-
-        publicUrl = desktopPublicUrl;
-        console.log('DEBUG: URL pública gerada:', publicUrl);
+        const uploadResult = await uploadFileToStorage(storedFile.file, userId);
+        publicUrl = uploadResult.publicUrl;
+        filePath = uploadResult.filePath;
         
-        // Verificar se o upload foi bem-sucedido
-        if (uploadData) {
-          console.log('DEBUG: Upload bem-sucedido:', uploadData);
-        }
+        console.log('DEBUG: Upload bem-sucedido:', uploadResult.uploadData);
       }
 
       // Verificar se documentId existe nos metadados da sessão
@@ -344,8 +312,10 @@ export function PaymentSuccess() {
       const updateResult = await updateResponse.json();
       console.log('DEBUG: Documento atualizado via Edge Function:', updateResult);
 
-      // Chamar send-translation-webhook para enviar para n8n
+      // Chamada manual para send-translation-webhook (Storage Trigger não existe)
+      console.log('DEBUG: 🚀 INICIANDO ENVIO PARA N8N - CHAMADA MANUAL');
       console.log('DEBUG: Chamando send-translation-webhook para enviar para n8n');
+      console.log('DEBUG: 📋 CONFIRMAÇÃO - APENAS UMA REQUISIÇÃO SERÁ ENVIADA PARA O N8N');
       
       // Garantir que a URL seja válida
       let finalUrl = publicUrl;
@@ -388,7 +358,8 @@ export function PaymentSuccess() {
       } else {
         const webhookResult = await webhookResponse.json();
         console.log('DEBUG: Resposta do send-translation-webhook:', webhookResult);
-        console.log('SUCCESS: Documento enviado para n8n via send-translation-webhook');
+        console.log('✅ SUCCESS: Documento enviado para n8n via send-translation-webhook');
+        console.log('✅ CONFIRMAÇÃO: APENAS UMA REQUISIÇÃO FOI ENVIADA PARA O N8N');
       }
 
       // Remover arquivo do IndexedDB (apenas desktop usa IndexedDB)
@@ -448,6 +419,22 @@ export function PaymentSuccess() {
             <p className="text-sm text-green-700 mb-4">
               Your document has been successfully processed and sent for translation.
             </p>
+            
+            {/* Aviso sobre não recarregar a página */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex items-start space-x-2">
+                <CheckCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-left">
+                  <p className="text-xs font-medium text-blue-800 mb-1">
+                    ✅ Successfully Completed
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    Your document is now being processed. You can safely navigate away from this page.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
             <button
               onClick={() => navigate('/dashboard')}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors w-full"
@@ -482,6 +469,22 @@ export function PaymentSuccess() {
               ></div>
             </div>
             <p className="text-xs text-gray-500">{uploadProgress}% completed</p>
+            
+            {/* Aviso importante para não fechar a página */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-4">
+              <div className="flex items-start space-x-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="text-left">
+                  <p className="text-xs font-medium text-amber-800 mb-1">
+                    ⚠️ Important
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    Please do not close this page or refresh the browser while the upload is in progress. 
+                    This could interrupt the process and cause delays.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
         
