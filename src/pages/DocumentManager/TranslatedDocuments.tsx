@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 import { FileText, Download, Eye, Calendar, DollarSign, User, CheckCircle, XCircle } from 'lucide-react';
 
 interface TranslatedDocument {
@@ -23,6 +24,9 @@ interface TranslatedDocument {
   authenticated_by_name?: string | null;
   authenticated_by_email?: string | null;
   authentication_date?: string | null;
+  // Dados do usuário
+  user_name?: string | null;
+  user_email?: string | null;
 }
 
 interface UserProfile {
@@ -33,6 +37,7 @@ interface UserProfile {
 }
 
 export default function TranslatedDocuments() {
+  const { user, loading: authLoading } = useAuth();
   const [documents, setDocuments] = useState<TranslatedDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,19 +52,42 @@ export default function TranslatedDocuments() {
 
   useEffect(() => {
     async function fetchTranslatedDocuments() {
+      if (!user) return;
+      
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase
+        console.log('[TranslatedDocuments] Fetching documents for authenticator:', user.id);
+        
+        // Se for admin, mostra todos os documentos. Se for authenticator, mostra apenas os que ele autenticou
+        let query = supabase
           .from('translated_documents')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .select(`
+            *,
+            profiles:user_id (
+              name,
+              email
+            )
+          `);
+        
+        // Se não for admin, filtra apenas os documentos autenticados pelo usuário atual
+        if (user.role !== 'admin') {
+          query = query.eq('authenticated_by', user.id);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
         
         if (error) {
           console.error('[TranslatedDocuments] Error fetching documents:', error);
           setError(error.message);
         } else {
-          setDocuments(data as TranslatedDocument[] || []);
+          const documentsWithUserData = (data as any[] || []).map(doc => ({
+            ...doc,
+            user_name: doc.profiles?.name || null,
+            user_email: doc.profiles?.email || null
+          })) as TranslatedDocument[];
+          setDocuments(documentsWithUserData);
+          console.log('[TranslatedDocuments] Found documents:', documentsWithUserData.length);
         }
       } catch (err) {
         console.error('[TranslatedDocuments] Unexpected error:', err);
@@ -69,7 +97,7 @@ export default function TranslatedDocuments() {
       }
     }
     fetchTranslatedDocuments();
-  }, []);
+  }, [user]);
 
   async function handleViewUser(userId: string) {
     setUserLoading(true);
@@ -109,6 +137,28 @@ export default function TranslatedDocuments() {
     setCurrentPage(page);
   };
 
+  // Verificar se está carregando ou se não há usuário
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">You need to be logged in to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6">
@@ -117,7 +167,12 @@ export default function TranslatedDocuments() {
           <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Translated Documents</h1>
-            <p className="text-sm sm:text-base text-gray-600">View all documents that have been translated and sent to clients.</p>
+            <p className="text-sm sm:text-base text-gray-600">
+              {user?.role === 'admin' 
+                ? 'View all documents that have been translated and sent to clients.' 
+                : 'View documents that you have authenticated and sent to clients.'
+              }
+            </p>
           </div>
         </div>
 
@@ -231,8 +286,8 @@ export default function TranslatedDocuments() {
                   {/* Client Info */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-gray-600 truncate max-w-20" title={doc.user_id}>
-                        {doc.user_id.slice(0, 8)}...
+                      <span className="text-xs text-gray-600 truncate max-w-32" title={doc.user_name || doc.user_id}>
+                        {doc.user_name || `${doc.user_id.slice(0, 8)}...`}
                       </span>
                       <button
                         className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
@@ -362,8 +417,8 @@ export default function TranslatedDocuments() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono text-gray-600 truncate max-w-24" title={doc.user_id}>
-                            {doc.user_id.slice(0, 8)}...
+                          <span className="text-xs text-gray-600 truncate max-w-32" title={doc.user_name || doc.user_id}>
+                            {doc.user_name || `${doc.user_id.slice(0, 8)}...`}
                           </span>
                           <button
                             className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"

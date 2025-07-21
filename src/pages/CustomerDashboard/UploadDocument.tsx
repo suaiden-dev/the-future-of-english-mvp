@@ -115,6 +115,7 @@ export default function UploadDocument() {
         isBankStatement: isExtrato,
         fileId, // Usar o ID do arquivo no IndexedDB
         userId: user?.id,
+        userEmail: user?.email, // Adicionar email do usuário
         filename: selectedFile?.name
       };
       console.log('Payload enviado para checkout:', payload);
@@ -193,6 +194,7 @@ export default function UploadDocument() {
             isBankStatement: isExtrato,
             filePath, // Caminho do arquivo no Supabase Storage
             userId: user.id,
+            userEmail: user.email, // Adicionar email do usuário
             filename: selectedFile?.name,
             isMobile: true // Mobile
           };

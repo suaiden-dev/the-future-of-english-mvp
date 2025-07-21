@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, X, Check, Trash2, FileText, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useNotifications, Notification } from '../hooks/useNotifications';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // Fechar dropdown quando clicar fora
   useEffect(() => {
@@ -20,10 +24,27 @@ export function NotificationBell() {
   }, []);
 
   const handleNotificationClick = async (notification: Notification) => {
+    console.log('[NotificationBell] Clicou na notificação:', notification.title, 'User role:', user?.role);
+    
     if (!notification.is_read) {
       await markAsRead(notification.id);
     }
     setIsOpen(false);
+    
+    // Redirecionar baseado no role do usuário
+    if (user?.role === 'authenticator') {
+      // Autenticadores vão para a página de autenticar documentos
+      console.log('[NotificationBell] Redirecionando autenticador para /authenticator/authenticate');
+      navigate('/authenticator/authenticate');
+    } else if (user?.role === 'admin') {
+      // Admins vão para o dashboard de progresso
+      console.log('[NotificationBell] Redirecionando admin para /dashboard/progress');
+      navigate('/dashboard/progress');
+    } else {
+      // Usuários normais vão para o dashboard de progresso
+      console.log('[NotificationBell] Redirecionando usuário normal para /dashboard/progress');
+      navigate('/dashboard/progress');
+    }
   };
 
   const handleMarkAllAsRead = async () => {
@@ -74,7 +95,7 @@ export function NotificationBell() {
       {/* Botão do sino */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-white hover:text-blue-100 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors border border-white border-opacity-30 hover:border-opacity-50"
+        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (

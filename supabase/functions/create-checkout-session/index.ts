@@ -65,6 +65,7 @@ Deno.serve(async (req: Request) => {
       filePath,
       isMobile,
       userId,
+      userEmail, // Adicionar email do usuário
       filename,
       fileSize,
       fileType,
@@ -72,7 +73,7 @@ Deno.serve(async (req: Request) => {
     } = await req.json();
 
     console.log('DEBUG: Dados recebidos:', {
-      pages, isCertified, isNotarized, isBankStatement, fileId, filePath, isMobile, userId, filename, fileSize, fileType, originalLanguage
+      pages, isCertified, isNotarized, isBankStatement, fileId, filePath, isMobile, userId, userEmail, filename, fileSize, fileType, originalLanguage
     });
 
     // Validações
@@ -118,6 +119,7 @@ Deno.serve(async (req: Request) => {
     // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      customer_email: userEmail, // Pré-preencher email do usuário
       line_items: [
         {
           price_data: {
@@ -128,12 +130,13 @@ Deno.serve(async (req: Request) => {
               metadata: {
                 fileId: fileIdentifier,
                 userId,
+                userEmail, // Adicionar email nos metadados
                 filename,
                 pages: pages.toString(),
-                isCertified: isCertified.toString(),
-                isNotarized: isNotarized.toString(),
-                isBankStatement: isBankStatement.toString(),
-                isMobile: isMobile.toString(),
+                isCertified: (isCertified || false).toString(),
+                isNotarized: (isNotarized || false).toString(),
+                isBankStatement: (isBankStatement || false).toString(),
+                isMobile: (isMobile || false).toString(),
                 fileSize: fileSize?.toString() || '',
                 fileType: fileType || '',
                 originalLanguage: originalLanguage || '',
@@ -158,13 +161,14 @@ Deno.serve(async (req: Request) => {
       metadata: {
         fileId: fileIdentifier,
         userId,
+        userEmail, // Adicionar email nos metadados
         filename,
         pages: pages.toString(),
-        isCertified: isCertified.toString(),
-        isNotarized: isNotarized.toString(),
-        isBankStatement: isBankStatement.toString(),
+        isCertified: (isCertified || false).toString(),
+        isNotarized: (isNotarized || false).toString(),
+        isBankStatement: (isBankStatement || false).toString(),
         totalPrice: totalPrice.toString(),
-        isMobile: isMobile.toString(),
+        isMobile: (isMobile || false).toString(),
         fileSize: fileSize?.toString() || '',
         fileType: fileType || '',
         originalLanguage: originalLanguage || '',

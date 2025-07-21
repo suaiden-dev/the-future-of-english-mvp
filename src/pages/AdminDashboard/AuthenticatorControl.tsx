@@ -233,9 +233,11 @@ export function AuthenticatorControl() {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <span className="text-white font-bold text-xl">TFE</span>
-              </div>
+              <img 
+                src="/logo_tfoe.png" 
+                alt="The Future of English Logo" 
+                className="h-16 w-auto mx-auto mb-4"
+              />
               <p className="text-gray-600">Loading authenticator data...</p>
             </div>
           </div>

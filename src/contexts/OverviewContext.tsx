@@ -63,38 +63,52 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    console.log('[OverviewContext] Fetching fresh data...');
+    console.log('[OverviewContext] Fetching fresh data for user:', currentUser.id, 'role:', currentUser.role);
     setLoading(true);
     setError(null);
 
     try {
-      // Fetch general statistics
-      const { data: allDocuments, error: allError } = await supabase
-        .from('documents_to_be_verified')
-        .select('*');
+      // Fetch documents based on user role
+      let allDocumentsQuery = supabase.from('documents_to_be_verified').select('*');
+      let translatedDocsQuery = supabase.from('translated_documents').select('*');
 
+      // If not admin, filter by authenticated_by
+      if (currentUser.role !== 'admin') {
+        translatedDocsQuery = translatedDocsQuery.eq('authenticated_by', currentUser.id);
+      }
+
+      const { data: allDocuments, error: allError } = await allDocumentsQuery;
       if (allError) throw allError;
 
-      // Fetch translated documents
-      const { data: translatedDocs, error: translatedError } = await supabase
-        .from('translated_documents')
-        .select('*');
-
+      const { data: translatedDocs, error: translatedError } = await translatedDocsQuery;
       if (translatedError) throw translatedError;
 
-      // Calculate statistics
-      const totalDocs = allDocuments?.length || 0;
-      const pendingDocs = allDocuments?.filter(doc => doc.status === 'pending').length || 0;
-      const approvedDocs = allDocuments?.filter(doc => doc.status === 'completed').length || 0;
-      const rejectedDocs = allDocuments?.filter(doc => doc.status === 'rejected').length || 0;
+      console.log('[OverviewContext] Found documents - all:', allDocuments?.length, 'translated:', translatedDocs?.length);
 
-      const totalValue = (allDocuments?.reduce((sum, doc) => sum + (doc.total_cost || 0), 0) || 0) +
-                        (translatedDocs?.reduce((sum, doc) => sum + (doc.total_cost || 0), 0) || 0);
+      // Calculate statistics based on user role
+      let totalDocs, pendingDocs, approvedDocs, rejectedDocs, totalValue, totalPages;
 
-      const totalPages = (allDocuments?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0) +
-                        (translatedDocs?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0);
+      if (currentUser.role === 'admin') {
+        // Admin sees all documents
+        totalDocs = allDocuments?.length || 0;
+        pendingDocs = allDocuments?.filter(doc => doc.status === 'pending').length || 0;
+        approvedDocs = allDocuments?.filter(doc => doc.status === 'completed').length || 0;
+        rejectedDocs = allDocuments?.filter(doc => doc.status === 'rejected').length || 0;
+        totalValue = (allDocuments?.reduce((sum, doc) => sum + (doc.total_cost || 0), 0) || 0) +
+                    (translatedDocs?.reduce((sum, doc) => sum + (doc.total_cost || 0), 0) || 0);
+        totalPages = (allDocuments?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0) +
+                    (translatedDocs?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0);
+      } else {
+        // Authenticator sees their authenticated documents + pending documents they can review
+        totalDocs = translatedDocs?.length || 0;
+        pendingDocs = allDocuments?.filter(doc => doc.status === 'pending').length || 0; // All pending docs
+        approvedDocs = translatedDocs?.length || 0; // All translated docs are approved
+        rejectedDocs = 0; // Rejected docs are not in translated_documents
+        totalValue = translatedDocs?.reduce((sum, doc) => sum + (doc.total_cost || 0), 0) || 0;
+        totalPages = translatedDocs?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0;
+      }
 
-      // My authentications
+      // My authentications (always based on current user)
       const myAuths = translatedDocs?.filter(doc => doc.authenticated_by === currentUser.id).length || 0;
 
       // Authentications this month
@@ -108,9 +122,14 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
         new Date(doc.authentication_date) >= thisMonth
       ).length || 0;
 
-      // Top languages
+      // Calculate average processing time (mock data for now)
+      const averageProcessingTime = 2.5; // hours
+
+      // Top languages (based on available documents)
       const languageCounts: { [key: string]: number } = {};
-      allDocuments?.forEach(doc => {
+      const docsForLanguages = currentUser.role === 'admin' ? allDocuments : translatedDocs;
+      
+      docsForLanguages?.forEach(doc => {
         if (doc.source_language && doc.target_language) {
           const langPair = `${doc.source_language} → ${doc.target_language}`;
           languageCounts[langPair] = (languageCounts[langPair] || 0) + 1;
@@ -132,7 +151,7 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
           filename: doc.filename,
           action: 'Authenticated',
           date: doc.authentication_date || '',
-          user_name: 'You'
+          user_name: currentUser.role === 'admin' ? 'You' : 'You'
         })) || [];
 
       const newStats = {
@@ -144,14 +163,14 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
         totalPages,
         myAuthentications: myAuths,
         myAuthenticationsThisMonth: myAuthsThisMonth,
-        averageProcessingTime: 0,
+        averageProcessingTime,
         topLanguages,
         recentActivity
       };
 
       setStats(newStats);
       setLastUpdated(now);
-      console.log('[OverviewContext] Data updated successfully');
+      console.log('[OverviewContext] Data updated successfully for', currentUser.role);
 
     } catch (err: any) {
       console.error('[OverviewContext] Error fetching stats:', err);

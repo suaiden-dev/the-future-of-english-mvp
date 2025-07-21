@@ -84,7 +84,13 @@ Deno.serve(async (req: Request) => {
         tipo_trad: record.tipo_trad || tipo_trad || null,
         valor: record.valor || valor || null,
         idioma_raiz: record.idioma_raiz || idioma_raiz || null,
-        is_bank_statement: record.is_bank_statement || is_bank_statement || false
+        is_bank_statement: record.is_bank_statement || is_bank_statement || false,
+        // Adicionar informações sobre o tipo de arquivo
+        isPdf: (record.mimetype || record.metadata?.mimetype || "application/octet-stream") === 'application/pdf',
+        fileExtension: path.split('.').pop()?.toLowerCase(),
+        // Informar ao n8n que deve usar a tabela 'profiles' em vez de 'users'
+        tableName: 'profiles',
+        schema: 'public'
       };
     } else {
       // Called from frontend
@@ -123,11 +129,24 @@ Deno.serve(async (req: Request) => {
         size, 
         user_id: user_id || null, 
         paginas, tipo_trad, valor, idioma_raiz, 
-        is_bank_statement: is_bank_statement || false
+        is_bank_statement: is_bank_statement || false,
+        // Adicionar informações sobre o tipo de arquivo
+        isPdf: mimetype === 'application/pdf',
+        fileExtension: filename.split('.').pop()?.toLowerCase(),
+        // Informar ao n8n que deve usar a tabela 'profiles' em vez de 'users'
+        tableName: 'profiles',
+        schema: 'public'
       };
     }
 
     console.log("Final payload for n8n webhook:", JSON.stringify(payload, null, 2));
+
+    // Verificar se o arquivo é um PDF antes de enviar para o n8n
+    const isPdf = payload.isPdf || payload.mimetype === 'application/pdf' || payload.filename.toLowerCase().endsWith('.pdf');
+    console.log("Is PDF file:", isPdf);
+    console.log("File mimetype:", payload.mimetype);
+    console.log("File extension:", payload.fileExtension);
+    console.log("Table name for n8n:", payload.tableName);
 
     // Send POST to n8n webhook
     const webhookUrl = "https://nwh.thefutureofenglish.com/webhook/tfoetranslations";

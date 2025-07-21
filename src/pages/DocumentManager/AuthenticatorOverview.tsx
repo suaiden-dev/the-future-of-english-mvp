@@ -1,22 +1,24 @@
 import React from 'react';
+import { useOverview } from '../../contexts/OverviewContext';
 import { useAuth } from '../../hooks/useAuth';
 import { 
-  ShieldCheck, 
   FileText, 
   Clock, 
   CheckCircle, 
-  XCircle, 
   DollarSign, 
+  Award, 
+  ShieldCheck, 
+  Calendar, 
   TrendingUp, 
-  Users, 
-  Calendar,
-  Activity,
-  Award,
-  BarChart3,
-  RefreshCw
+  Globe, 
+  Activity, 
+  RefreshCw,
+  Home,
+  FileText as FileTextIcon,
+  CheckCircle as CheckCircleIcon,
+  XCircle,
+  BarChart3
 } from 'lucide-react';
-import { NotificationBell } from '../../components/NotificationBell';
-import { useOverview } from '../../contexts/OverviewContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 interface OverviewStats {
@@ -76,9 +78,14 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
           <div className="flex items-center gap-4 sm:gap-6">
             <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12 text-blue-600" />
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Authenticator Overview</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
+                {currentUser?.role === 'admin' ? 'Admin Overview' : 'Authenticator Overview'}
+              </h1>
               <p className="text-sm sm:text-base text-gray-600">
-                Welcome back! Here's your authentication dashboard overview.
+                {currentUser?.role === 'admin' 
+                  ? 'Welcome back! Here\'s your complete system overview.' 
+                  : 'Welcome back! Here\'s your personal authentication dashboard.'
+                }
                 {lastUpdated && (
                   <span className="block text-xs text-gray-500 mt-1">
                     Last updated: {lastUpdated.toLocaleTimeString()}
@@ -90,8 +97,7 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
           <div className="flex items-center gap-3">
             <button
               onClick={refreshStats}
-              disabled={loading}
-              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
               title="Refresh data"
             >
               {loading ? (
@@ -100,7 +106,6 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
                 <RefreshCw className="w-5 h-5" />
               )}
             </button>
-            <NotificationBell />
           </div>
         </div>
 
@@ -109,7 +114,9 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
           <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm sm:text-base text-gray-600 mb-1">Total Documents</p>
+                <p className="text-sm sm:text-base text-gray-600 mb-1">
+                  {currentUser?.role === 'admin' ? 'Total Documents' : 'My Authenticated'}
+                </p>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stats.totalDocuments}</p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -133,7 +140,9 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
           <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm sm:text-base text-gray-600 mb-1">Approved</p>
+                <p className="text-sm sm:text-base text-gray-600 mb-1">
+                  {currentUser?.role === 'admin' ? 'Approved' : 'Completed'}
+                </p>
                 <p className="text-2xl sm:text-3xl font-bold text-green-600">{stats.approvedDocuments}</p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -145,7 +154,9 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
           <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm sm:text-base text-gray-600 mb-1">Total Value</p>
+                <p className="text-sm sm:text-base text-gray-600 mb-1">
+                  {currentUser?.role === 'admin' ? 'Total Value' : 'My Value'}
+                </p>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">${stats.totalValue.toFixed(2)}</p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -161,7 +172,9 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
           <div className="lg:col-span-2 bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3 mb-4 sm:mb-6">
               <Award className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">My Authentications</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                {currentUser?.role === 'admin' ? 'System Authentications' : 'My Authentications'}
+              </h2>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -171,7 +184,9 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
                     <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-sm sm:text-base text-gray-600">Total Authenticated</p>
+                    <p className="text-sm sm:text-base text-gray-600">
+                      {currentUser?.role === 'admin' ? 'Total Authenticated' : 'My Total'}
+                    </p>
                     <p className="text-2xl sm:text-3xl font-bold text-purple-600">{stats.myAuthentications}</p>
                   </div>
                 </div>
@@ -183,7 +198,9 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
                     <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm sm:text-base text-gray-600">This Month</p>
+                    <p className="text-sm sm:text-base text-gray-600">
+                      {currentUser?.role === 'admin' ? 'This Month' : 'My This Month'}
+                    </p>
                     <p className="text-2xl sm:text-3xl font-bold text-green-600">{stats.myAuthenticationsThisMonth}</p>
                   </div>
                 </div>
@@ -205,8 +222,12 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
               >
                 <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                 <div className="text-left">
-                  <p className="font-medium text-blue-900">Authenticate Documents</p>
-                  <p className="text-sm text-blue-700">{stats.pendingDocuments} pending</p>
+                  <p className="font-medium text-blue-900">
+                    {currentUser?.role === 'admin' ? 'Authenticate Documents' : 'Review Documents'}
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    {stats.pendingDocuments} pending
+                  </p>
                 </div>
               </button>
               
@@ -216,8 +237,15 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
               >
                 <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                 <div className="text-left">
-                  <p className="font-medium text-green-900">View Translated</p>
-                  <p className="text-sm text-green-700">{stats.approvedDocuments} completed</p>
+                  <p className="font-medium text-green-900">
+                    {currentUser?.role === 'admin' ? 'View Translated' : 'My Translated'}
+                  </p>
+                  <p className="text-sm text-green-700">
+                    {currentUser?.role === 'admin' 
+                      ? `${stats.approvedDocuments} completed` 
+                      : `${stats.approvedDocuments} documents`
+                    }
+                  </p>
                 </div>
               </button>
             </div>
@@ -230,7 +258,9 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
           <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3 mb-4 sm:mb-6">
               <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600" />
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Top Languages</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                {currentUser?.role === 'admin' ? 'Top Languages' : 'My Top Languages'}
+              </h2>
             </div>
             
             <div className="space-y-3">
@@ -251,7 +281,9 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
           <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3 mb-4 sm:mb-6">
               <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Recent Activity</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                {currentUser?.role === 'admin' ? 'Recent Activity' : 'My Recent Activity'}
+              </h2>
             </div>
             
             <div className="space-y-3">

@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import AuthenticatorDashboard from './AuthenticatorDashboard';
 import TranslatedDocuments from './TranslatedDocuments';
 import AuthenticatorOverview from './AuthenticatorOverview';
-import { FileText, CheckCircle, LogOut, Home, Menu, X } from 'lucide-react';
+import { FileText, CheckCircle, LogOut, Home, Menu, X, User } from 'lucide-react';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OverviewProvider } from '../../contexts/OverviewContext';
@@ -76,8 +76,12 @@ export default function AuthenticatorLayout() {
       <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">TFE</span>
+            <div className="flex justify-center">
+              <img 
+                src="/logo_tfoe.png" 
+                alt="The Future of English Logo" 
+                className="h-8 w-auto"
+              />
             </div>
             <span className="text-lg font-bold text-gray-900">Menu</span>
           </div>
@@ -169,16 +173,20 @@ export default function AuthenticatorLayout() {
       <div className="hidden lg:block w-64 bg-white shadow-sm border-r border-gray-200">
         <div className="p-6">
           <div className="mb-6">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center space-x-2 mb-4 focus:outline-none group hover:opacity-80 transition-opacity"
-              aria-label="Ir para Home"
-            >
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-                <span className="text-white font-bold text-sm">TFE</span>
-              </div>
-              <span className="text-lg font-bold text-gray-900 group-hover:underline">TheFutureOfEnglish</span>
-            </button>
+            <div className="flex justify-center mb-4">
+              <button
+                onClick={() => navigate('/')}
+                className="focus:outline-none group"
+                aria-label="Ir para Home"
+              >
+                <img 
+                  src="/logo_tfoe.png" 
+                  alt="The Future of English Logo" 
+                  className="h-24 w-auto group-hover:scale-105 transition-transform"
+                />
+              </button>
+            </div>
+            
             {user && (
               <div className="bg-gray-50 p-3 rounded-lg">
                 <p className="text-sm font-medium text-gray-900">{user.user_metadata?.name || 'Authenticator'}</p>
@@ -260,8 +268,12 @@ export default function AuthenticatorLayout() {
                 <Menu className="w-6 h-6" />
               </button>
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">TFE</span>
+                <div className="flex justify-center">
+                  <img 
+                    src="/logo_tfoe.png" 
+                    alt="The Future of English Logo" 
+                    className="h-8 w-auto"
+                  />
                 </div>
                 <span className="text-lg font-bold text-gray-900">Authenticator</span>
               </div>
@@ -286,6 +298,25 @@ export default function AuthenticatorLayout() {
 
         {/* Page Content */}
         <div className="flex-1 overflow-auto">
+          {/* Desktop header que complementa a sidebar */}
+          <div className="hidden lg:block bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+              </div>
+              <div className="flex items-center space-x-4">
+                <NotificationBell />
+                <button
+                  onClick={() => navigate('/authenticator')}
+                  className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
+                  title="Go to Overview"
+                >
+                  <User className="w-5 h-5" />
+                  <span className="text-sm font-medium">{user?.user_metadata?.name || 'Authenticator'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <OverviewProvider>
             <Routes>
               <Route path="/" element={<AuthenticatorOverview onNavigate={handleNavigation} />} />

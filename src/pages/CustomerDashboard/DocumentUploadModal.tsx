@@ -8,10 +8,11 @@ interface DocumentUploadModalProps {
   onClose: () => void;
   onUpload: (documentData: { filename: string; file_url: string; pages: number; folder_id?: string }) => Promise<void>;
   userId: string;
+  userEmail: string; // Adicionar email do usuário
   currentFolderId?: string | null;
 }
 
-export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, currentFolderId }: DocumentUploadModalProps) {
+export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEmail, currentFolderId }: DocumentUploadModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pages, setPages] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
@@ -110,6 +111,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, current
         isBankStatement: isExtrato,
         fileId, // Usar o ID do arquivo no IndexedDB
         userId,
+        userEmail, // Adicionar email do usuário
         filename: selectedFile?.name,
         isMobile: false // Desktop
       };
@@ -193,6 +195,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, current
             isBankStatement: isExtrato,
             filePath, // Caminho do arquivo no Supabase Storage
             userId,
+            userEmail, // Adicionar email do usuário
             filename: selectedFile?.name,
             isMobile: true // Mobile
           };

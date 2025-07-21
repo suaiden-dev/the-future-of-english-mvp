@@ -1,7 +1,6 @@
 import React from 'react';
 import { User, Upload } from 'lucide-react';
 import { CustomUser } from '../../hooks/useAuth';
-import { NotificationBell } from '../../components/NotificationBell';
 
 interface WelcomeSectionProps {
   user: CustomUser | null;
@@ -28,7 +27,6 @@ export function WelcomeSection({ user, onUploadClick }: WelcomeSectionProps) {
           </p>
         </div>
         <div className="hidden md:block flex items-center gap-4">
-          <NotificationBell />
           <button
             onClick={onUploadClick}
             className="bg-white text-blue-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center space-x-2"
@@ -41,7 +39,6 @@ export function WelcomeSection({ user, onUploadClick }: WelcomeSectionProps) {
       
       {/* Mobile upload button */}
       <div className="md:hidden mt-4 flex items-center gap-4">
-        <NotificationBell />
         <button
           onClick={onUploadClick}
           className="flex-1 bg-white text-blue-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"

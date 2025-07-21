@@ -5,6 +5,7 @@ import { useFolders } from './hooks/useFolders';
 import { ToastProvider } from './contexts/ToastContext';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
+import { NotificationBell } from './components/NotificationBell';
 import { Home } from './pages/Home';
 import { Translations } from './pages/Translations';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -17,7 +18,7 @@ import { Register } from './pages/Register';
 import { DocumentManager } from './pages/DocumentManager';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentCancelled } from './pages/PaymentCancelled';
-import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, LogOut, Upload as UploadIcon, Menu, X, Users, UserCheck } from 'lucide-react';
+import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, LogOut, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User } from 'lucide-react';
 
 import { Page } from './types/Page';
 import { Database } from './lib/database.types';
@@ -126,9 +127,11 @@ function App() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">TFE</span>
-          </div>
+          <img 
+            src="/logo_tfoe.png" 
+            alt="The Future of English Logo" 
+            className="h-16 w-auto mx-auto mb-4"
+          />
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -174,9 +177,9 @@ function App() {
       // Itens para usuário comum - apenas itens do dashboard
       const userItems = [
         { id: 'dashboard', label: 'Overview', icon: UserIcon, page: '/dashboard' },
-        { id: 'my-documents', label: 'My Documents', icon: FileText, page: '/dashboard/documents' },
-        { id: 'my-translations', label: 'My Translations', icon: UploadIcon, page: '/dashboard/progress' },
-        { id: 'upload-document', label: 'Translation', icon: UploadIcon, page: '/dashboard/upload' },
+        { id: 'upload-document', label: 'Get Translation', icon: UploadIcon, page: '/dashboard/upload' },
+        { id: 'my-translations', label: 'My Translations', icon: FileText, page: '/dashboard/progress' },
+        { id: 'my-documents', label: 'My Documents', icon: Folder, page: '/dashboard/documents' },
         { id: 'profile', label: 'Profile', icon: UserIcon, page: '/dashboard/profile' },
       ];
       
@@ -206,9 +209,11 @@ function App() {
       <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">TFE</span>
-            </div>
+            <img 
+              src="/logo_tfoe.png" 
+              alt="The Future of English Logo" 
+              className="h-8 w-auto"
+            />
             <span className="text-lg font-bold text-gray-900">Menu</span>
           </div>
           <button
@@ -264,14 +269,17 @@ function App() {
                     </div>
                     <span className="text-lg font-bold text-gray-900">Dashboard</span>
                   </div>
-                  <button
-                    onClick={() => setIsMobileMenuOpen(true)}
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                    aria-label="Open menu"
-                    title="Open menu"
-                  >
-                    <Menu className="w-6 h-6" />
-                  </button>
+                  <div className="flex items-center space-x-3">
+                    <NotificationBell />
+                    <button
+                      onClick={() => setIsMobileMenuOpen(true)}
+                      className="p-2 text-gray-400 hover:text-gray-600"
+                      aria-label="Open menu"
+                      title="Open menu"
+                    >
+                      <Menu className="w-6 h-6" />
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -282,6 +290,25 @@ function App() {
               
               {/* Main content */}
               <main className="flex-1 lg:ml-0">
+                {/* Desktop header que complementa a sidebar */}
+                <div className="hidden lg:block bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <NotificationBell />
+                      <button
+                        onClick={() => navigate('/dashboard/profile')}
+                        className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
+                        title="Go to Profile"
+                      >
+                        <User className="w-5 h-5" />
+                        <span className="text-sm font-medium">{user?.user_metadata?.name || 'User'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
                 <Routes>
                   <Route path="/" element={<CustomerDashboard user={user} documents={documents} folders={folders} onDocumentUpload={handleDocumentUpload} onFolderCreate={handleFolderCreate} onFolderUpdate={handleFolderUpdate} onFolderDelete={handleFolderDelete} onViewDocument={handleViewDocument} />} />
                   <Route path="/profile" element={<ProfilePage />} />
@@ -301,8 +328,12 @@ function App() {
               <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">TFE</span>
+                    <div className="flex justify-center">
+                      <img 
+                        src="/logo_tfoe.png" 
+                        alt="The Future of English Logo" 
+                        className="h-8 w-auto"
+                      />
                     </div>
                     <span className="text-lg font-bold text-gray-900">Admin Panel</span>
                   </div>
@@ -334,8 +365,12 @@ function App() {
               <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">TFE</span>
+                    <div className="flex justify-center">
+                      <img 
+                        src="/logo_tfoe.png" 
+                        alt="The Future of English Logo" 
+                        className="h-8 w-auto"
+                      />
                     </div>
                     <span className="text-lg font-bold text-gray-900">User Management</span>
                   </div>
@@ -367,8 +402,12 @@ function App() {
               <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">TFE</span>
+                    <div className="flex justify-center">
+                      <img 
+                        src="/logo_tfoe.png" 
+                        alt="The Future of English Logo" 
+                        className="h-8 w-auto"
+                      />
                     </div>
                     <span className="text-lg font-bold text-gray-900">Authenticator Control</span>
                   </div>

@@ -58,6 +58,7 @@ export function Sidebar({ navItems, user, onLogout }: SidebarProps) {
               />
             </button>
             </div>
+          
           {user && (
             <div className="bg-gray-50 p-3 rounded-lg">
               <p className="text-sm font-medium text-gray-900">{user.user_metadata?.name || 'Usuário'}</p>
@@ -78,6 +79,7 @@ export function Sidebar({ navItems, user, onLogout }: SidebarProps) {
             </div>
           )}
         </div>
+        
         <nav className="space-y-2">
           {/* Renderizar itens de navegação dinâmicos */}
           {navItems.map((item) => {

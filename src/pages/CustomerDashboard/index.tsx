@@ -150,6 +150,7 @@ export function CustomerDashboard({
           onClose={handleCloseUploadModal}
           onUpload={onDocumentUpload}
           userId={user?.id || ''}
+          userEmail={user?.email || ''} // Adicionar email do usuário
         />
         <DocumentDetailsModal
           document={selectedDocument}
