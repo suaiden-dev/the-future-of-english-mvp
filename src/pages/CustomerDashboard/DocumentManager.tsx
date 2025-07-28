@@ -46,10 +46,10 @@ export function DocumentManager({
 
 
   const folderColors = [
-    'bg-blue-100 text-blue-800',
+    'bg-tfe-blue-100 text-tfe-blue-800',
     'bg-green-100 text-green-800',
     'bg-purple-100 text-purple-800',
-    'bg-red-100 text-red-800',
+    'bg-tfe-red-100 text-tfe-red-800',
     'bg-yellow-100 text-yellow-800',
     'bg-indigo-100 text-indigo-800'
   ];
@@ -135,16 +135,16 @@ export function DocumentManager({
           <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
             <button
               onClick={() => setCurrentFolderId(null)}
-              className="hover:text-blue-600 transition-colors"
+              className="hover:text-tfe-blue-600 transition-colors"
             >
-              Home
+              Root
             </button>
             {breadcrumbs.map((folder) => (
               <React.Fragment key={folder.id}>
                 <span>/</span>
                 <button
                   onClick={() => setCurrentFolderId(folder.id)}
-                  className="hover:text-blue-600 transition-colors"
+                  className="hover:text-tfe-blue-600 transition-colors"
                 >
                   {folder.name}
                 </button>
@@ -156,7 +156,7 @@ export function DocumentManager({
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setIsCreatingFolder(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>New Folder</span>
@@ -192,7 +192,7 @@ export function DocumentManager({
             placeholder="Search documents and folders..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80"
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 w-80"
             aria-label="Search documents and folders"
             title="Search documents and folders"
           />
@@ -203,7 +203,7 @@ export function DocumentManager({
             onClick={() => setViewMode('grid')}
             aria-label="Visualizar em grade"
             className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'
+              viewMode === 'grid' ? 'bg-tfe-blue-100 text-tfe-blue-600' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             <Grid className="w-5 h-5" />
@@ -212,7 +212,7 @@ export function DocumentManager({
             onClick={() => setViewMode('list')}
             aria-label="Visualizar em lista"
             className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'
+              viewMode === 'list' ? 'bg-tfe-blue-100 text-tfe-blue-600' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             <List className="w-5 h-5" />
@@ -227,7 +227,7 @@ export function DocumentManager({
             const currentFolder = folders.find(f => f.id === currentFolderId);
             setCurrentFolderId(currentFolder?.parent_id || null);
           }}
-          className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors"
+          className="flex items-center space-x-2 text-tfe-blue-600 hover:text-tfe-blue-800 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
@@ -247,7 +247,7 @@ export function DocumentManager({
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
                     placeholder="Folder name"
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
                     autoFocus
                     onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
                     aria-label="New folder name"
@@ -256,7 +256,7 @@ export function DocumentManager({
                   <div className="flex space-x-1">
                     <button
                       onClick={handleCreateFolder}
-                      className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                      className="px-2 py-1 text-xs bg-tfe-blue-600 text-white rounded hover:bg-tfe-blue-700"
                     >
                       Create
                     </button>
@@ -285,7 +285,7 @@ export function DocumentManager({
                         type="text"
                         value={editingFolderName}
                         onChange={(e) => setEditingFolderName(e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
                         autoFocus
                         onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
                         aria-label="Edit folder name"
@@ -294,7 +294,7 @@ export function DocumentManager({
                       <div className="flex space-x-1">
                         <button
                           onClick={handleSaveEdit}
-                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                          className="px-2 py-1 text-xs bg-tfe-blue-600 text-white rounded hover:bg-tfe-blue-700"
                         >
                           Save
                         </button>
@@ -315,7 +315,7 @@ export function DocumentManager({
                         onClick={() => setCurrentFolderId(folder.id)}
                         className="flex flex-col items-center space-y-2"
                       >
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${folder.color || 'bg-blue-100 text-blue-800'}`}>
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${folder.color || 'bg-tfe-blue-100 text-tfe-blue-800'}`}>
                           <FolderIcon className="w-6 h-6" />
                         </div>
                         <span className="text-sm font-medium text-gray-900 text-center truncate w-full">
@@ -331,7 +331,7 @@ export function DocumentManager({
                                 e.stopPropagation();
                                 handleEditFolder(folder.id);
                               }}
-                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                              className="p-1 text-tfe-blue-600 hover:text-tfe-blue-800 hover:bg-tfe-blue-50 rounded"
                               aria-label="Renomear pasta"
                               title="Rename folder"
                             >
@@ -342,7 +342,7 @@ export function DocumentManager({
                                 e.stopPropagation();
                                 handleDeleteFolder(folder.id);
                               }}
-                              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                              className="p-1 text-tfe-red-600 hover:text-tfe-red-800 hover:bg-tfe-red-50 rounded"
                               aria-label="Excluir pasta"
                               title="Delete folder"
                             >
@@ -372,7 +372,7 @@ export function DocumentManager({
                     </span>
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       document.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      document.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                      document.status === 'processing' ? 'bg-tfe-blue-100 text-tfe-blue-800' :
                       'bg-yellow-100 text-yellow-800'
                     }`}>
                       {document.status}
@@ -409,7 +409,7 @@ export function DocumentManager({
                   <tr key={folder.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded flex items-center justify-center mr-3 ${folder.color || 'bg-blue-100 text-blue-800'}`}>
+                        <div className={`w-8 h-8 rounded flex items-center justify-center mr-3 ${folder.color || 'bg-tfe-blue-100 text-tfe-blue-800'}`}>
                           <FolderIcon className="w-4 h-4" />
                         </div>
                         <span className="text-sm font-medium text-gray-900">{folder.name}</span>
@@ -428,7 +428,7 @@ export function DocumentManager({
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEditFolder(folder.id)}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-tfe-blue-600 hover:text-tfe-blue-800"
                           aria-label="Renomear pasta"
                           title="Renomear pasta"
                         >
@@ -436,7 +436,7 @@ export function DocumentManager({
                         </button>
                         <button
                           onClick={() => handleDeleteFolder(folder.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-tfe-red-600 hover:text-tfe-red-800"
                           aria-label="Excluir pasta"
                           title="Excluir pasta"
                         >
@@ -465,7 +465,7 @@ export function DocumentManager({
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         document.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        document.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                        document.status === 'processing' ? 'bg-tfe-blue-100 text-tfe-blue-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
                         {document.status}
@@ -474,7 +474,7 @@ export function DocumentManager({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <button
                         onClick={() => onViewDocument(document)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-tfe-blue-600 hover:text-tfe-blue-800"
                       >
                         View
                       </button>
@@ -501,7 +501,7 @@ export function DocumentManager({
             {!searchTerm && (
               <button
                 onClick={() => setIsCreatingFolder(true)}
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Folder</span>

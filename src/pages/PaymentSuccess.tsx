@@ -63,11 +63,11 @@ export function PaymentSuccess() {
 
       // Função consolidada para fazer upload do arquivo
       const uploadFileToStorage = async (file: File, userId: string) => {
-        setIsUploading(true);
-        setUploadProgress(0);
+            setIsUploading(true);
+            setUploadProgress(0);
 
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+            const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
         const uploadPath = `${userId}/${fileName}`;
 
         console.log('DEBUG: Fazendo upload para:', uploadPath);
@@ -75,38 +75,38 @@ export function PaymentSuccess() {
         console.log('DEBUG: Tamanho do arquivo:', file.size);
         console.log('DEBUG: Tipo do arquivo:', file.type);
 
-        // Simular progresso do upload
-        const progressInterval = setInterval(() => {
-          setUploadProgress(prev => {
-            if (prev >= 90) {
-              clearInterval(progressInterval);
-              return 90;
-            }
-            return prev + 10;
-          });
-        }, 200);
+            // Simular progresso do upload
+            const progressInterval = setInterval(() => {
+              setUploadProgress(prev => {
+                if (prev >= 90) {
+                  clearInterval(progressInterval);
+                  return 90;
+                }
+                return prev + 10;
+              });
+            }, 200);
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('documents')
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('documents')
           .upload(uploadPath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
+                cacheControl: '3600',
+                upsert: false
+              });
 
-        clearInterval(progressInterval);
-        setUploadProgress(100);
+            clearInterval(progressInterval);
+            setUploadProgress(100);
 
-        if (uploadError) {
-          console.error('ERROR: Erro no upload:', uploadError);
-          console.error('ERROR: Detalhes do erro:', JSON.stringify(uploadError, null, 2));
-          throw new Error(`Error uploading file: ${uploadError.message}`);
-        }
+            if (uploadError) {
+              console.error('ERROR: Erro no upload:', uploadError);
+              console.error('ERROR: Detalhes do erro:', JSON.stringify(uploadError, null, 2));
+              throw new Error(`Error uploading file: ${uploadError.message}`);
+            }
 
-        console.log('DEBUG: Upload completed:', uploadData);
+            console.log('DEBUG: Upload completed:', uploadData);
 
-        // Obter URL pública do arquivo
+            // Obter URL pública do arquivo
         const { data: { publicUrl: generatedPublicUrl } } = supabase.storage
-          .from('documents')
+              .from('documents')
           .getPublicUrl(uploadPath);
 
         console.log('DEBUG: URL pública gerada:', generatedPublicUrl);
@@ -120,28 +120,28 @@ export function PaymentSuccess() {
         console.log('DEBUG: Mobile detectado, verificando localização do arquivo');
         console.log('DEBUG: fileId recebido:', fileId);
         console.log('DEBUG: userId recebido:', userId);
-        
+          
         // Verificar se fileId é na verdade um filePath no Storage (upload direto do DocumentUploadModal)
-        try {
+          try {
           console.log('DEBUG: Verificando se fileId é um filePath no Storage');
-          const { data: { publicUrl: storagePublicUrl } } = supabase.storage
-            .from('documents')
-            .getPublicUrl(fileId);
-          
-          publicUrl = storagePublicUrl;
+            const { data: { publicUrl: storagePublicUrl } } = supabase.storage
+              .from('documents')
+              .getPublicUrl(fileId);
+            
+            publicUrl = storagePublicUrl;
           console.log('DEBUG: ✅ Arquivo encontrado no Storage (upload direto):', publicUrl);
-          
-          // Criar objeto simulado para compatibilidade
-          storedFile = {
-            file: { name: filename, type: 'application/pdf', size: 0 },
-            metadata: {
-              pageCount: parseInt(sessionData.metadata.pages),
-              documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado'
-            }
-          };
+            
+            // Criar objeto simulado para compatibilidade
+            storedFile = {
+              file: { name: filename, type: 'application/pdf', size: 0 },
+              metadata: {
+                pageCount: parseInt(sessionData.metadata.pages),
+                documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado'
+              }
+            };
           
           console.log('DEBUG: ✅ USANDO ARQUIVO DO STORAGE - SEM UPLOAD DUPLICADO');
-        } catch (storageError) {
+          } catch (storageError) {
           console.log('DEBUG: fileId não é um filePath no Storage, tentando IndexedDB');
           
           // Tentar recuperar do IndexedDB como fallback
@@ -387,12 +387,12 @@ export function PaymentSuccess() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <AlertCircle className="w-16 h-16 text-tfe-red-500 mx-auto mb-4" />
                   <h1 className="text-2xl font-bold text-gray-900 mb-4">Processing Error</h1>
         <p className="text-gray-600 mb-6">{error}</p>
         <button
           onClick={() => navigate('/dashboard')}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          className="bg-tfe-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-tfe-blue-700 transition-colors"
         >
           Back to Dashboard
         </button>
@@ -421,14 +421,14 @@ export function PaymentSuccess() {
             </p>
             
             {/* Aviso sobre não recarregar a página */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="bg-tfe-blue-50 border border-tfe-blue-200 rounded-lg p-3 mb-4">
               <div className="flex items-start space-x-2">
-                <CheckCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="w-4 h-4 text-tfe-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="text-left">
-                  <p className="text-xs font-medium text-blue-800 mb-1">
+                  <p className="text-xs font-medium text-tfe-blue-800 mb-1">
                     ✅ Successfully Completed
                   </p>
-                  <p className="text-xs text-blue-700">
+                  <p className="text-xs text-tfe-blue-700">
                     Your document is now being processed. You can safely navigate away from this page.
                   </p>
                 </div>
@@ -437,7 +437,7 @@ export function PaymentSuccess() {
             
             <button
               onClick={() => navigate('/dashboard')}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors w-full"
+              className="bg-tfe-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-tfe-blue-700 transition-colors w-full"
             >
               Go to Dashboard
             </button>
@@ -459,12 +459,12 @@ export function PaymentSuccess() {
         {isUploading && (
           <div className="space-y-4">
             <div className="flex items-center justify-center space-x-2">
-              <Loader className="w-5 h-5 text-blue-500 animate-spin" />
+              <Loader className="w-5 h-5 text-tfe-blue-500 animate-spin" />
               <span className="text-sm text-gray-600">Uploading file...</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className="bg-tfe-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               ></div>
             </div>

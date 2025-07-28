@@ -13,7 +13,7 @@ import {
   Globe, 
   Activity, 
   RefreshCw,
-  Home,
+  Home as HomeIcon,
   FileText as FileTextIcon,
   CheckCircle as CheckCircleIcon,
   XCircle,
@@ -61,10 +61,10 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <XCircle className="w-8 h-8 text-red-600" />
+          <div className="w-16 h-16 bg-tfe-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <XCircle className="w-8 h-8 text-tfe-red-600" />
           </div>
-          <p className="text-red-600">Error: {error}</p>
+          <p className="text-tfe-red-600">Error: {error}</p>
         </div>
       </div>
     );
@@ -76,7 +76,7 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center gap-4 sm:gap-6">
-            <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12 text-blue-600" />
+            <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12 text-tfe-blue-600" />
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                 {currentUser?.role === 'admin' ? 'Admin Overview' : 'Authenticator Overview'}
@@ -119,8 +119,8 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
                 </p>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stats.totalDocuments}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-tfe-blue-100 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-600" />
               </div>
             </div>
           </div>
@@ -211,21 +211,21 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
           {/* Quick Actions */}
           <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3 mb-4 sm:mb-6">
-              <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+              <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-tfe-blue-600" />
               <h2 className="text-lg sm:text-xl font-bold text-gray-900">Quick Actions</h2>
             </div>
             
             <div className="space-y-3">
               <button
                 onClick={() => onNavigate?.('authenticate')}
-                className="w-full flex items-center gap-3 p-3 sm:p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors group"
+                className="w-full flex items-center gap-3 p-3 sm:p-4 bg-tfe-blue-50 hover:bg-tfe-blue-100 rounded-lg transition-colors group"
               >
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-600" />
                 <div className="text-left">
-                  <p className="font-medium text-blue-900">
+                  <p className="font-medium text-tfe-blue-950">
                     {currentUser?.role === 'admin' ? 'Authenticate Documents' : 'Review Documents'}
                   </p>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-tfe-blue-700">
                     {stats.pendingDocuments} pending
                   </p>
                 </div>

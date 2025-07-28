@@ -64,8 +64,8 @@ export default function AuthenticatorStatsCards({ documentsToVerify }: Authentic
       title: 'Autenticados por você',
       value: totalAuthenticated,
       icon: UserCheck,
-      bgColor: 'bg-blue-100',
-      iconColor: 'text-blue-900',
+      bgColor: 'bg-tfe-blue-100',
+      iconColor: 'text-tfe-blue-950',
       description: 'Total autenticados por você'
     },
     {
@@ -120,20 +120,20 @@ export default function AuthenticatorStatsCards({ documentsToVerify }: Authentic
       </div>
       {/* Alerta de pendências antigas */}
       {pendingOver2Days > 0 && (
-        <div className="flex items-center bg-red-50 border border-red-200 rounded-xl p-4 mb-2">
-          <AlertTriangle className="w-6 h-6 text-red-500 mr-3" />
-          <span className="text-red-700 font-semibold mr-2">Atenção:</span>
-          <span className="text-red-600">{pendingOver2Days} documento(s) pendente(s) há mais de 2 dias!</span>
+        <div className="flex items-center bg-tfe-red-50 border border-tfe-red-200 rounded-xl p-4 mb-2">
+          <AlertTriangle className="w-6 h-6 text-tfe-red-500 mr-3" />
+          <span className="text-tfe-red-700 font-semibold mr-2">Atenção:</span>
+          <span className="text-tfe-red-600">{pendingOver2Days} documento(s) pendente(s) há mais de 2 dias!</span>
         </div>
       )}
       {/* Gráfico de barras de produtividade */}
       <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mt-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center"><BarChart2 className="w-5 h-5 mr-2 text-blue-700" />Produtividade (últimos 7 dias)</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center"><BarChart2 className="w-5 h-5 mr-2 text-tfe-blue-700" />Produtividade (últimos 7 dias)</h3>
         <div className="flex items-end space-x-3 h-32">
           {data.map((value, idx) => (
             <div key={idx} className="flex flex-col items-center justify-end h-full">
               <div
-                className="w-7 rounded-t-md bg-blue-400 transition-all duration-300"
+                className="w-7 rounded-t-md bg-tfe-blue-400 transition-all duration-300"
                 style={{ height: `${(value / max) * 100}%`, minHeight: 8 }}
                 title={`${value} autenticado(s)`}
               ></div>

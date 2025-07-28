@@ -1,5 +1,5 @@
 export type Page =
-  | 'home'
+  | 'mentorship'
   | 'translations'
   | 'dashboard-customer'
   | 'dashboard-authenticator'

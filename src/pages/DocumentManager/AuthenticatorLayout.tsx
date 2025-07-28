@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import AuthenticatorDashboard from './AuthenticatorDashboard';
 import TranslatedDocuments from './TranslatedDocuments';
 import AuthenticatorOverview from './AuthenticatorOverview';
-import { FileText, CheckCircle, LogOut, Home, Menu, X, User } from 'lucide-react';
+import { FileText, CheckCircle, LogOut, Home as HomeIcon, Menu, X, User } from 'lucide-react';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OverviewProvider } from '../../contexts/OverviewContext';
@@ -75,15 +75,13 @@ export default function AuthenticatorLayout() {
       {/* Menu */}
       <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-2">
-            <div className="flex justify-center">
-              <img 
-                src="/logo_tfoe.png" 
-                alt="The Future of English Logo" 
-                className="h-8 w-auto"
-              />
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">TFE</span>
+              </div>
+              <h3 className="text-xl font-bold">The Future of English</h3>
             </div>
-            <span className="text-lg font-bold text-gray-900">Menu</span>
           </div>
           <button
             onClick={() => setIsMobileMenuOpen(false)}
@@ -102,7 +100,7 @@ export default function AuthenticatorLayout() {
               <p className="text-xs text-gray-600">{user.email || ''}</p>
               <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${
                 user.role === 'admin'
-                  ? 'bg-red-100 text-red-800'
+                  ? 'bg-tfe-red-100 text-tfe-red-800'
                   : 'bg-green-100 text-green-800'
               }`}>
                 {user.role === 'admin' ? 'Administrator' : 'Authenticator'}
@@ -116,11 +114,11 @@ export default function AuthenticatorLayout() {
               onClick={() => handleNavigation('overview')}
               className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors ${
                 currentPage === 'overview'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
-              <Home className="w-5 h-5" />
+              <HomeIcon className="w-5 h-5" />
               <span className="font-medium">Overview</span>
             </button>
             
@@ -128,7 +126,7 @@ export default function AuthenticatorLayout() {
               onClick={() => handleNavigation('authenticate')}
               className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors ${
                 currentPage === 'authenticate'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
@@ -140,7 +138,7 @@ export default function AuthenticatorLayout() {
               onClick={() => handleNavigation('translated')}
               className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors ${
                 currentPage === 'translated'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
@@ -153,9 +151,9 @@ export default function AuthenticatorLayout() {
           <div className="mt-8 pt-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors text-tfe-red-600 hover:bg-tfe-red-50 hover:text-tfe-red-700"
             >
-              <LogOut className="w-5 h-5 text-red-500" />
+              <LogOut className="w-5 h-5 text-tfe-red-500" />
               <span className="font-medium">Logout</span>
             </button>
           </div>
@@ -177,13 +175,21 @@ export default function AuthenticatorLayout() {
               <button
                 onClick={() => navigate('/')}
                 className="focus:outline-none group"
-                aria-label="Ir para Home"
+                aria-label="Go to Mentorship"
               >
-                <img 
-                  src="/logo_tfoe.png" 
-                  alt="The Future of English Logo" 
-                  className="h-24 w-auto group-hover:scale-105 transition-transform"
-                />
+                <div className="text-center">
+                  <img 
+                    src="/logo_tfoe.png" 
+                    alt="The Future of English Logo" 
+                    className="h-16 w-auto mx-auto mb-2 group-hover:scale-105 transition-transform"
+                  />
+                  <div className="font-bold text-sm text-tfe-blue-950">
+                    The Future of English
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium">
+                    Professional Translation
+                  </div>
+                </div>
               </button>
             </div>
             
@@ -193,7 +199,7 @@ export default function AuthenticatorLayout() {
                 <p className="text-xs text-gray-600">{user.email || ''}</p>
                 <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${
                   user.role === 'admin'
-                    ? 'bg-red-100 text-red-800'
+                    ? 'bg-tfe-red-100 text-tfe-red-800'
                     : 'bg-green-100 text-green-800'
                 }`}>
                   {user.role === 'admin' ? 'Administrator' : 'Authenticator'}
@@ -208,11 +214,11 @@ export default function AuthenticatorLayout() {
               onClick={() => navigate('/authenticator')}
               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                 currentPage === 'overview'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
-              <Home className="w-5 h-5" />
+              <HomeIcon className="w-5 h-5" />
               <span className="font-medium">Overview</span>
             </button>
             
@@ -220,7 +226,7 @@ export default function AuthenticatorLayout() {
               onClick={() => navigate('/authenticator/authenticate')}
               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                 currentPage === 'authenticate'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
@@ -232,7 +238,7 @@ export default function AuthenticatorLayout() {
               onClick={() => navigate('/authenticator/translated')}
               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                 currentPage === 'translated'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
@@ -245,9 +251,9 @@ export default function AuthenticatorLayout() {
           <div className="mt-8 pt-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-tfe-red-600 hover:bg-tfe-red-50 hover:text-tfe-red-700"
             >
-              <LogOut className="w-5 h-5 text-red-500" />
+              <LogOut className="w-5 h-5 text-tfe-red-500" />
               <span className="font-medium">Logout</span>
             </button>
           </div>
@@ -267,15 +273,11 @@ export default function AuthenticatorLayout() {
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <div className="flex items-center space-x-2">
-                <div className="flex justify-center">
-                  <img 
-                    src="/logo_tfoe.png" 
-                    alt="The Future of English Logo" 
-                    className="h-8 w-auto"
-                  />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">TFE</span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">Authenticator</span>
+                <h3 className="text-xl font-bold">The Future of English</h3>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -285,7 +287,7 @@ export default function AuthenticatorLayout() {
                   <p className="text-sm font-medium text-gray-900">{user.user_metadata?.name || 'Authenticator'}</p>
                   <span className={`inline-block px-2 py-1 text-xs rounded-full ${
                     user.role === 'admin'
-                      ? 'bg-red-100 text-red-800'
+                      ? 'bg-tfe-red-100 text-tfe-red-800'
                       : 'bg-green-100 text-green-800'
                   }`}>
                     {user.role === 'admin' ? 'Admin' : 'Auth'}

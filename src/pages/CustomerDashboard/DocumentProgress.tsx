@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTranslatedDocuments } from '../../hooks/useDocuments';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
+import { db } from '../../lib/supabase';
 
 export default function DocumentProgress() {
   const { user } = useAuth();
@@ -12,6 +13,110 @@ export default function DocumentProgress() {
   const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  // Função para download automático (incluindo PDFs)
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      // Tentar baixar com URL atual
+      const response = await fetch(url);
+      
+      // Se der erro de acesso negado, tentar gerar URL público
+      if (!response.ok && response.status === 403) {
+        console.log('URL expirado, gerando URL público...');
+        
+        // Extrair o caminho do arquivo da URL
+        console.log('URL original:', url);
+        const urlParts = url.split('/');
+        console.log('URL parts:', urlParts);
+        
+        // Tentar diferentes formas de extrair o filePath
+        let filePath = '';
+        
+        // Se a URL contém 'storage/v1/object/public/documents/', extrair o que vem depois
+        if (url.includes('storage/v1/object/public/documents/')) {
+          const documentsIndex = url.indexOf('documents/');
+          filePath = url.substring(documentsIndex + 'documents/'.length);
+        } else {
+          // Fallback: pegar os últimos 2 segmentos
+          filePath = urlParts.slice(-2).join('/');
+        }
+        
+        console.log('File path extraído:', filePath);
+        
+        // Tentar URL público primeiro (não expira)
+        const publicUrl = await db.generatePublicUrl(filePath);
+        if (publicUrl) {
+          try {
+            const publicResponse = await fetch(publicUrl);
+            if (publicResponse.ok) {
+              const blob = await publicResponse.blob();
+              const downloadUrl = window.URL.createObjectURL(blob);
+              
+              const link = window.document.createElement('a');
+              link.href = downloadUrl;
+              link.download = filename;
+              window.document.body.appendChild(link);
+              link.click();
+              window.document.body.removeChild(link);
+              
+              window.URL.revokeObjectURL(downloadUrl);
+              return;
+            }
+          } catch (error) {
+            console.log('URL público falhou, tentando URL pré-assinado...');
+          }
+        }
+        
+        // Se URL público falhou, tentar URL pré-assinado de 7 dias
+        const signedUrl = await db.generateSignedUrl(filePath);
+        if (signedUrl) {
+          try {
+            const signedResponse = await fetch(signedUrl);
+            if (signedResponse.ok) {
+              const blob = await signedResponse.blob();
+              const downloadUrl = window.URL.createObjectURL(blob);
+              
+              const link = window.document.createElement('a');
+              link.href = downloadUrl;
+              link.download = filename;
+              window.document.body.appendChild(link);
+              link.click();
+              window.document.body.removeChild(link);
+              
+              window.URL.revokeObjectURL(downloadUrl);
+              return;
+            }
+          } catch (error) {
+            console.error('Erro com URL pré-assinado:', error);
+          }
+        }
+      }
+      
+      // Se chegou aqui, o URL original funcionou
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      const link = window.document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+      
+      // Limpar o URL do blob
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Erro ao baixar arquivo:', error);
+      // Fallback para download direto
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.target = '_blank';
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'completed':
@@ -19,39 +124,51 @@ export default function DocumentProgress() {
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'processing':
       case 'in_progress':
-        return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
+        return <Loader2 className="w-5 h-5 text-tfe-blue-500 animate-spin" />;
       case 'pending':
       case 'waiting':
         return <Clock className="w-5 h-5 text-yellow-500" />;
       case 'error':
       case 'failed':
-        return <AlertCircle className="w-5 h-5 text-red-500" />;
+        return <AlertCircle className="w-5 h-5 text-tfe-red-500" />;
       default:
         return <Clock className="w-5 h-5 text-gray-400" />;
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
+  const getStatusColor = (doc: any) => {
+    // Se tem translated_file_url, significa que foi traduzido e está disponível para download/view
+    if (doc.translated_file_url) {
+      return 'bg-green-100 text-green-800';
+    }
+    
+    // Caso contrário, usar o status original
+    switch (doc.status?.toLowerCase()) {
       case 'completed':
       case 'finished':
         return 'bg-green-100 text-green-800';
       case 'processing':
       case 'in_progress':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-tfe-blue-100 text-tfe-blue-800';
       case 'pending':
       case 'waiting':
         return 'bg-yellow-100 text-yellow-800';
       case 'error':
       case 'failed':
-        return 'bg-red-100 text-red-800';
+        return 'bg-tfe-red-100 text-tfe-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status?.toLowerCase()) {
+  const getStatusText = (doc: any) => {
+    // Se tem translated_file_url, significa que foi traduzido e está disponível para download/view
+    if (doc.translated_file_url) {
+      return 'Completed';
+    }
+    
+    // Caso contrário, usar o status original
+    switch (doc.status?.toLowerCase()) {
       case 'completed':
       case 'finished':
         return 'Completed';
@@ -73,7 +190,7 @@ export default function DocumentProgress() {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3 sm:mb-4">
         <div className="flex items-center gap-2 sm:gap-3">
-          <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
+          <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-tfe-blue-500" />
           <div>
             <h3 className="font-semibold text-gray-900 truncate max-w-32 sm:max-w-48 text-sm sm:text-base" title={doc.filename}>
               {doc.filename}
@@ -87,8 +204,8 @@ export default function DocumentProgress() {
       </div>
 
       <div className="mb-3 sm:mb-4">
-        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(doc.status || 'pending')}`}>
-          {getStatusText(doc.status || 'pending')}
+        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(doc)}`}>
+          {getStatusText(doc)}
         </span>
       </div>
 
@@ -110,23 +227,10 @@ export default function DocumentProgress() {
       {doc.translated_file_url && (
         <div className="flex flex-col sm:flex-row gap-2">
           <button
-            className="flex-1 inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-xs sm:text-sm"
+            className="flex-1 inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-tfe-blue-600 text-white rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors text-xs sm:text-sm"
             onClick={async (e) => {
               e.preventDefault();
-              try {
-                const response = await fetch(doc.translated_file_url);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = doc.filename || 'translated_document';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-              } catch (err) {
-                alert('Error downloading file.');
-              }
+              await handleDownload(doc.translated_file_url, doc.filename || 'translated_document');
             }}
             title="Download file"
           >
@@ -166,7 +270,7 @@ export default function DocumentProgress() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         {/* File Info - Stacked on mobile */}
         <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-          <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 flex-shrink-0 mt-0.5" />
+          <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-gray-900 truncate text-sm sm:text-base" title={doc.filename}>
               {doc.filename}
@@ -181,8 +285,8 @@ export default function DocumentProgress() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           {/* Status Badge */}
           <div className="flex justify-center sm:justify-start">
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(doc.status || 'pending')}`}>
-              {getStatusText(doc.status || 'pending')}
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(doc)}`}>
+              {getStatusText(doc)}
             </span>
           </div>
           
@@ -205,23 +309,10 @@ export default function DocumentProgress() {
           {doc.translated_file_url && (
             <div className="flex flex-col sm:flex-row gap-2">
               <button
-                className="inline-flex items-center justify-center gap-1 px-3 py-2 sm:py-1.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-xs"
+                className="inline-flex items-center justify-center gap-1 px-3 py-2 sm:py-1.5 bg-tfe-blue-600 text-white rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors text-xs"
                 onClick={async (e) => {
                   e.preventDefault();
-                  try {
-                    const response = await fetch(doc.translated_file_url);
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = doc.filename || 'translated_document';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
-                  } catch (err) {
-                    alert('Error downloading file.');
-                  }
+                  await handleDownload(doc.translated_file_url, doc.filename || 'translated_document');
                 }}
                 title="Download file"
               >
@@ -268,7 +359,7 @@ export default function DocumentProgress() {
 
         {loadingTranslated ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 animate-spin mr-2 sm:mr-3" />
+            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-tfe-blue-500 animate-spin mr-2 sm:mr-3" />
             <span className="text-sm sm:text-base text-gray-600">Loading documents...</span>
           </div>
         ) : translatedDocs && translatedDocs.length > 0 ? (
@@ -280,7 +371,7 @@ export default function DocumentProgress() {
                   onClick={() => setViewMode('grid')}
                   className={`p-2 rounded-md transition-colors ${
                     viewMode === 'grid' 
-                      ? 'bg-blue-100 text-blue-600' 
+                      ? 'bg-tfe-blue-100 text-tfe-blue-600' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                   title="Grid view"
@@ -291,7 +382,7 @@ export default function DocumentProgress() {
                   onClick={() => setViewMode('list')}
                   className={`p-2 rounded-md transition-colors ${
                     viewMode === 'list' 
-                      ? 'bg-blue-100 text-blue-600' 
+                      ? 'bg-tfe-blue-100 text-tfe-blue-600' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                   title="List view"
@@ -326,7 +417,7 @@ export default function DocumentProgress() {
             <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">You don't have any translated documents yet. Make your first upload in the Translations page.</p>
             <button
               onClick={() => window.location.href = '/dashboard/upload'}
-              className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm sm:text-base"
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-tfe-blue-600 text-white rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors text-sm sm:text-base"
             >
               <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
               Go to Translations

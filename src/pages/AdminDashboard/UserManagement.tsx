@@ -88,7 +88,7 @@ export function UserManagement() {
       case 'admin':
         return <Crown className="w-4 h-4 text-purple-600" />;
       case 'authenticator':
-        return <Shield className="w-4 h-4 text-blue-600" />;
+        return <Shield className="w-4 h-4 text-tfe-blue-600" />;
       case 'user':
         return <User className="w-4 h-4 text-gray-600" />;
       default:
@@ -101,7 +101,7 @@ export function UserManagement() {
       case 'admin':
         return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'authenticator':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-tfe-blue-100 text-tfe-blue-800 border-tfe-blue-200';
       case 'user':
         return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
@@ -115,12 +115,15 @@ export function UserManagement() {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <img 
-                src="/logo_tfoe.png" 
-                alt="The Future of English Logo" 
-                className="h-16 w-auto mx-auto mb-4"
-              />
-              <p className="text-gray-600">Loading users...</p>
+              <div className="flex flex-col items-center space-y-3">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">TFE</span>
+                  </div>
+                  <h3 className="text-xl font-bold">The Future of English</h3>
+                </div>
+              </div>
+              <p className="text-gray-600 mt-4">Loading users...</p>
             </div>
           </div>
         </div>
@@ -145,8 +148,8 @@ export function UserManagement() {
                 <p className="text-xs sm:text-sm text-gray-600 font-medium">Total Users</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{totalUsers}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-900" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-tfe-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-950" />
               </div>
             </div>
           </div>
@@ -169,8 +172,8 @@ export function UserManagement() {
                 <p className="text-xs sm:text-sm text-gray-600 font-medium">Authenticators</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{authenticatorUsers}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-blue-900" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-tfe-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-950" />
               </div>
             </div>
           </div>
@@ -205,7 +208,7 @@ export function UserManagement() {
                     placeholder="Search users..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm w-full sm:w-64"
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm w-full sm:w-64"
                   />
                 </div>
                 
@@ -228,7 +231,7 @@ export function UserManagement() {
                   <select
                     value={roleFilter}
                     onChange={(e) => setRoleFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
                     aria-label="Filter by role"
                   >
                     <option value="all">All Roles</option>

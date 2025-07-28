@@ -119,7 +119,7 @@ const ResetPassword: React.FC = () => {
                 You will be redirected to the login page in a few seconds...
               </p>
               <div className="flex justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-tfe-blue-600"></div>
               </div>
             </div>
           </div>
@@ -130,7 +130,7 @@ const ResetPassword: React.FC = () => {
                   supabase.auth.signOut();
                   navigate('/login');
                 }}
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-tfe-blue-600 bg-tfe-blue-50 border border-tfe-blue-200 rounded-lg hover:bg-tfe-blue-100 hover:border-tfe-blue-300 hover:text-tfe-blue-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-tfe-blue-500 focus:ring-offset-2"
               >
                 <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -174,7 +174,7 @@ const ResetPassword: React.FC = () => {
                   type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
                   required
-                  className="appearance-none rounded-lg relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
+                  className="appearance-none rounded-lg relative block w-full pl-10 pr-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 sm:text-sm transition-colors"
                   placeholder="Enter your new password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -212,10 +212,10 @@ const ResetPassword: React.FC = () => {
                   required
                   className={`appearance-none rounded-lg relative block w-full pl-10 pr-10 py-3 border ${
                     confirmPassword && password !== confirmPassword 
-                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      ? 'border-tfe-red-300 focus:ring-red-500 focus:border-tfe-red-500' 
                       : confirmPassword && password === confirmPassword 
                       ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
-                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      : 'border-gray-300 focus:ring-tfe-blue-500 focus:border-tfe-blue-500'
                   } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
                   placeholder="Confirm your new password"
                   value={confirmPassword}
@@ -235,7 +235,7 @@ const ResetPassword: React.FC = () => {
               </div>
               {confirmPassword && (
                 <div className={`mt-2 text-xs flex items-center ${
-                  password === confirmPassword ? 'text-green-600' : 'text-red-600'
+                  password === confirmPassword ? 'text-green-600' : 'text-tfe-red-600'
                 }`}>
                   {password === confirmPassword ? (
                     <>
@@ -257,8 +257,8 @@ const ResetPassword: React.FC = () => {
             </div>
             
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-red-600 flex items-center">
+              <div className="bg-tfe-red-50 border border-tfe-red-200 rounded-lg p-4">
+                <p className="text-sm text-tfe-red-600 flex items-center">
                   <span className="mr-2">❌</span> {error}
                 </p>
               </div>
@@ -268,7 +268,7 @@ const ResetPassword: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-red-600 hover:from-blue-700 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-red-600 hover:from-blue-700 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tfe-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <div className="flex items-center">

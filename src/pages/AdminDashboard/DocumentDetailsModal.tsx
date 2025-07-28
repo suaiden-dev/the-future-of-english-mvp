@@ -88,7 +88,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
           {/* File Info */}
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-3">
-              <FileText className="w-6 h-6 text-blue-600" />
+              <FileText className="w-6 h-6 text-tfe-blue-600" />
               <h4 className="text-lg font-semibold text-gray-900">File Information</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -107,10 +107,10 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
               <div>
                 <label className="text-sm font-medium text-gray-700">Status</label>
                 <div className="mt-1">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(document.status)}`}>
-                    {getStatusIcon(document.status)}
-                    <span className="ml-1 capitalize">{document.status}</span>
-                  </span>
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(document)}`}>
+                  {getStatusIcon(document)}
+                  <span className="ml-1 capitalize">{document.file_url ? 'Completed' : document.status}</span>
+                </span>
                 </div>
               </div>
             </div>
@@ -198,7 +198,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
           {/* Verification */}
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-3">
-              <Hash className="w-6 h-6 text-red-600" />
+              <Hash className="w-6 h-6 text-tfe-red-600" />
               <h4 className="text-lg font-semibold text-gray-900">Verification</h4>
             </div>
           <div>
@@ -209,12 +209,12 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
 
           {/* Actions */}
           {document.file_url && (
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h4 className="text-lg font-semibold text-blue-900 mb-3">File Actions</h4>
+            <div className="bg-tfe-blue-50 rounded-lg p-4">
+              <h4 className="text-lg font-semibold text-tfe-blue-950 mb-3">File Actions</h4>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handleViewFile}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors"
                 >
                   <Eye className="w-4 h-4" />
                   View File

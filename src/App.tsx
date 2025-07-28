@@ -6,7 +6,8 @@ import { ToastProvider } from './contexts/ToastContext';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { NotificationBell } from './components/NotificationBell';
-import { Home } from './pages/Home';
+import { Footer } from './components/Footer';
+import { Mentorship } from './pages/Home';
 import { Translations } from './pages/Translations';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { UserManagement } from './pages/AdminDashboard/UserManagement';
@@ -55,14 +56,12 @@ function App() {
   // Folders hook
   const { folders, createFolder, updateFolder, deleteFolder } = useFolders(user?.id);
 
-  // Remover handleLogin e lógica de login, pois agora está no contexto
-
   const navigate = useNavigate();
 
   const handleLogout = () => {
     console.log('[App] handleLogout chamado');
     signOut();
-    navigate('/login'); // Redireciona para login após logout
+    navigate('/login');
   };
 
   const handleDocumentUpload = async (documentData: Omit<DocumentInsert, 'user_id'>) => {
@@ -129,12 +128,15 @@ function App() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <img 
-            src="/logo_tfoe.png" 
-            alt="The Future of English Logo" 
-            className="h-16 w-auto mx-auto mb-4"
-          />
-          <p className="text-gray-600">Loading...</p>
+          <div className="flex flex-col items-center space-y-3">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">TFE</span>
+              </div>
+              <h3 className="text-xl font-bold">The Future of English</h3>
+            </div>
+          </div>
+          <p className="text-gray-600 mt-4">Loading...</p>
         </div>
       </div>
     );
@@ -147,7 +149,7 @@ function App() {
     console.log('[App] getNavItems chamado com user:', user);
     
     const baseItems = [
-      { id: 'home', label: 'Home', icon: HomeIcon, page: 'home' as Page },
+      { id: 'mentorship', label: 'Mentorship', icon: HomeIcon, page: 'mentorship' as Page },
       { id: 'translations', label: 'Translations', icon: FileText, page: 'translations' as Page },
       { id: 'verify', label: 'Verify Document', icon: Search, page: 'verify' as Page },
     ];
@@ -199,46 +201,51 @@ function App() {
   };
 
   // Mobile menu component
-  const MobileMenu = () => (
-    <div className={`fixed inset-0 z-50 lg:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50" 
-        onClick={() => setIsMobileMenuOpen(false)}
-      />
-      
-      {/* Menu */}
-      <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-2">
-            <img 
-              src="/logo_tfoe.png" 
-              alt="The Future of English Logo" 
-              className="h-8 w-auto"
-            />
-            <span className="text-lg font-bold text-gray-900">Menu</span>
-          </div>
-          <button
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="p-2 text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+  const MobileMenu = () => {
+    console.log('[App] MobileMenu renderizado, isMobileMenuOpen:', isMobileMenuOpen);
+    return (
+      <div className={`fixed inset-0 z-50 lg:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}>
+        {/* Backdrop */}
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50" 
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
         
-        <div className="p-4">
-          <Sidebar 
-            navItems={getNavItems()} 
-            user={user} 
-            onLogout={() => {
-              handleLogout();
-              setIsMobileMenuOpen(false);
-            }} 
-          />
+        {/* Menu */}
+        <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">TFE</span>
+                </div>
+                <h3 className="text-xl font-bold">The Future of English</h3>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="p-2 text-gray-400 hover:text-gray-600"
+              aria-label="Close menu"
+              title="Close menu"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <div className="p-4">
+            <Sidebar 
+              navItems={getNavItems()} 
+              user={user} 
+              onLogout={() => {
+                handleLogout();
+                setIsMobileMenuOpen(false);
+              }} 
+            />
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <ToastProvider>
@@ -248,12 +255,16 @@ function App() {
       
       {/* Renderiza Header apenas em rotas públicas */}
       {['/', '/translations', '/verify', '/login', '/register'].includes(location.pathname) && (
-        <Header user={user} onLogout={handleLogout} />
+        <Header 
+          user={user} 
+          onLogout={handleLogout} 
+          onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
+        />
       )}
       
       <AuthRedirect>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Mentorship />} />
           <Route path="/translations" element={<Translations />} />
           <Route path="/verify" element={<DocumentVerification />} />
           <Route path="/login" element={<Login />} />
@@ -262,16 +273,20 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+          
+          {/* Dashboard routes for regular users */}
           <Route path="/dashboard/*" element={user && user.role === 'user' ? (
             <div className="flex flex-col lg:flex-row">
               {/* Mobile header */}
               <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">TFE</span>
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">TFE</span>
+                      </div>
+                      <h3 className="text-xl font-bold">The Future of English</h3>
                     </div>
-                    <span className="text-lg font-bold text-gray-900">Dashboard</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <NotificationBell />
@@ -323,23 +338,25 @@ function App() {
               </main>
             </div>
           ) : <Navigate to="/login" />} />
+          
+          {/* Authenticator routes */}
           <Route path="/authenticator/*" element={user && (user.role === 'authenticator' || user.role === 'admin') ? (
             <DocumentManagerPage />
           ) : <Navigate to="/login" />} />
+          
+          {/* Admin routes */}
           <Route path="/admin" element={user && user.role === 'admin' ? (
             <div className="flex flex-col lg:flex-row">
               {/* Mobile header */}
               <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="flex justify-center">
-                      <img 
-                        src="/logo_tfoe.png" 
-                        alt="The Future of English Logo" 
-                        className="h-8 w-auto"
-                      />
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">TFE</span>
+                      </div>
+                      <h3 className="text-xl font-bold">The Future of English</h3>
                     </div>
-                    <span className="text-lg font-bold text-gray-900">Admin Panel</span>
                   </div>
                   <button
                     onClick={() => setIsMobileMenuOpen(true)}
@@ -363,6 +380,7 @@ function App() {
               </main>
             </div>
           ) : <Navigate to="/login" />} />
+          
           <Route path="/user-management" element={user && user.role === 'admin' ? (
             <div className="flex flex-col lg:flex-row">
               {/* Mobile header */}
@@ -400,12 +418,13 @@ function App() {
               </main>
             </div>
           ) : <Navigate to="/login" />} />
+          
           <Route path="/authenticator-control" element={user && user.role === 'admin' ? (
             <div className="flex flex-col lg:flex-row">
               {/* Mobile header */}
               <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <div className="flex justify-center">
                       <img 
                         src="/logo_tfoe.png" 
@@ -413,7 +432,14 @@ function App() {
                         className="h-8 w-auto"
                       />
                     </div>
-                    <span className="text-lg font-bold text-gray-900">Authenticator Control</span>
+                    <div>
+                      <div className="font-bold text-sm text-gray-900">
+                        The Future of English
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Professional Translation
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={() => setIsMobileMenuOpen(true)}
@@ -437,19 +463,31 @@ function App() {
               </main>
             </div>
           ) : <Navigate to="/login" />} />
+          
+          {/* Legacy routes for backward compatibility */}
           <Route path="/upload" element={user ? (
             <Upload user={user} documents={documents} onDocumentUpload={handleDocumentUpload} />
           ) : <Navigate to="/login" />} />
+          
           <Route path="/dashboard/progress" element={user && user.role === 'user' ? (
             <div className="flex flex-col lg:flex-row">
               {/* Mobile header */}
               <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">TFE</span>
+                  <div className="flex items-center space-x-3">
+                    <img 
+                      src="/logo_tfoe.png" 
+                      alt="The Future of English Logo" 
+                      className="h-8 w-auto"
+                    />
+                    <div>
+                      <div className="font-bold text-sm text-gray-900">
+                        The Future of English
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Professional Translation
+                      </div>
                     </div>
-                    <span className="text-lg font-bold text-gray-900">Progress</span>
                   </div>
                   <button
                     onClick={() => setIsMobileMenuOpen(true)}
@@ -473,46 +511,22 @@ function App() {
               </main>
             </div>
           ) : <Navigate to="/login" />} />
+          
+          {/* Documents route - simplified */}
           <Route path="/documents" element={user ? (
             user.role === 'authenticator' || user.role === 'admin' ? (
               <DocumentManagerPage />
             ) : (
-              <div className="flex flex-col lg:flex-row">
-                {/* Mobile header */}
-                <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-red-600 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">TFE</span>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900">Documents</span>
-                    </div>
-                    <button
-                      onClick={() => setIsMobileMenuOpen(true)}
-                      className="p-2 text-gray-400 hover:text-gray-600"
-                      aria-label="Open menu"
-                      title="Open menu"
-                    >
-                      <Menu className="w-6 h-6" />
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Desktop sidebar */}
-                <div className="hidden lg:block">
-                  <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
-                </div>
-                
-                {/* Main content */}
-                <main className="flex-1 lg:ml-0">
-                  <DocumentManager user={user} documents={documents} folders={folders} onDocumentUpload={handleDocumentUpload} onFolderCreate={handleFolderCreate} onFolderUpdate={handleFolderUpdate} onFolderDelete={handleFolderDelete} onViewDocument={handleViewDocument} />
-                </main>
-              </div>
+              <MyDocumentsPage />
             )
           ) : <Navigate to="/login" />} />
+          
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AuthRedirect>
+      
+      {/* Footer - Show on all pages */}
+      <Footer />
     </div>
     </ToastProvider>
   );

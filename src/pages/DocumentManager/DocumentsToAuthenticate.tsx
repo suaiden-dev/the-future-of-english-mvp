@@ -225,8 +225,8 @@ export default function DocumentsToAuthenticate({ user }: Props) {
           </div>
         </div>
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          {loading && <p className="text-blue-700 text-base sm:text-lg">Loading documents...</p>}
-          {error && <p className="text-red-500 text-base sm:text-lg">Error: {error}</p>}
+          {loading && <p className="text-tfe-blue-700 text-base sm:text-lg">Loading documents...</p>}
+          {error && <p className="text-tfe-red-500 text-base sm:text-lg">Error: {error}</p>}
           {!loading && documents.length === 0 && (
             <p className="text-gray-500 text-base sm:text-lg text-center py-8">No pending documents for authentication.</p>
           )}
@@ -238,7 +238,7 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                 <div className="space-y-3">
                   {/* Document Name */}
                   <div>
-                    <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline font-medium text-sm">{doc.filename}</a>
+                    <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-tfe-blue-700 underline font-medium text-sm">{doc.filename}</a>
                   </div>
 
                   {/* Document Details */}
@@ -286,7 +286,7 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                     <button
                       onClick={() => handleRejectClick(doc)}
                       disabled={processingDoc === doc.id}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg font-medium text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-tfe-red-600 text-white rounded-lg font-medium text-sm hover:bg-tfe-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <XCircle className="w-4 h-4" />
                       Reject
@@ -300,7 +300,7 @@ export default function DocumentsToAuthenticate({ user }: Props) {
           {/* Desktop Table View */}
           <div className="hidden sm:block overflow-x-auto">
             <table className="min-w-full bg-white border rounded-lg shadow">
-              <thead className="bg-blue-50">
+              <thead className="bg-tfe-blue-50">
                 <tr>
                   <th className="px-4 py-2 text-left font-semibold text-gray-900">Original File</th>
                   <th className="px-4 py-2 text-left font-semibold text-gray-900">User</th>
@@ -314,9 +314,9 @@ export default function DocumentsToAuthenticate({ user }: Props) {
               </thead>
               <tbody>
                 {documents.map(doc => (
-                  <tr key={doc.id} className="border-t hover:bg-blue-50 transition-colors">
+                  <tr key={doc.id} className="border-t hover:bg-tfe-blue-50 transition-colors">
                     <td className="px-4 py-2">
-                      <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline font-medium text-sm">{doc.filename}</a>
+                      <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-tfe-blue-700 underline font-medium text-sm">{doc.filename}</a>
                     </td>
                     <td className="px-4 py-2 text-sm">
                       <span className="font-mono text-gray-600 truncate max-w-24" title={doc.user_id}>
@@ -343,7 +343,7 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                         <button
                           onClick={() => handleRejectClick(doc)}
                           disabled={processingDoc === doc.id}
-                          className="flex items-center gap-1 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="flex items-center gap-1 px-3 py-1 bg-tfe-red-600 text-white rounded text-sm hover:bg-tfe-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <XCircle className="w-3 h-3" />
                           Reject
@@ -365,8 +365,8 @@ export default function DocumentsToAuthenticate({ user }: Props) {
              {/* Header */}
              <div className="flex items-center justify-between p-6 border-b border-gray-200">
                <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                   <XCircle className="w-6 h-6 text-red-600" />
+                 <div className="w-10 h-10 bg-tfe-red-100 rounded-lg flex items-center justify-center">
+                   <XCircle className="w-6 h-6 text-tfe-red-600" />
                  </div>
                  <div>
                    <h3 className="text-xl font-bold text-gray-900">Rejeitar Documento</h3>
@@ -387,13 +387,13 @@ export default function DocumentsToAuthenticate({ user }: Props) {
              <div className="p-6 bg-gray-50 border-b border-gray-200">
                <div className="flex items-center justify-between mb-3">
                  <div className="flex items-center gap-3">
-                   <FileText className="w-5 h-5 text-blue-600" />
+                   <FileText className="w-5 h-5 text-tfe-blue-600" />
                    <span className="font-medium text-gray-900">{selectedDocForRejection.filename}</span>
                  </div>
                  <button
                    onClick={() => fetchUserProfile(selectedDocForRejection.user_id)}
                    disabled={loadingUserInfo}
-                   className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                   className="flex items-center gap-2 px-3 py-1.5 bg-tfe-blue-100 text-tfe-blue-700 rounded-lg hover:bg-tfe-blue-200 transition-colors text-sm font-medium"
                  >
                    <Eye className="w-4 h-4" />
                    {loadingUserInfo ? 'Loading...' : 'View User Info'}
@@ -402,9 +402,9 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                
                {/* User Information Display */}
                {showUserInfo && userProfile && (
-                 <div className="mb-4 p-4 bg-white rounded-lg border border-blue-200">
+                 <div className="mb-4 p-4 bg-white rounded-lg border border-tfe-blue-200">
                    <div className="flex items-center gap-2 mb-3">
-                     <User className="w-4 h-4 text-blue-600" />
+                     <User className="w-4 h-4 text-tfe-blue-600" />
                      <span className="font-medium text-gray-900">Client Information</span>
                    </div>
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -462,13 +462,13 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                {/* Motivo da Rejeição */}
                <div>
                  <label htmlFor="rejectionReason" className="block mb-3 text-sm font-semibold text-gray-900">
-                   Motivo da Rejeição <span className="text-red-500">*</span>
+                   Motivo da Rejeição <span className="text-tfe-red-500">*</span>
                  </label>
                  <select
                    id="rejectionReason"
                    value={rejectionReason}
                    onChange={(e) => setRejectionReason(e.target.value)}
-                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-tfe-red-500 transition-colors"
                  >
                    <option value="">Selecione um motivo</option>
                    {REJECTION_REASONS.map(option => (
@@ -481,14 +481,14 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                {rejectionReason === 'other' && (
                  <div>
                    <label htmlFor="rejectionOtherReason" className="block mb-3 text-sm font-semibold text-gray-900">
-                     Especifique o Motivo <span className="text-red-500">*</span>
+                     Especifique o Motivo <span className="text-tfe-red-500">*</span>
                    </label>
                    <input
                      type="text"
                      id="rejectionOtherReason"
                      value={rejectionOtherReason}
                      onChange={(e) => setRejectionOtherReason(e.target.value)}
-                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-tfe-red-500 transition-colors"
                      placeholder="Descreva o motivo específico da rejeição..."
                    />
                  </div>
@@ -497,14 +497,14 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                {/* Comentário Detalhado */}
                <div>
                  <label htmlFor="rejectionComment" className="block mb-3 text-sm font-semibold text-gray-900">
-                   Comentário Detalhado <span className="text-red-500">*</span>
+                   Comentário Detalhado <span className="text-tfe-red-500">*</span>
                  </label>
                  <textarea
                    id="rejectionComment"
                    value={rejectionComment}
                    onChange={(e) => setRejectionComment(e.target.value)}
                    rows={4}
-                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors resize-none"
+                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-tfe-red-500 transition-colors resize-none"
                    placeholder="Forneça detalhes específicos sobre os problemas encontrados e sugestões para correção..."
                  />
                  <p className="mt-2 text-xs text-gray-500">
@@ -524,7 +524,7 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                <button
                  onClick={handleRejectConfirm}
                  disabled={rejectionLoading || !rejectionReason || !rejectionComment.trim() || (rejectionReason === 'other' && !rejectionOtherReason.trim())}
-                 className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
+                 className="px-6 py-3 bg-tfe-red-600 text-white rounded-lg hover:bg-tfe-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
                >
                  {rejectionLoading ? (
                    <>

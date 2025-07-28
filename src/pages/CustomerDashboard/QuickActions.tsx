@@ -15,7 +15,7 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
       title: 'Upload Document',
       description: 'Start a new translation project',
       icon: Upload,
-      color: 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
+      color: 'bg-gradient-to-br from-blue-500 to-tfe-red-950 hover:from-blue-600 hover:to-blue-700',
       textColor: 'text-white',
       iconBg: 'bg-white/20',
       onClick: onUploadClick
@@ -75,8 +75,8 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
       <div className="mb-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Quick Actions</h3>
-        <p className="text-sm text-gray-600">Common tasks and shortcuts</p>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Quick Actions</h3>
+        <p className="text-lg text-gray-600">Common tasks and shortcuts</p>
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -109,13 +109,13 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
       
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-tfe-blue-100">
           <div className="flex items-center space-x-2 mb-1">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span className="text-xs font-medium text-blue-700 uppercase tracking-wide">Pricing</span>
+            <div className="w-2 h-2 bg-tfe-blue-500 rounded-full"></div>
+            <span className="text-xs font-medium text-tfe-blue-700 uppercase tracking-wide">Pricing</span>
           </div>
-          <div className="text-2xl font-bold text-blue-900">$20</div>
-          <div className="text-sm text-blue-600">per page</div>
+          <div className="text-2xl font-bold text-tfe-blue-950">$20</div>
+          <div className="text-sm text-tfe-blue-600">per page</div>
         </div>
         
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-100">
@@ -164,7 +164,7 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
                   // Placeholder for contact support
                   console.log('Contact support clicked');
                 }}
-                className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md transition-colors"
+                className="text-xs bg-tfe-blue-100 hover:bg-tfe-blue-200 text-tfe-blue-700 px-3 py-1 rounded-md transition-colors"
               >
                 Contact Support
               </button>

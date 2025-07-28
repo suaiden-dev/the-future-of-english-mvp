@@ -8,8 +8,8 @@ export function PaymentCancelled() {
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
         {/* Cancellation Icon */}
         <div className="mb-8">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <XCircle className="w-12 h-12 text-red-600" />
+          <div className="w-20 h-20 bg-tfe-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle className="w-12 h-12 text-tfe-red-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Payment Cancelled
@@ -24,15 +24,15 @@ export function PaymentCancelled() {
           <h2 className="font-semibold text-gray-900 mb-4">What happened?</h2>
           <div className="space-y-3 text-sm text-gray-700">
             <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+              <div className="w-2 h-2 bg-tfe-red-500 rounded-full mt-2 flex-shrink-0"></div>
               <p>You cancelled the payment process on Stripe</p>
             </div>
             <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+              <div className="w-2 h-2 bg-tfe-red-500 rounded-full mt-2 flex-shrink-0"></div>
               <p>Your document was not sent for translation</p>
             </div>
             <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+              <div className="w-2 h-2 bg-tfe-red-500 rounded-full mt-2 flex-shrink-0"></div>
               <p>No charge was made to your account</p>
             </div>
           </div>
@@ -42,7 +42,7 @@ export function PaymentCancelled() {
         <div className="mb-8">
           <Link
             to="/customer-dashboard"
-            className="inline-flex items-center px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+            className="inline-flex items-center px-8 py-3 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors font-semibold"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Back to Dashboard

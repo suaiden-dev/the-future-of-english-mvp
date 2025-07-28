@@ -142,7 +142,7 @@ export default function TranslatedDocuments() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-8 h-8 border-4 border-tfe-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function TranslatedDocuments() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600">You need to be logged in to access this page.</p>
+          <p className="text-tfe-red-600">You need to be logged in to access this page.</p>
         </div>
       </div>
     );
@@ -179,8 +179,8 @@ export default function TranslatedDocuments() {
         {/* Overview Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-900" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-tfe-blue-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-950" />
             </div>
             <div>
               <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{totalDocuments}</div>
@@ -210,10 +210,10 @@ export default function TranslatedDocuments() {
         {/* Documents Table */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-700" /> Translated Documents History
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-700" /> Translated Documents History
           </h2>
-          {loading && <p className="text-blue-700 text-base sm:text-lg">Loading documents...</p>}
-          {error && <p className="text-red-500 text-base sm:text-lg">Error: {error}</p>}
+          {loading && <p className="text-tfe-blue-700 text-base sm:text-lg">Loading documents...</p>}
+          {error && <p className="text-tfe-red-500 text-base sm:text-lg">Error: {error}</p>}
           
           {/* Mobile Cards View */}
           <div className="block sm:hidden space-y-4">
@@ -231,7 +231,7 @@ export default function TranslatedDocuments() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
-                      className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors font-medium"
+                      className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
                       title="View PDF"
                     >
                       <FileText className="w-3 h-3" /> View
@@ -290,7 +290,7 @@ export default function TranslatedDocuments() {
                         {doc.user_name || `${doc.user_id.slice(0, 8)}...`}
                       </span>
                       <button
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                        className="text-tfe-blue-600 hover:text-tfe-blue-950 p-1 rounded hover:bg-tfe-blue-50 transition-colors"
                         title="View user information"
                         onClick={() => handleViewUser(doc.user_id)}
                       >
@@ -324,7 +324,7 @@ export default function TranslatedDocuments() {
           {/* Desktop Table View */}
           <div className="hidden sm:block overflow-x-auto">
             <table className="w-full bg-white border rounded-lg shadow">
-              <thead className="bg-blue-50">
+              <thead className="bg-tfe-blue-50">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-900">Document</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-900">Actions</th>
@@ -339,7 +339,7 @@ export default function TranslatedDocuments() {
               <tbody>
                 {currentDocuments.map(doc => {
                   return (
-                    <tr key={doc.id} className="border-t hover:bg-blue-50 transition-colors">
+                    <tr key={doc.id} className="border-t hover:bg-tfe-blue-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="space-y-2">
                           <div>
@@ -350,7 +350,7 @@ export default function TranslatedDocuments() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
-                              className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors font-medium"
+                              className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
                               title="View PDF"
                             >
                               <FileText className="w-3 h-3" /> View
@@ -385,7 +385,7 @@ export default function TranslatedDocuments() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
-                            className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors font-medium"
+                            className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
                             title="View PDF"
                           >
                             <FileText className="w-3 h-3" /> View
@@ -421,7 +421,7 @@ export default function TranslatedDocuments() {
                             {doc.user_name || `${doc.user_id.slice(0, 8)}...`}
                           </span>
                           <button
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                            className="text-tfe-blue-600 hover:text-tfe-blue-950 p-1 rounded hover:bg-tfe-blue-50 transition-colors"
                             title="View user information"
                             onClick={() => handleViewUser(doc.user_id)}
                           >
@@ -497,7 +497,7 @@ export default function TranslatedDocuments() {
                       onClick={() => handlePageChange(page)}
                       className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                         currentPage === page
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-tfe-blue-600 text-white'
                           : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -531,8 +531,8 @@ export default function TranslatedDocuments() {
               <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
             <h3 className="text-xl font-bold mb-6 text-gray-900">Client Information</h3>
-            {userLoading && <p className="text-blue-700 text-lg">Loading...</p>}
-            {userError && <p className="text-red-500 text-lg">{userError}</p>}
+            {userLoading && <p className="text-tfe-blue-700 text-lg">Loading...</p>}
+            {userError && <p className="text-tfe-red-500 text-lg">{userError}</p>}
             {selectedUser && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">

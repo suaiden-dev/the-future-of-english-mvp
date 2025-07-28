@@ -2,6 +2,7 @@ import React from 'react';
 import { FileText, Eye, Download, Copy } from 'lucide-react';
 import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
 import { Document } from '../../App';
+import { db } from '../../lib/supabase';
 
 interface DocumentsListProps {
   documents: Document[];
@@ -14,12 +15,101 @@ export function DocumentsList({ documents, onViewDocument }: DocumentsListProps)
     // You could add a toast notification here
   };
 
+  // Função para download automático (incluindo PDFs)
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      // Tentar baixar com URL atual
+      const response = await fetch(url);
+      
+      // Se der erro de acesso negado, tentar gerar URL público
+      if (!response.ok && response.status === 403) {
+        console.log('URL expirado, gerando URL público...');
+        
+        // Extrair o caminho do arquivo da URL
+        const urlParts = url.split('/');
+        const filePath = urlParts.slice(-2).join('/'); // Pega os últimos 2 segmentos
+        
+        // Tentar URL público primeiro (não expira)
+        const publicUrl = await db.generatePublicUrl(filePath);
+        if (publicUrl) {
+          try {
+            const publicResponse = await fetch(publicUrl);
+            if (publicResponse.ok) {
+              const blob = await publicResponse.blob();
+              const downloadUrl = window.URL.createObjectURL(blob);
+              
+              const link = window.document.createElement('a');
+              link.href = downloadUrl;
+              link.download = filename;
+              window.document.body.appendChild(link);
+              link.click();
+              window.document.body.removeChild(link);
+              
+              window.URL.revokeObjectURL(downloadUrl);
+              return;
+            }
+          } catch (error) {
+            console.log('URL público falhou, tentando URL pré-assinado...');
+          }
+        }
+        
+        // Se URL público falhou, tentar URL pré-assinado de 7 dias
+        const signedUrl = await db.generateSignedUrl(filePath);
+        if (signedUrl) {
+          try {
+            const signedResponse = await fetch(signedUrl);
+            if (signedResponse.ok) {
+              const blob = await signedResponse.blob();
+              const downloadUrl = window.URL.createObjectURL(blob);
+              
+              const link = window.document.createElement('a');
+              link.href = downloadUrl;
+              link.download = filename;
+              window.document.body.appendChild(link);
+              link.click();
+              window.document.body.removeChild(link);
+              
+              window.URL.revokeObjectURL(downloadUrl);
+              return;
+            }
+          } catch (error) {
+            console.error('Erro com URL pré-assinado:', error);
+          }
+        }
+      }
+      
+      // Se chegou aqui, o URL original funcionou
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      const link = window.document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+      
+      // Limpar o URL do blob
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Erro ao baixar arquivo:', error);
+      // Fallback para download direto
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.target = '_blank';
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+    }
+  };
+
   if (documents.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
         <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Documents Yet</h3>
-        <p className="text-gray-600">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">No Documents Yet</h3>
+        <p className="text-gray-600 text-lg">
           Upload your first document to get started with professional translation services.
         </p>
       </div>
@@ -29,7 +119,7 @@ export function DocumentsList({ documents, onViewDocument }: DocumentsListProps)
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Your Documents</h3>
+        <h3 className="text-2xl font-bold text-gray-900">Your Documents</h3>
       </div>
       
       <div className="divide-y divide-gray-200">
@@ -37,8 +127,8 @@ export function DocumentsList({ documents, onViewDocument }: DocumentsListProps)
           <div key={doc.id} className="p-6 hover:bg-gray-50 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-blue-900" />
+                <div className="w-12 h-12 bg-tfe-blue-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-tfe-blue-950" />
                 </div>
                 <div>
                   <h4 className="text-lg font-semibold text-gray-900">{doc.filename}</h4>
@@ -53,24 +143,25 @@ export function DocumentsList({ documents, onViewDocument }: DocumentsListProps)
               </div>
               
               <div className="flex items-center space-x-4">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(doc.status)}`}>
-                  {getStatusIcon(doc.status)}
-                  <span className="ml-1 capitalize">{doc.status}</span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(doc)}`}>
+                  {getStatusIcon(doc)}
+                  <span className="ml-1 capitalize">{doc.file_url ? 'Completed' : doc.status}</span>
                 </span>
                 
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => onViewDocument(doc)}
-                    className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                    className="p-2 text-gray-400 hover:text-tfe-blue-600 transition-colors"
                     title="View Details"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   
-                  {doc.status === 'completed' && (
+                  {doc.file_url && (
                     <button
+                      onClick={() => handleDownload(doc.file_url!, doc.filename)}
                       className="p-2 text-gray-400 hover:text-green-600 transition-colors"
-                      title="Download Translation"
+                      title="Download Original"
                     >
                       <Download className="w-4 h-4" />
                     </button>
@@ -88,7 +179,7 @@ export function DocumentsList({ documents, onViewDocument }: DocumentsListProps)
                   </div>
                   <button
                     onClick={() => copyVerificationCode(doc.verificationCode!)}
-                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                    className="p-1 text-gray-400 hover:text-tfe-blue-600 transition-colors"
                     title="Copy Code"
                   >
                     <Copy className="w-4 h-4" />

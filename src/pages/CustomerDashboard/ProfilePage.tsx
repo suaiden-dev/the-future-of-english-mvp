@@ -62,13 +62,13 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-lg mx-auto mt-10 bg-white rounded-xl shadow p-8">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900">My Profile</h2>
+      <h2 className="text-3xl font-bold mb-6 text-gray-900">My Profile</h2>
       {loading && (
         <div className="flex justify-center items-center py-8">
-          <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
+          <RefreshCw className="w-8 h-8 animate-spin text-tfe-blue-500" />
         </div>
       )}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {error && <p className="text-tfe-red-500 mb-4">{error}</p>}
       {success && <p className="text-green-600 mb-4">{success}</p>}
       {!loading && profile && (
         <form onSubmit={handleSave} className="space-y-6">
@@ -79,7 +79,7 @@ export default function ProfilePage() {
               name="name"
               value={form.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
               required
               placeholder="Enter your name"
             />
@@ -91,7 +91,7 @@ export default function ProfilePage() {
               name="email"
               value={form.email}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
               required
               placeholder="Enter your email"
             />
@@ -103,13 +103,13 @@ export default function ProfilePage() {
               name="phone"
               value={form.phone}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
               placeholder="Enter your phone number"
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full bg-tfe-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-tfe-blue-700 transition-colors"
             disabled={loading}
           >
             Save Changes

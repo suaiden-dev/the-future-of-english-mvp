@@ -60,19 +60,22 @@ export function DocumentVerification() {
                   id="verification-code"
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
-                  placeholder="e.g., TFE123456"
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-mono"
+                  placeholder="e.g., A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-lg font-mono"
                   disabled={isSearching}
                 />
                 <button
                   onClick={handleVerification}
                   disabled={isSearching || !verificationCode.trim()}
-                  className="px-6 py-3 bg-blue-900 text-white rounded-r-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                  className="px-6 py-3 bg-tfe-blue-950 text-white rounded-r-lg hover:bg-tfe-blue-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
                 >
                   <Search className="w-5 h-5" />
                   <span>{isSearching ? 'Verifying...' : 'Verify'}</span>
                 </button>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                The verification code can be found on the first page of your translated document
+              </p>
             </div>
 
             {/* Search Results */}
@@ -87,7 +90,7 @@ export function DocumentVerification() {
                           Document Verified ✓
                         </h3>
                         <p className="text-green-700">
-                          This document has been authenticated by TheFutureOfEnglish
+                          This document was translated by TheFutureOfEnglish
                         </p>
                       </div>
                     </div>
@@ -139,14 +142,14 @@ export function DocumentVerification() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <div className="bg-tfe-red-50 border border-tfe-red-200 rounded-lg p-6">
                     <div className="flex items-center mb-4">
-                      <XCircle className="w-8 h-8 text-red-600 mr-3" />
+                      <XCircle className="w-8 h-8 text-tfe-red-600 mr-3" />
                       <div>
-                        <h3 className="text-lg font-semibold text-red-900">
+                        <h3 className="text-lg font-semibold text-tfe-red-950">
                           Document Not Found
                         </h3>
-                        <p className="text-red-700">
+                        <p className="text-tfe-red-700">
                           The verification code you entered was not found in our system
                         </p>
                       </div>
@@ -167,7 +170,7 @@ export function DocumentVerification() {
                 <div className="mt-6 text-center">
                   <button
                     onClick={resetSearch}
-                    className="px-6 py-2 text-blue-900 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
+                    className="px-6 py-2 text-tfe-blue-950 bg-tfe-blue-100 hover:bg-tfe-blue-200 rounded-lg transition-colors"
                   >
                     Search Another Document
                   </button>

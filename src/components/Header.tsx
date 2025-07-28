@@ -1,16 +1,17 @@
 import React from 'react';
-import { User, LogOut, Shield, Home, FileText, Search } from 'lucide-react';
+import { User, LogOut, Shield, Home, FileText, Search, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register';
+type Page = 'mentorship' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register';
 
 interface HeaderProps {
   user: any | null; // Changed from UserType to any as UserType is no longer imported
   onLogout: () => void;
   currentPage?: Page;
+  onMobileMenuOpen?: () => void;
 }
 
-export function Header({ user, onLogout, currentPage }: HeaderProps) {
+export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: HeaderProps) {
   const navigate = useNavigate();
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -20,13 +21,29 @@ export function Header({ user, onLogout, currentPage }: HeaderProps) {
           <div className="flex items-center">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center space-x-2 text-blue-900 hover:text-blue-700 transition-colors"
+              className="flex items-center space-x-3 text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors"
             >
-              <img 
-                src="/logo_tfoe.png" 
-                alt="The Future of English Logo" 
-                className="h-20 w-auto"
-              />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">TFE</span>
+                </div>
+                <h3 className="text-xl font-bold">The Future of English</h3>
+              </div>
+            </button>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <button
+              onClick={() => {
+                console.log('[Header] Mobile menu button clicked');
+                onMobileMenuOpen?.();
+              }}
+              className="p-2 text-gray-400 hover:text-gray-600"
+              aria-label="Open menu"
+              title="Open menu"
+            >
+              <Menu className="w-6 h-6" />
             </button>
           </div>
 
@@ -35,21 +52,21 @@ export function Header({ user, onLogout, currentPage }: HeaderProps) {
             <button
               onClick={() => navigate('/')}
               className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                currentPage === 'home' 
-                  ? 'bg-blue-50 text-blue-900' 
-                  : 'text-gray-600 hover:text-blue-900'
+                currentPage === 'mentorship' 
+                  ? 'bg-tfe-blue-50 text-tfe-blue-950' 
+                  : 'text-gray-600 hover:text-tfe-blue-950'
               }`}
             >
               <Home className="w-4 h-4" />
-              <span>Home</span>
+              <span>Mentorship</span>
             </button>
             
             <button
               onClick={() => navigate('/translations')}
               className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 currentPage === 'translations' 
-                  ? 'bg-blue-50 text-blue-900' 
-                  : 'text-gray-600 hover:text-blue-900'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-950' 
+                  : 'text-gray-600 hover:text-tfe-blue-950'
               }`}
             >
               <FileText className="w-4 h-4" />
@@ -60,8 +77,8 @@ export function Header({ user, onLogout, currentPage }: HeaderProps) {
               onClick={() => navigate('/verify')}
               className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 currentPage === 'verify' 
-                  ? 'bg-blue-50 text-blue-900' 
-                  : 'text-gray-600 hover:text-blue-900'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-950' 
+                  : 'text-gray-600 hover:text-tfe-blue-950'
               }`}
             >
               <Search className="w-4 h-4" />
@@ -78,8 +95,8 @@ export function Header({ user, onLogout, currentPage }: HeaderProps) {
                     onClick={() => navigate('/admin')}
                     className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       currentPage === 'admin' 
-                        ? 'bg-red-50 text-red-900' 
-                        : 'text-gray-600 hover:text-red-900'
+                        ? 'bg-tfe-red-50 text-tfe-red-950' 
+                        : 'text-gray-600 hover:text-tfe-red-950'
                     }`}
                   >
                     <Shield className="w-4 h-4" />
@@ -91,8 +108,8 @@ export function Header({ user, onLogout, currentPage }: HeaderProps) {
                   onClick={() => navigate('/dashboard')}
                   className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPage === 'dashboard-customer' 
-                      ? 'bg-blue-50 text-blue-900' 
-                      : 'text-gray-600 hover:text-blue-900'
+                      ? 'bg-tfe-blue-50 text-tfe-blue-950' 
+                      : 'text-gray-600 hover:text-tfe-blue-950'
                   }`}
                 >
                   <User className="w-4 h-4" />
@@ -100,10 +117,10 @@ export function Header({ user, onLogout, currentPage }: HeaderProps) {
                 </button>
                 
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">Welcome, {user.name || user.email}</span>
-                                                                          <button
+                  <span className="text-sm text-gray-600">Welcome, {user.user_metadata?.name || user.email}</span>
+                  <button
                     onClick={onLogout}
-                    className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-red-600 transition-colors"
+                    className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-tfe-red-600 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Logout</span>
@@ -114,13 +131,13 @@ export function Header({ user, onLogout, currentPage }: HeaderProps) {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => navigate('/login')}
-                  className="px-4 py-2 text-sm font-medium text-blue-900 hover:text-blue-700 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors"
                 >
                   Login
                 </button>
                 <button
                   onClick={() => navigate('/register')}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 rounded-md transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-tfe-blue-950 hover:bg-tfe-blue-800 rounded-md transition-colors"
                 >
                   Register
                 </button>

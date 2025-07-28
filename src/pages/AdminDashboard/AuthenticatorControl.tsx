@@ -201,14 +201,20 @@ export function AuthenticatorControl() {
   const totalDocumentsProcessed = authenticators.reduce((sum, auth) => sum + auth.documents_processed, 0);
   const totalDocumentsPending = authenticators.reduce((sum, auth) => sum + auth.documents_pending, 0);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (activity: AuthenticatorActivity) => {
+    // Se tem file_url, significa que foi traduzido e está disponível para download/view
+    if (activity.status === 'completed') {
+      return 'bg-green-100 text-green-800 border-green-200';
+    }
+    
+    // Caso contrário, usar o status original
+    switch (activity.status) {
       case 'completed':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-tfe-red-100 text-tfe-red-800 border-tfe-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -233,12 +239,15 @@ export function AuthenticatorControl() {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <img 
-                src="/logo_tfoe.png" 
-                alt="The Future of English Logo" 
-                className="h-16 w-auto mx-auto mb-4"
-              />
-              <p className="text-gray-600">Loading authenticator data...</p>
+              <div className="flex flex-col items-center space-y-3">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">TFE</span>
+                  </div>
+                  <h3 className="text-xl font-bold">The Future of English</h3>
+                </div>
+              </div>
+              <p className="text-gray-600 mt-4">Loading authenticator data...</p>
             </div>
           </div>
         </div>
@@ -263,8 +272,8 @@ export function AuthenticatorControl() {
                 <p className="text-xs sm:text-sm text-gray-600 font-medium">Total Authenticators</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{totalAuthenticators}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-blue-900" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-tfe-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-950" />
               </div>
             </div>
           </div>
@@ -390,7 +399,7 @@ export function AuthenticatorControl() {
                     placeholder="Search activities..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm w-full sm:w-64"
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm w-full sm:w-64"
                   />
                 </div>
                 
@@ -413,7 +422,7 @@ export function AuthenticatorControl() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
                     aria-label="Filter by status"
                   >
                     <option value="all">All Status</option>
@@ -425,7 +434,7 @@ export function AuthenticatorControl() {
                   <select
                     value={selectedAuthenticator || ''}
                     onChange={(e) => setSelectedAuthenticator(e.target.value || null)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
                     aria-label="Filter by authenticator"
                   >
                     <option value="">All Authenticators</option>
@@ -492,7 +501,7 @@ export function AuthenticatorControl() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(activity.status)}`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(activity)}`}>
                         {getStatusIcon(activity.status)}
                         <span className="ml-1 capitalize">{activity.status}</span>
                       </span>

@@ -84,15 +84,15 @@ export const Upload: React.FC<UploadProps> = ({ user, documents, onDocumentUploa
       <div className="w-full max-w-2xl">
         <h1 className="text-2xl font-bold mb-4 text-gray-900">Upload Documents</h1>
         <div
-          className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'}`}
+          className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center transition-colors ${dragActive ? 'border-tfe-blue-500 bg-tfe-blue-50' : 'border-gray-300 bg-white'}`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onClick={() => inputRef.current?.click()}
           style={{ cursor: 'pointer' }}
         >
-          <UploadCloud className="w-12 h-12 text-blue-500 mb-2" />
-          <p className="text-gray-700 font-medium">Drag & drop files here, or <span className="text-blue-600 underline">browse</span></p>
+          <UploadCloud className="w-12 h-12 text-tfe-blue-500 mb-2" />
+          <p className="text-gray-700 font-medium">Drag & drop files here, or <span className="text-tfe-blue-600 underline">browse</span></p>
           <input
             ref={inputRef}
             type="file"
@@ -111,21 +111,21 @@ export const Upload: React.FC<UploadProps> = ({ user, documents, onDocumentUploa
                     <div className="flex items-center space-x-2">
                       <span className="font-medium text-gray-900">{f.file.name}</span>
                       {f.status === 'success' && <CheckCircle className="w-5 h-5 text-green-500" />}
-                      {f.status === 'error' && <X className="w-5 h-5 text-red-500" />}
-                      {f.status === 'uploading' && <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />}
+                      {f.status === 'error' && <X className="w-5 h-5 text-tfe-red-500" />}
+                      {f.status === 'uploading' && <RefreshCw className="w-5 h-5 animate-spin text-tfe-blue-500" />}
                     </div>
                     <div className="text-xs text-gray-500">{(f.file.size / 1024).toFixed(1)} KB</div>
                     <div className="w-full bg-gray-100 rounded h-2 mt-2">
                       <div
-                        className={`h-2 rounded ${f.status === 'success' ? 'bg-green-400' : f.status === 'error' ? 'bg-red-400' : 'bg-blue-400'}`}
+                        className={`h-2 rounded ${f.status === 'success' ? 'bg-green-400' : f.status === 'error' ? 'bg-tfe-red-400' : 'bg-tfe-blue-400'}`}
                         style={{ width: `${f.progress}%` }}
                       />
                     </div>
-                    {f.error && <div className="text-xs text-red-500 mt-1">{f.error}</div>}
+                    {f.error && <div className="text-xs text-tfe-red-500 mt-1">{f.error}</div>}
                   </div>
                   <div className="flex flex-col items-end ml-4 space-y-1">
-                    <button onClick={() => removeFile(idx)} className="text-gray-400 hover:text-red-500" title="Remove"><X className="w-5 h-5" /></button>
-                    {f.status === 'error' && <button onClick={() => retryFile(idx)} className="text-blue-500 hover:underline text-xs">Retry</button>}
+                    <button onClick={() => removeFile(idx)} className="text-gray-400 hover:text-tfe-red-500" title="Remove"><X className="w-5 h-5" /></button>
+                    {f.status === 'error' && <button onClick={() => retryFile(idx)} className="text-tfe-blue-500 hover:underline text-xs">Retry</button>}
                     {f.status === 'success' && f.url && (
                       <a href={f.url} download={f.file.name} className="text-green-600 hover:underline text-xs flex items-center"><Download className="w-4 h-4 mr-1" />Download</a>
                     )}
@@ -134,7 +134,7 @@ export const Upload: React.FC<UploadProps> = ({ user, documents, onDocumentUploa
               ))}
             </ul>
             <button
-              className="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
+              className="mt-4 w-full bg-tfe-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-tfe-blue-700 transition"
               onClick={startUpload}
               disabled={files.every(f => f.status !== 'pending')}
             >
@@ -161,7 +161,7 @@ export const Upload: React.FC<UploadProps> = ({ user, documents, onDocumentUploa
                       <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${doc.status === 'completed' ? 'bg-green-100 text-green-800' : doc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>{doc.status}</span>
                     </td>
                     <td className="px-4 py-2 space-x-2">
-                      <button className="text-blue-500 hover:underline flex items-center text-xs"><Eye className="w-4 h-4 mr-1" />View</button>
+                      <button className="text-tfe-blue-500 hover:underline flex items-center text-xs"><Eye className="w-4 h-4 mr-1" />View</button>
                       {/* Download link pode ser implementado se houver URL no futuro */}
                     </td>
                   </tr>

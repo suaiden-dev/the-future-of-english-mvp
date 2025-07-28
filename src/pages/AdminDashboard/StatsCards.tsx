@@ -23,8 +23,8 @@ export function StatsCards({ documents }: StatsCardsProps) {
       value: documents.length,
       subtitle: 'All time',
       icon: FileText,
-      bgColor: 'bg-blue-100',
-      iconColor: 'text-blue-900',
+      bgColor: 'bg-tfe-blue-100',
+      iconColor: 'text-tfe-blue-950',
       trend: null
     },
     {
@@ -77,9 +77,9 @@ export function StatsCards({ documents }: StatsCardsProps) {
       title: 'Pending',
       value: pendingDocuments,
       icon: AlertCircle,
-      bgColor: 'bg-red-100',
-      iconColor: 'text-red-900',
-      textColor: 'text-red-700'
+      bgColor: 'bg-tfe-red-100',
+      iconColor: 'text-tfe-red-950',
+      textColor: 'text-tfe-red-700'
     }
   ];
 

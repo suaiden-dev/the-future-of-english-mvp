@@ -9,7 +9,7 @@ interface WelcomeSectionProps {
 
 export function WelcomeSection({ user, onUploadClick }: WelcomeSectionProps) {
   return (
-    <div className="bg-gradient-to-r from-blue-900 to-red-600 text-white rounded-2xl p-8 mb-8">
+    <div className="bg-gradient-to-r from-tfe-blue-950 to-red-600 text-white rounded-2xl p-8 mb-8">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center mb-4">
@@ -17,11 +17,11 @@ export function WelcomeSection({ user, onUploadClick }: WelcomeSectionProps) {
               <User className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Welcome back, {user?.user_metadata?.name || 'User'}!</h1>
-              <p className="text-blue-100">{user?.email}</p>
+              <h1 className="text-3xl sm:text-4xl font-bold">Welcome back, {user?.user_metadata?.name || 'User'}!</h1>
+              <p className="text-tfe-blue-100 text-lg">{user?.email}</p>
             </div>
           </div>
-          <p className="text-blue-100 mb-6 max-w-2xl">
+          <p className="text-tfe-blue-100 mb-6 max-w-2xl text-lg leading-relaxed">
             Upload your documents for professional translation services. 
             All translations are certified and accepted by USCIS and US authorities.
           </p>
@@ -29,7 +29,7 @@ export function WelcomeSection({ user, onUploadClick }: WelcomeSectionProps) {
         <div className="hidden md:block flex items-center gap-4">
           <button
             onClick={onUploadClick}
-            className="bg-white text-blue-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center space-x-2"
+            className="bg-white text-tfe-blue-950 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center space-x-2"
           >
             <Upload className="w-5 h-5" />
             <span>Upload Document</span>
@@ -41,7 +41,7 @@ export function WelcomeSection({ user, onUploadClick }: WelcomeSectionProps) {
       <div className="md:hidden mt-4 flex items-center gap-4">
         <button
           onClick={onUploadClick}
-          className="flex-1 bg-white text-blue-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"
+          className="flex-1 bg-white text-tfe-blue-950 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"
         >
           <Upload className="w-5 h-5" />
           <span>Upload Document</span>

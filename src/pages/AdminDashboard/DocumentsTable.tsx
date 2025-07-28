@@ -54,7 +54,7 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
                 placeholder="Search documents..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm w-full sm:w-64"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm w-full sm:w-64"
               />
             </div>
             
@@ -77,7 +77,7 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
                 aria-label="Filter by status"
               >
                 <option value="all">All Status</option>
@@ -143,10 +143,10 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
                   {doc.pages}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(doc.status)}`}>
-                    {getStatusIcon(doc.status)}
-                    <span className="ml-1 capitalize">{doc.status}</span>
-                  </span>
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(doc)}`}>
+                  {getStatusIcon(doc)}
+                  <span className="ml-1 capitalize">{doc.file_url ? 'Completed' : doc.status}</span>
+                </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   ${doc.total_cost}.00
@@ -158,7 +158,7 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => onViewDocument(doc)}
-                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                      className="text-tfe-blue-600 hover:text-tfe-blue-800 transition-colors"
                       title="View details"
                     >
                       <Eye className="w-4 h-4" />
@@ -212,9 +212,9 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
                     </div>
                     <div>
                       <span className="font-medium">Status:</span>
-                      <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(doc.status)}`}>
-                        {getStatusIcon(doc.status)}
-                        <span className="ml-1 capitalize">{doc.status}</span>
+                      <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(doc)}`}>
+                        {getStatusIcon(doc)}
+                        <span className="ml-1 capitalize">{doc.file_url ? 'Completed' : doc.status}</span>
                       </span>
                     </div>
                   </div>
@@ -223,7 +223,7 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
                 <div className="flex flex-col items-end gap-2 ml-4">
                   <button
                     onClick={() => onViewDocument(doc)}
-                    className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                    className="text-tfe-blue-600 hover:text-tfe-blue-800 transition-colors p-1"
                     title="View details"
                   >
                     <Eye className="w-4 h-4" />

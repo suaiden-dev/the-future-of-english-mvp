@@ -23,7 +23,7 @@ export function useFolders(userId?: string) {
       setFolders(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching folders:', err);
+      console.error('[useFolders] Erro ao buscar pastas:', err);
       setError('Failed to fetch folders');
     } finally {
       setLoading(false);
@@ -40,6 +40,8 @@ export function useFolders(userId?: string) {
     try {
       const newFolder = await db.createFolder({
         ...folderData,
+        parent_id: folderData.parent_id || undefined, // Convert null to undefined
+        color: folderData.color || undefined, // Convert null to undefined
         user_id: userId
       });
       

@@ -171,6 +171,7 @@ export const db = {
     pages: number;
     total_cost: number;
     file_url?: string;
+    verification_code: string; // Adicionar campo obrigatório
   }) => {
     console.log('[db.createDocument] Inserindo documento:', JSON.stringify(document, null, 2));
     const { data, error } = await supabase
@@ -203,7 +204,14 @@ export const db = {
       .select('*')
       .ilike('verification_code', verificationCode)
       .single();
-    if (error && error.code !== 'PGRST116') throw error;
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw error;
+    }
+    
     return data;
   },
 
@@ -263,8 +271,77 @@ export const db = {
       .eq('user_id', userId)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false });
+    
     if (error) throw error;
     return data;
+  },
+
+  getVerificationCode: async (documentId: string) => {
+    // Busca o código de verificação real na tabela translated_documents
+    // Primeiro busca o documento em documents_to_be_verified que corresponde ao documento original
+    const { data: toBeVerifiedData, error: toBeVerifiedError } = await supabase
+      .from('documents_to_be_verified')
+      .select('id, filename, status')
+      .eq('id', documentId)
+      .single();
+    
+    if (toBeVerifiedError) {
+      if (toBeVerifiedError.code === 'PGRST116') {
+        // Documento não encontrado na tabela de documentos a serem verificados
+        return null;
+      }
+      throw toBeVerifiedError;
+    }
+    
+    // Agora busca o documento traduzido usando o ID do documento a ser verificado
+    const { data, error } = await supabase
+      .from('translated_documents')
+      .select('verification_code, original_document_id, filename, translated_file_url, is_authenticated, authentication_date, authenticated_by_name')
+      .eq('original_document_id', toBeVerifiedData.id)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // Documento não encontrado na tabela de traduzidos
+        return null;
+      }
+      throw error;
+    }
+    
+    return data;
+  },
+
+  // Função para gerar URL público (não expira)
+  generatePublicUrl: async (filePath: string) => {
+    try {
+      const { data } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+      
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Erro ao gerar URL público:', error);
+      return null;
+    }
+  },
+
+  // Função para gerar URL pré-assinado com tempo maior (7 dias)
+  generateSignedUrl: async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(filePath, 604800); // 7 dias de validade
+      
+      if (error) {
+        console.error('Erro ao gerar URL:', error);
+        return null;
+      }
+      
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Erro ao gerar URL do arquivo:', error);
+      return null;
+    }
   }
 };
 

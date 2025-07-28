@@ -71,10 +71,10 @@ export function DocumentManager({
   const [editingFolderName, setEditingFolderName] = useState('');
 
   const folderColors = [
-    'bg-blue-100 text-blue-800',
+    'bg-tfe-blue-100 text-tfe-blue-800',
     'bg-green-100 text-green-800',
     'bg-purple-100 text-purple-800',
-    'bg-red-100 text-red-800',
+    'bg-tfe-red-100 text-tfe-red-800',
     'bg-yellow-100 text-yellow-800',
     'bg-indigo-100 text-indigo-800'
   ];
@@ -179,16 +179,16 @@ export function DocumentManager({
               <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
                 <button
                   onClick={() => setCurrentFolderId(null)}
-                  className="hover:text-blue-600 transition-colors"
+                  className="hover:text-tfe-blue-600 transition-colors"
                 >
-                  Home
+                  Root
                 </button>
                 {breadcrumbs.map((folder, index) => (
                   <React.Fragment key={folder.id}>
                     <span>/</span>
                     <button
                       onClick={() => setCurrentFolderId(folder.id)}
-                      className="hover:text-blue-600 transition-colors"
+                      className="hover:text-tfe-blue-600 transition-colors"
                     >
                       {folder.name}
                     </button>
@@ -200,7 +200,7 @@ export function DocumentManager({
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setIsCreatingFolder(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Folder</span>
@@ -224,7 +224,7 @@ export function DocumentManager({
                 placeholder="Search documents and folders..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 w-80"
               />
             </div>
             
@@ -232,7 +232,7 @@ export function DocumentManager({
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-2 rounded-lg transition-colors ${
-                  viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'
+                  viewMode === 'grid' ? 'bg-tfe-blue-100 text-tfe-blue-600' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
                 <Grid className="w-5 h-5" />
@@ -240,7 +240,7 @@ export function DocumentManager({
               <button
                 onClick={() => setViewMode('list')}
                 className={`p-2 rounded-lg transition-colors ${
-                  viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'
+                  viewMode === 'list' ? 'bg-tfe-blue-100 text-tfe-blue-600' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
                 <List className="w-5 h-5" />
@@ -257,7 +257,7 @@ export function DocumentManager({
                 const currentFolder = folders.find(f => f.id === currentFolderId);
                 setCurrentFolderId(currentFolder?.parent_id || null);
               }}
-              className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors"
+              className="flex items-center space-x-2 text-tfe-blue-600 hover:text-tfe-blue-800 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
@@ -278,14 +278,14 @@ export function DocumentManager({
                       value={newFolderName}
                       onChange={(e) => setNewFolderName(e.target.value)}
                       placeholder="Folder name"
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
                       autoFocus
                       onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
                     />
                     <div className="flex space-x-1">
                       <button
                         onClick={handleCreateFolder}
-                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="px-2 py-1 text-xs bg-tfe-blue-600 text-white rounded hover:bg-tfe-blue-700"
                       >
                         Create
                       </button>
@@ -314,14 +314,14 @@ export function DocumentManager({
                           type="text"
                           value={editingFolderName}
                           onChange={(e) => setEditingFolderName(e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
                           autoFocus
                           onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
                         />
                         <div className="flex space-x-1">
                           <button
                             onClick={handleSaveEdit}
-                            className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                            className="px-2 py-1 text-xs bg-tfe-blue-600 text-white rounded hover:bg-tfe-blue-700"
                           >
                             Save
                           </button>
@@ -342,7 +342,7 @@ export function DocumentManager({
                           onClick={() => setCurrentFolderId(folder.id)}
                           className="flex flex-col items-center space-y-2"
                         >
-                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${folder.color || 'bg-blue-100 text-blue-800'}`}>
+                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${folder.color || 'bg-tfe-blue-100 text-tfe-blue-800'}`}>
                             <FolderIcon className="w-6 h-6" />
                           </div>
                           <span className="text-sm font-medium text-gray-900 text-center truncate w-full">
@@ -371,7 +371,7 @@ export function DocumentManager({
                                   e.stopPropagation();
                                   handleDeleteFolder(folder.id);
                                 }}
-                                className="w-full px-3 py-1 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                                className="w-full px-3 py-1 text-left text-sm text-tfe-red-600 hover:bg-tfe-red-50 flex items-center space-x-2"
                               >
                                 <Trash2 className="w-3 h-3" />
                                 <span>Delete</span>
@@ -397,9 +397,9 @@ export function DocumentManager({
                       <span className="text-sm font-medium text-gray-900 text-center truncate w-full">
                         {document.filename}
                       </span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(document.status)}`}>
-                        {getStatusIcon(document.status)}
-                        <span className="ml-1 capitalize">{document.status}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(document)}`}>
+                        {getStatusIcon(document)}
+                        <span className="ml-1 capitalize">{document.file_url ? 'Completed' : document.status}</span>
                       </span>
                     </div>
                     
@@ -407,7 +407,7 @@ export function DocumentManager({
                       <div className="flex space-x-1">
                         <button
                           onClick={() => onViewDocument(document)}
-                          className="p-1 text-gray-400 hover:text-blue-600 rounded"
+                          className="p-1 text-gray-400 hover:text-tfe-blue-600 rounded"
                           title="View Details"
                         >
                           <Eye className="w-3 h-3" />
@@ -431,7 +431,7 @@ export function DocumentManager({
                           </span>
                           <button
                             onClick={() => copyVerificationCode(document.verification_code!)}
-                            className="p-1 text-gray-400 hover:text-blue-600"
+                            className="p-1 text-gray-400 hover:text-tfe-blue-600"
                             title="Copy Code"
                           >
                             <Copy className="w-3 h-3" />
@@ -470,12 +470,12 @@ export function DocumentManager({
                     <tr key={folder.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className={`w-8 h-8 rounded flex items-center justify-center mr-3 ${folder.color || 'bg-blue-100 text-blue-800'}`}>
+                          <div className={`w-8 h-8 rounded flex items-center justify-center mr-3 ${folder.color || 'bg-tfe-blue-100 text-tfe-blue-800'}`}>
                             <FolderIcon className="w-4 h-4" />
                           </div>
                           <button
                             onClick={() => setCurrentFolderId(folder.id)}
-                            className="text-sm font-medium text-gray-900 hover:text-blue-600"
+                            className="text-sm font-medium text-gray-900 hover:text-tfe-blue-600"
                           >
                             {folder.name}
                           </button>
@@ -494,13 +494,13 @@ export function DocumentManager({
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleEditFolder(folder.id)}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-tfe-blue-600 hover:text-tfe-blue-800"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteFolder(folder.id)}
-                            className="text-red-600 hover:text-red-800"
+                            className="text-tfe-red-600 hover:text-tfe-red-800"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -525,16 +525,16 @@ export function DocumentManager({
                         {new Date(document.upload_date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(document.status)}`}>
-                          {getStatusIcon(document.status)}
-                          <span className="ml-1 capitalize">{document.status}</span>
+                        <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(document)}`}>
+                          {getStatusIcon(document)}
+                          <span className="ml-1 capitalize">{document.file_url ? 'Completed' : document.status}</span>
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex space-x-2">
                           <button
                             onClick={() => onViewDocument(document)}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-tfe-blue-600 hover:text-tfe-blue-800"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -568,7 +568,7 @@ export function DocumentManager({
                 <div className="flex justify-center space-x-3">
                   <button
                     onClick={() => setIsCreatingFolder(true)}
-                    className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center space-x-2 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Create Folder</span>

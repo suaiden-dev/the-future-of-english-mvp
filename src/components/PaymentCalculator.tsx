@@ -157,12 +157,12 @@ export function PaymentCalculator({
                 type="checkbox"
                 checked={service.checked}
                 onChange={() => toggleService(service.id)}
-                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="mt-1 h-4 w-4 text-tfe-blue-600 focus:ring-tfe-blue-500 border-gray-300 rounded"
               />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-gray-900">{service.name}</span>
-                  <span className="text-sm font-medium text-blue-600">
+                  <span className="text-sm font-medium text-tfe-blue-600">
                     +${service.pricePerPage}/página
                   </span>
                 </div>
@@ -174,7 +174,7 @@ export function PaymentCalculator({
       </div>
 
       {/* Resumo do preço */}
-      <div className="bg-blue-50 rounded-lg p-4 mb-6">
+      <div className="bg-tfe-blue-50 rounded-lg p-4 mb-6">
         <h3 className="font-semibold text-gray-900 mb-3">Resumo do Preço</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
@@ -182,7 +182,7 @@ export function PaymentCalculator({
             <span>${basePricePerPage * pages}</span>
           </div>
           {services.filter(s => s.checked).map(service => (
-            <div key={service.id} className="flex justify-between text-blue-700">
+            <div key={service.id} className="flex justify-between text-tfe-blue-700">
               <span>{service.name} ({pages} páginas × ${service.pricePerPage})</span>
               <span>+${service.pricePerPage * pages}</span>
             </div>
@@ -217,9 +217,9 @@ export function PaymentCalculator({
 
       {/* Mensagem de erro */}
       {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-          <AlertCircle className="w-5 h-5 text-red-600" />
-          <span className="text-red-800 text-sm">{error}</span>
+        <div className="mt-4 p-3 bg-tfe-red-50 border border-tfe-red-200 rounded-lg flex items-center space-x-2">
+          <AlertCircle className="w-5 h-5 text-tfe-red-600" />
+          <span className="text-tfe-red-800 text-sm">{error}</span>
         </div>
       )}
 

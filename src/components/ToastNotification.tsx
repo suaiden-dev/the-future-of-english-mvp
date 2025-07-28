@@ -45,11 +45,11 @@ export function ToastNotification({ notification, onClose, onMarkAsRead }: Toast
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'document_upload':
-        return <FileText className="w-5 h-5 text-blue-500" />;
+        return <FileText className="w-5 h-5 text-tfe-blue-500" />;
       case 'document_approved':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'document_rejected':
-        return <XCircle className="w-5 h-5 text-red-500" />;
+        return <XCircle className="w-5 h-5 text-tfe-red-500" />;
       case 'translation_ready':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       default:
@@ -60,11 +60,11 @@ export function ToastNotification({ notification, onClose, onMarkAsRead }: Toast
   const getNotificationColor = (type: string) => {
     switch (type) {
       case 'document_upload':
-        return 'border-l-blue-500 bg-blue-50';
+        return 'border-l-blue-500 bg-tfe-blue-50';
       case 'document_approved':
         return 'border-l-green-500 bg-green-50';
       case 'document_rejected':
-        return 'border-l-red-500 bg-red-50';
+        return 'border-l-red-500 bg-tfe-red-50';
       case 'translation_ready':
         return 'border-l-green-500 bg-green-50';
       default:
@@ -115,7 +115,7 @@ export function ToastNotification({ notification, onClose, onMarkAsRead }: Toast
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleMarkAsRead}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  className="text-xs text-tfe-blue-600 hover:text-tfe-blue-800 font-medium transition-colors"
                 >
                   Mark as read
                 </button>

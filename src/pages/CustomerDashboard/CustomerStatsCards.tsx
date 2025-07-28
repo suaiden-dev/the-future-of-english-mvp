@@ -27,8 +27,8 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
       title: 'Total Documents',
       value: totalDocuments || 0,
       icon: FileText,
-      bgColor: 'bg-blue-100',
-      iconColor: 'text-blue-900',
+      bgColor: 'bg-tfe-blue-100',
+      iconColor: 'text-tfe-blue-950',
       description: `${totalPages || 0} pages total`
     },
     {
@@ -76,29 +76,29 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
   if (totalDocuments === 0) {
     return (
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 mb-8 text-center">
-        <FileText className="w-16 h-16 text-blue-300 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+        <FileText className="w-16 h-16 text-tfe-blue-300 mx-auto mb-4" />
+        <h3 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
           Welcome to Your Dashboard!
         </h3>
-        <p className="text-gray-600 mb-4">
+        <p className="text-gray-600 mb-4 text-lg leading-relaxed">
           Upload your first document to start tracking your translation progress and statistics.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           <div className="bg-white p-4 rounded-lg">
-            <div className="text-2xl font-bold text-blue-900">$20</div>
-            <div className="text-sm text-gray-600">Per page</div>
+            <div className="text-3xl font-bold text-tfe-blue-950">$20</div>
+            <div className="text-base font-medium text-gray-600">Per page</div>
           </div>
           <div className="bg-white p-4 rounded-lg">
-            <div className="text-2xl font-bold text-green-900">24-48h</div>
-            <div className="text-sm text-gray-600">Turnaround</div>
+            <div className="text-3xl font-bold text-green-900">24-48h</div>
+            <div className="text-base font-medium text-gray-600">Turnaround</div>
           </div>
           <div className="bg-white p-4 rounded-lg">
-            <div className="text-2xl font-bold text-purple-900">USCIS</div>
-            <div className="text-sm text-gray-600">Accepted</div>
+            <div className="text-3xl font-bold text-purple-900">USCIS</div>
+            <div className="text-base font-medium text-gray-600">Accepted</div>
           </div>
           <div className="bg-white p-4 rounded-lg">
-            <div className="text-2xl font-bold text-red-900">Certified</div>
-            <div className="text-sm text-gray-600">Translation</div>
+            <div className="text-3xl font-bold text-tfe-red-950">Certified</div>
+            <div className="text-base font-medium text-gray-600">Translation</div>
           </div>
         </div>
       </div>
@@ -108,8 +108,8 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
   return (
     <div className="mb-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Statistics</h2>
-        <p className="text-gray-600">Overview of your document translation activity</p>
+        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Your Statistics</h2>
+        <p className="text-gray-600 text-lg">Overview of your document translation activity</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -122,11 +122,11 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
                   <Icon className={`w-6 h-6 ${stat.iconColor}`} />
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-sm text-gray-600">{stat.title}</p>
+                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-base font-medium text-gray-600">{stat.title}</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500">{stat.description}</p>
+              <p className="text-sm text-gray-500">{stat.description}</p>
             </div>
           );
         })}

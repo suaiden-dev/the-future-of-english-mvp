@@ -130,8 +130,8 @@ export function Register() {
             </h2>
             <div className="mt-6 bg-white rounded-xl p-6 shadow-lg border border-green-100">
               <div className="flex items-center justify-center mb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Mail className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-tfe-blue-100 rounded-full flex items-center justify-center">
+                  <Mail className="w-6 h-6 text-tfe-blue-600" />
                 </div>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">
@@ -140,11 +140,11 @@ export function Register() {
               <p className="text-sm text-gray-600 text-center mb-4">
                 We've sent a verification link to <strong>{formData.email}</strong>
               </p>
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <p className="text-sm text-blue-800 text-center font-medium">
+                              <div className="bg-tfe-blue-50 rounded-lg p-4 border border-tfe-blue-200">
+                <p className="text-sm text-tfe-blue-800 text-center font-medium">
                   📧 A verification link has been sent to your email
                 </p>
-                <p className="text-xs text-blue-700 text-center mt-1">
+                <p className="text-xs text-tfe-blue-700 text-center mt-1">
                   Please check your inbox and click the verification link to activate your account
                 </p>
               </div>
@@ -155,7 +155,7 @@ export function Register() {
               </p>
               <button
                 onClick={() => navigate('/login')}
-                className="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md"
+                className="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-tfe-blue-600 to-tfe-blue-700 hover:from-tfe-blue-700 hover:to-tfe-blue-800 transition-all duration-200 shadow-md"
               >
                 Go to Login Now
               </button>
@@ -167,10 +167,10 @@ export function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-tfe-blue-50 to-tfe-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-tfe-blue-600 to-tfe-red-600 rounded-full flex items-center justify-center shadow-lg">
             <UserPlus className="h-8 w-8 text-white" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -184,7 +184,7 @@ export function Register() {
           </p>
           <button
             onClick={() => navigate('/login')}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 border border-transparent rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-tfe-blue-600 to-tfe-blue-700 border border-transparent rounded-lg hover:from-tfe-blue-700 hover:to-tfe-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tfe-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -209,14 +209,14 @@ export function Register() {
                   type="text"
                   required
                   className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
-                    errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    errors.name ? 'border-tfe-red-300 focus:ring-red-500 focus:border-tfe-red-500' : 'border-gray-300 focus:ring-tfe-blue-500 focus:border-tfe-blue-500'
                   } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
                   placeholder="Enter your full name"
                   value={formData.name}
                   onChange={handleChange}
                 />
               </div>
-              {errors.name && <p className="mt-2 text-sm text-red-600 flex items-center">
+              {errors.name && <p className="mt-2 text-sm text-tfe-red-600 flex items-center">
                 <span className="mr-1">⚠️</span> {errors.name}
               </p>}
             </div>
@@ -235,14 +235,14 @@ export function Register() {
                   type="email"
                   required
                   className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
-                    errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    errors.email ? 'border-tfe-red-300 focus:ring-red-500 focus:border-tfe-red-500' : 'border-gray-300 focus:ring-tfe-blue-500 focus:border-tfe-blue-500'
                   } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
                   placeholder="Enter your email address"
                   value={formData.email}
                   onChange={handleChange}
                 />
               </div>
-              {errors.email && <p className="mt-2 text-sm text-red-600 flex items-center">
+              {errors.email && <p className="mt-2 text-sm text-tfe-red-600 flex items-center">
                 <span className="mr-1">⚠️</span> {errors.email}
               </p>}
             </div>
@@ -263,22 +263,22 @@ export function Register() {
                   type="tel"
                   required
                   className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
-                    errors.phone ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    errors.phone ? 'border-tfe-red-300 focus:ring-red-500 focus:border-tfe-red-500' : 'border-gray-300 focus:ring-tfe-blue-500 focus:border-tfe-blue-500'
                   } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
                   placeholder="Enter your phone number"
                   value={formData.phone}
                   onChange={handleChange}
                 />
               </div>
-              {errors.phone && <p className="mt-2 text-sm text-red-600 flex items-center">
+              {errors.phone && <p className="mt-2 text-sm text-tfe-red-600 flex items-center">
                 <span className="mr-1">⚠️</span> {errors.phone}
               </p>}
             </div>
           </div>
 
           {errors.general && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-600 flex items-center">
+            <div className="bg-tfe-red-50 border border-tfe-red-200 rounded-lg p-4">
+              <p className="text-sm text-tfe-red-600 flex items-center">
                 <span className="mr-2">❌</span> {errors.general}
               </p>
             </div>
@@ -299,14 +299,14 @@ export function Register() {
                   type="password"
                   required
                   className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
-                    errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    errors.password ? 'border-tfe-red-300 focus:ring-red-500 focus:border-tfe-red-500' : 'border-gray-300 focus:ring-tfe-blue-500 focus:border-tfe-blue-500'
                   } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
                   placeholder="Create a strong password"
                   value={formData.password}
                   onChange={handleChange}
                 />
               </div>
-              {errors.password && <p className="mt-2 text-sm text-red-600 flex items-center">
+              {errors.password && <p className="mt-2 text-sm text-tfe-red-600 flex items-center">
                 <span className="mr-1">⚠️</span> {errors.password}
               </p>}
             </div>
@@ -325,7 +325,7 @@ export function Register() {
                   type="password"
                   required
                   className={`appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border ${
-                    errors.confirmPassword ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    errors.confirmPassword ? 'border-tfe-red-300 focus:ring-red-500 focus:border-tfe-red-500' : 'border-gray-300 focus:ring-tfe-blue-500 focus:border-tfe-blue-500'
                   } placeholder-gray-500 text-gray-900 focus:outline-none sm:text-sm transition-colors`}
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
@@ -333,7 +333,7 @@ export function Register() {
                 />
               </div>
               {errors.confirmPassword && (
-                <p className="mt-2 text-sm text-red-600 flex items-center">
+                <p className="mt-2 text-sm text-tfe-red-600 flex items-center">
                   <span className="mr-1">⚠️</span> {errors.confirmPassword}
                 </p>
               )}
@@ -344,7 +344,7 @@ export function Register() {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-red-600 hover:from-blue-700 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-red-600 hover:from-blue-700 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tfe-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="flex items-center">

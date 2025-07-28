@@ -59,11 +59,11 @@ export function NotificationBell() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'document_upload':
-        return <FileText className="w-4 h-4 text-blue-500" />;
+        return <FileText className="w-4 h-4 text-tfe-blue-500" />;
       case 'document_approved':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'document_rejected':
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className="w-4 h-4 text-tfe-red-500" />;
       case 'translation_ready':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       default:
@@ -99,7 +99,7 @@ export function NotificationBell() {
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium border-2 border-white">
+          <span className="absolute -top-1 -right-1 bg-tfe-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium border-2 border-white">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -115,7 +115,7 @@ export function NotificationBell() {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  className="text-sm text-tfe-blue-600 hover:text-tfe-blue-800 font-medium"
                 >
                   Mark all as read
                 </button>
@@ -144,7 +144,7 @@ export function NotificationBell() {
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
                     className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      !notification.is_read ? 'bg-blue-50' : ''
+                      !notification.is_read ? 'bg-tfe-blue-50' : ''
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -161,7 +161,7 @@ export function NotificationBell() {
                           </p>
                                                      <button
                              onClick={(e) => handleDeleteNotification(e, notification.id)}
-                             className="text-gray-400 hover:text-red-500 transition-colors"
+                             className="text-gray-400 hover:text-tfe-red-500 transition-colors"
                              title="Delete notification"
                            >
                              <Trash2 className="w-3 h-3" />
@@ -178,7 +178,7 @@ export function NotificationBell() {
                           </span>
                           
                           {!notification.is_read && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-tfe-blue-100 text-tfe-blue-800">
                               New
                             </span>
                           )}

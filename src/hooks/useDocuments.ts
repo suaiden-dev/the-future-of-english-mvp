@@ -38,6 +38,7 @@ export function useDocuments(userId?: string) {
     console.log('DEBUG: [useDocuments] createDocument chamado com:', JSON.stringify(documentData, null, 2));
     if (!userId) throw new Error('User not authenticated');
     if (!documentData.filename) throw new Error('Filename is required');
+    if (!documentData.verification_code) throw new Error('Verification code is required');
 
     try {
       // Garantir que folder_id nunca seja null (apenas string ou undefined)
@@ -47,7 +48,8 @@ export function useDocuments(userId?: string) {
         user_id: userId, // sempre sobrescreve
         pages: documentData.pages ?? 1,
         total_cost: (documentData.pages ?? 1) * 20,
-        filename: documentData.filename // garantir obrigatório
+        filename: documentData.filename, // garantir obrigatório
+        verification_code: documentData.verification_code // garantir obrigatório
       };
       console.log('DEBUG: [useDocuments] docToInsert:', JSON.stringify(docToInsert, null, 2));
       const newDocument = await db.createDocument(docToInsert);
@@ -59,7 +61,7 @@ export function useDocuments(userId?: string) {
     }
   };
 
-  const updateDocumentStatus = async (documentId: string, status: Document['status']) => {
+  const updateDocumentStatus = async (documentId: string, status: 'pending' | 'processing' | 'completed') => {
     try {
       const updatedDocument = await db.updateDocumentStatus(documentId, status);
       setDocuments(prev => 
@@ -126,7 +128,7 @@ export function useAllDocuments() {
     fetchAllDocuments();
   }, []);
 
-  const updateDocumentStatus = async (documentId: string, status: Document['status']) => {
+  const updateDocumentStatus = async (documentId: string, status: 'pending' | 'processing' | 'completed') => {
     try {
       const updatedDocument = await db.updateDocumentStatus(documentId, status);
       setDocuments(prev => 
@@ -168,7 +170,7 @@ export function useTranslatedDocuments(userId?: string) {
       setDocuments(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching translated documents:', err);
+      console.error('[useTranslatedDocuments] Erro ao buscar documentos traduzidos:', err);
       setError('Failed to fetch translated documents');
     } finally {
       setLoading(false);
@@ -177,7 +179,7 @@ export function useTranslatedDocuments(userId?: string) {
 
   useEffect(() => {
     fetchDocuments();
-  }, [userId]);
+  }, [userId]); // Removido fetchDocuments da dependência para evitar loop infinito
 
   return {
     documents,

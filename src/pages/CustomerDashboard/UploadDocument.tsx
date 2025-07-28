@@ -252,7 +252,7 @@ export default function UploadDocument() {
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Document Translation</h1>
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Document Translation</h1>
           <p className="text-gray-600 text-lg">Get your documents professionally translated with our secure and reliable service.</p>
         </div>
         
@@ -261,26 +261,26 @@ export default function UploadDocument() {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
               {/* Instructions Section */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-                <h2 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <div className="bg-tfe-blue-50 border border-tfe-blue-200 rounded-xl p-6 mb-8">
+                <h2 className="text-2xl font-bold text-tfe-blue-950 mb-3 flex items-center gap-2">
                   <FileText className="w-5 h-5" />
                   How It Works
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-800">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-tfe-blue-800">
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">1</div>
+                    <div className="w-8 h-8 bg-tfe-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">1</div>
                     <p className="font-medium">Upload Document</p>
-                    <p className="text-blue-700">Select your PDF or image file</p>
+                    <p className="text-tfe-blue-700">Select your PDF or image file</p>
                   </div>
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">2</div>
+                    <div className="w-8 h-8 bg-tfe-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">2</div>
                     <p className="font-medium">Choose Service</p>
-                    <p className="text-blue-700">Select translation type and language</p>
+                    <p className="text-tfe-blue-700">Select translation type and language</p>
                   </div>
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">3</div>
+                    <div className="w-8 h-8 bg-tfe-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">3</div>
                     <p className="font-medium">Get Translation</p>
-                    <p className="text-blue-700">Receive your translated document</p>
+                    <p className="text-tfe-blue-700">Receive your translated document</p>
                   </div>
                 </div>
               </div>
@@ -288,9 +288,9 @@ export default function UploadDocument() {
               <div className="space-y-6">
                 {/* Upload Area */}
                 <section>
-                  <h2 className="text-lg font-semibold text-gray-800 mb-3">1. Select Document</h2>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-3">1. Select Document</h2>
                   <div
-                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer flex flex-col items-center justify-center ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
+                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer flex flex-col items-center justify-center ${dragActive ? 'border-tfe-blue-500 bg-tfe-blue-50' : 'border-gray-300 hover:border-tfe-blue-400'}`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
@@ -313,11 +313,11 @@ export default function UploadDocument() {
                     />
                     {selectedFile ? (
                       <div className="flex flex-col items-center gap-2">
-                        <FileText className="w-10 h-10 text-blue-500 mb-1" />
+                        <FileText className="w-10 h-10 text-tfe-blue-500 mb-1" />
                         <span className="text-gray-800 font-medium text-base">{selectedFile.name}</span>
                         <span className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
                         <button
-                          className="mt-1 text-xs text-red-500 hover:underline"
+                          className="mt-1 text-xs text-tfe-red-500 hover:underline"
                           onClick={e => { e.stopPropagation(); setSelectedFile(null); }}
                         >Remove file</button>
                         {selectedFile && fileUrl && selectedFile.type.startsWith('image/') && (
@@ -350,7 +350,7 @@ export default function UploadDocument() {
                     max="50"
                     value={pages}
                     onChange={e => setPages(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                     disabled
                     placeholder="Number of pages"
                     aria-label="Number of pages"
@@ -367,7 +367,7 @@ export default function UploadDocument() {
                       id="translation-type"
                       value={tipoTrad}
                       onChange={e => setTipoTrad(e.target.value as 'Certificado' | 'Notorizado')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Translation type"
                     >
                       {translationTypes.map(opt => (
@@ -384,7 +384,7 @@ export default function UploadDocument() {
                       id="is-bank-statement"
                       value={isExtrato ? 'yes' : 'no'}
                       onChange={e => setIsExtrato(e.target.value === 'yes')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Is it a bank statement"
                     >
                       <option value="no">No</option>
@@ -400,7 +400,7 @@ export default function UploadDocument() {
                       id="original-language"
                       value={idiomaRaiz}
                       onChange={e => setIdiomaRaiz(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Original document language"
                     >
                       {languages.map(lang => (
@@ -412,7 +412,7 @@ export default function UploadDocument() {
 
                 {/* Error/Success Messages */}
                 {error && (
-                  <div className="flex items-center bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">
+                  <div className="flex items-center bg-tfe-red-50 border border-tfe-red-200 rounded-lg p-3 text-tfe-red-700">
                     <AlertCircle className="w-5 h-5 mr-2" />
                     <span>{error}</span>
                   </div>
@@ -429,7 +429,7 @@ export default function UploadDocument() {
                   <button
                     onClick={handleUpload}
                     disabled={!selectedFile || isUploading}
-                    className="w-full bg-gradient-to-r from-blue-900 to-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-all"
+                    className="w-full bg-gradient-to-r from-tfe-blue-950 to-tfe-red-950 text-white py-4 rounded-xl font-bold shadow-lg hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-all"
                   >
                     {isUploading ? 'Uploading...' : `Upload & Pay $${valor}.00`}
                   </button>
@@ -442,19 +442,19 @@ export default function UploadDocument() {
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-6">
               {/* Summary Card */}
-              <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <div className="bg-tfe-blue-50 rounded-2xl p-6 border border-tfe-blue-100">
+                <h3 className="text-2xl font-bold text-tfe-blue-950 mb-3 flex items-center gap-2">
                   <DollarSign className="w-5 h-5" />
                   Summary
                 </h3>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-base text-gray-700">Translation Cost:</span>
-                  <span className="text-2xl font-bold text-blue-900">${valor}.00</span>
+                  <span className="text-2xl font-bold text-tfe-blue-950">${valor}.00</span>
                 </div>
-                <p className="text-xs text-blue-900/80 mb-2">
+                <p className="text-xs text-tfe-blue-950/80 mb-2">
                   {translationTypes.find(t => t.value === tipoTrad)?.label} {isExtrato ? (tipoTrad === 'Certificado' ? '$25' : '$35') : (tipoTrad === 'Certificado' ? '$15' : '$20')} per page × {pages} page{pages !== 1 ? 's' : ''}
                 </p>
-                <ul className="text-xs text-blue-900/70 list-disc pl-4 space-y-1">
+                <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
                   <li>USCIS accepted translations</li>
                   <li>Official certification & authentication</li>
                   <li>Digital verification system</li>
@@ -464,8 +464,8 @@ export default function UploadDocument() {
 
               {/* Information Card */}
               <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Info className="w-5 h-5 text-blue-600" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Info className="w-5 h-5 text-tfe-blue-600" />
                   Service Information
                 </h3>
                 
@@ -473,14 +473,14 @@ export default function UploadDocument() {
                   {/* Translation Types */}
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <Award className="w-4 h-4 text-blue-600" />
+                      <Award className="w-4 h-4 text-tfe-blue-600" />
                       Translation Types
                     </h4>
                     <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium text-gray-800">Certified Translation</span>
-                          <span className="text-sm font-bold text-blue-600">$15/page</span>
+                          <span className="text-sm font-bold text-tfe-blue-600">$15/page</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
                           Standard translation with official certification for general use, immigration, and legal purposes.
@@ -496,7 +496,7 @@ export default function UploadDocument() {
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium text-gray-800">Notarized Translation</span>
-                          <span className="text-sm font-bold text-blue-600">$20/page</span>
+                          <span className="text-sm font-bold text-tfe-blue-600">$20/page</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
                           Official notarized translation with additional legal authentication for court documents and legal proceedings.
@@ -514,7 +514,7 @@ export default function UploadDocument() {
                   {/* Document Types */}
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-blue-600" />
+                      <FileText className="w-4 h-4 text-tfe-blue-600" />
                       Document Types
                     </h4>
                     <div className="space-y-3">
@@ -548,7 +548,7 @@ export default function UploadDocument() {
                   {/* Languages */}
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-blue-600" />
+                      <Globe className="w-4 h-4 text-tfe-blue-600" />
                       Supported Languages
                     </h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -567,7 +567,7 @@ export default function UploadDocument() {
                   {/* Features */}
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-blue-600" />
+                      <Shield className="w-4 h-4 text-tfe-blue-600" />
                       Service Features
                     </h4>
                     <div className="space-y-2 text-sm">
