@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Sidebar } from '../../components/Sidebar';
+import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import AuthenticatorDashboard from './AuthenticatorDashboard';
 import TranslatedDocuments from './TranslatedDocuments';
 import AuthenticatorOverview from './AuthenticatorOverview';
-import { FileText, CheckCircle, LogOut, Home as HomeIcon, Menu, X, User } from 'lucide-react';
+import AuthenticatorUpload from './AuthenticatorUpload';
+import { FileText, CheckCircle, LogOut, Home as HomeIcon, Menu, X, User, Upload } from 'lucide-react';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OverviewProvider } from '../../contexts/OverviewContext';
@@ -19,6 +19,7 @@ export default function AuthenticatorLayout() {
   const getCurrentPage = () => {
     if (location.pathname.includes('/authenticate')) return 'authenticate';
     if (location.pathname.includes('/translated')) return 'translated';
+    if (location.pathname.includes('/upload')) return 'upload';
     return 'overview';
   };
 
@@ -33,32 +34,21 @@ export default function AuthenticatorLayout() {
     return <div>Access denied. Only authenticators can view this page.</div>;
   }
 
-  const navItems = [
-    {
-      id: 'authenticate',
-      label: 'Authenticate Documents',
-      icon: FileText,
-      page: 'authenticate'
-    },
-    {
-      id: 'translated',
-      label: 'Translated Documents',
-      icon: CheckCircle,
-      page: 'translated'
-    }
-  ];
+
 
   const handleLogout = () => {
     signOut();
   };
 
-  const handleNavigation = (page: 'overview' | 'authenticate' | 'translated') => {
+  const handleNavigation = (page: 'overview' | 'authenticate' | 'translated' | 'upload') => {
     if (page === 'overview') {
       navigate('/authenticator');
     } else if (page === 'authenticate') {
       navigate('/authenticator/authenticate');
     } else if (page === 'translated') {
       navigate('/authenticator/translated');
+    } else if (page === 'upload') {
+      navigate('/authenticator/upload');
     }
     setIsMobileMenuOpen(false);
   };
@@ -145,6 +135,18 @@ export default function AuthenticatorLayout() {
               <CheckCircle className="w-5 h-5" />
               <span className="font-medium">Translated Documents</span>
             </button>
+            
+            <button
+              onClick={() => handleNavigation('upload')}
+              className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors ${
+                currentPage === 'upload'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <Upload className="w-5 h-5" />
+              <span className="font-medium">Upload Document</span>
+            </button>
           </nav>
 
           {/* Logout */}
@@ -178,13 +180,13 @@ export default function AuthenticatorLayout() {
                 aria-label="Go to Mentorship"
               >
                 <div className="text-center">
-                  <img 
-                    src="/logo_tfoe.png" 
-                    alt="The Future of English Logo" 
-                    className="h-16 w-auto mx-auto mb-2 group-hover:scale-105 transition-transform"
-                  />
-                  <div className="font-bold text-sm text-tfe-blue-950">
-                    The Future of English
+                  <div className="flex flex-col items-center group-hover:scale-105 transition-transform">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <div className="w-12 h-12 bg-gradient-to-r from-tfe-red-950 to-tfe-blue-950 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                        TFE
+                      </div>
+                    </div>
+                    <h3 className="font-bold text-sm text-tfe-blue-950">The Future of English</h3>
                   </div>
                   <div className="text-xs text-gray-600 font-medium">
                     Professional Translation
@@ -244,6 +246,18 @@ export default function AuthenticatorLayout() {
             >
               <CheckCircle className="w-5 h-5" />
               <span className="font-medium">Translated Documents</span>
+            </button>
+            
+            <button
+              onClick={() => navigate('/authenticator/upload')}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                currentPage === 'upload'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <Upload className="w-5 h-5" />
+              <span className="font-medium">Upload Document</span>
             </button>
           </nav>
 
@@ -324,6 +338,7 @@ export default function AuthenticatorLayout() {
               <Route path="/" element={<AuthenticatorOverview onNavigate={handleNavigation} />} />
               <Route path="/authenticate" element={<AuthenticatorDashboard />} />
               <Route path="/translated" element={<TranslatedDocuments />} />
+              <Route path="/upload" element={<AuthenticatorUpload />} />
             </Routes>
           </OverviewProvider>
         </div>

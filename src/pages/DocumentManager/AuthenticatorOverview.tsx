@@ -30,6 +30,8 @@ interface OverviewStats {
   totalPages: number;
   myAuthentications: number;
   myAuthenticationsThisMonth: number;
+  myTranslations: number;
+  myTranslationsThisMonth: number;
   averageProcessingTime: number;
   topLanguages: Array<{ language: string; count: number }>;
   recentActivity: Array<{
@@ -42,7 +44,7 @@ interface OverviewStats {
 }
 
 interface AuthenticatorOverviewProps {
-  onNavigate?: (page: 'authenticate' | 'translated') => void;
+  onNavigate?: (page: 'authenticate' | 'translated' | 'upload') => void;
 }
 
 export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverviewProps) {
@@ -173,39 +175,61 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
             <div className="flex items-center gap-3 mb-4 sm:mb-6">
               <Award className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
               <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                {currentUser?.role === 'admin' ? 'System Authentications' : 'My Authentications'}
+                {currentUser?.role === 'admin' ? 'System Activity' : 'My Activity'}
               </h2>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm sm:text-base text-gray-600">
-                      {currentUser?.role === 'admin' ? 'Total Authenticated' : 'My Total'}
-                    </p>
-                    <p className="text-2xl sm:text-3xl font-bold text-purple-600">{stats.myAuthentications}</p>
+            {/* Authentication Stats */}
+            <div className="mb-6">
+              <h3 className="text-md font-semibold text-gray-700 mb-3">Authentication</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="w-8 h-8 text-purple-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">Total</p>
+                      <p className="text-2xl font-bold text-purple-600">{stats.myAuthentications}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm sm:text-base text-gray-600">
-                      {currentUser?.role === 'admin' ? 'This Month' : 'My This Month'}
-                    </p>
-                    <p className="text-2xl sm:text-3xl font-bold text-green-600">{stats.myAuthenticationsThisMonth}</p>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-8 h-8 text-purple-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">This Month</p>
+                      <p className="text-2xl font-bold text-purple-600">{stats.myAuthenticationsThisMonth}</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Translation Stats (only for authenticators) */}
+            {currentUser?.role !== 'admin' && (
+              <div>
+                <h3 className="text-md font-semibold text-gray-700 mb-3">Translation Uploads</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-orange-50 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-8 h-8 text-orange-600" />
+                      <div>
+                        <p className="text-sm text-gray-600">Total</p>
+                        <p className="text-2xl font-bold text-orange-600">{stats.myTranslations}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-8 h-8 text-orange-600" />
+                      <div>
+                        <p className="text-sm text-gray-600">This Month</p>
+                        <p className="text-2xl font-bold text-orange-600">{stats.myTranslationsThisMonth}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Quick Actions */}
@@ -245,6 +269,19 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
                       ? `${stats.approvedDocuments} completed` 
                       : `${stats.approvedDocuments} documents`
                     }
+                  </p>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => onNavigate?.('upload')}
+                className="w-full flex items-center gap-3 p-3 sm:p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors group"
+              >
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+                <div className="text-left">
+                  <p className="font-medium text-orange-900">Upload Document</p>
+                  <p className="text-sm text-orange-700">
+                    Add new document for translation
                   </p>
                 </div>
               </button>

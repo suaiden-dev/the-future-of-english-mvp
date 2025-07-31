@@ -204,35 +204,43 @@ function App() {
   const MobileMenu = () => {
     console.log('[App] MobileMenu renderizado, isMobileMenuOpen:', isMobileMenuOpen);
     return (
-      <div className={`fixed inset-0 z-50 lg:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}>
+      <div className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         {/* Backdrop */}
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50" 
+          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300" 
           onClick={() => setIsMobileMenuOpen(false)}
         />
         
         {/* Menu */}
-        <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">TFE</span>
+        <div className={`fixed left-0 top-0 h-full w-72 sm:w-80 max-w-sm bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+            <button
+              onClick={() => {
+                navigate('/');
+                setIsMobileMenuOpen(false);
+              }}
+              className="flex items-center space-x-2 min-w-0 text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors p-1 rounded-lg hover:bg-gray-50"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-xs sm:text-sm">TFE</span>
                 </div>
-                <h3 className="text-xl font-bold">The Future of English</h3>
+                <h3 className="text-lg sm:text-xl font-bold truncate">The Future of English</h3>
               </div>
-            </div>
+            </button>
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="p-2 text-gray-400 hover:text-gray-600"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
               aria-label="Close menu"
               title="Close menu"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
           
-          <div className="p-4">
+          <div className="p-3 sm:p-4 h-full overflow-y-auto">
             <Sidebar 
               navItems={getNavItems()} 
               user={user} 
@@ -388,11 +396,9 @@ function App() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <div className="flex justify-center">
-                      <img 
-                        src="/logo_tfoe.png" 
-                        alt="The Future of English Logo" 
-                        className="h-8 w-auto"
-                      />
+                      <div className="w-8 h-8 bg-gradient-to-r from-tfe-red-950 to-tfe-blue-950 rounded-lg flex items-center justify-center text-white font-bold text-xs">
+                        TFE
+                      </div>
                     </div>
                     <span className="text-lg font-bold text-gray-900">User Management</span>
                   </div>
@@ -426,11 +432,9 @@ function App() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="flex justify-center">
-                      <img 
-                        src="/logo_tfoe.png" 
-                        alt="The Future of English Logo" 
-                        className="h-8 w-auto"
-                      />
+                      <div className="w-8 h-8 bg-gradient-to-r from-tfe-red-950 to-tfe-blue-950 rounded-lg flex items-center justify-center text-white font-bold text-xs">
+                        TFE
+                      </div>
                     </div>
                     <div>
                       <div className="font-bold text-sm text-gray-900">
@@ -475,11 +479,11 @@ function App() {
               <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <img 
-                      src="/logo_tfoe.png" 
-                      alt="The Future of English Logo" 
-                      className="h-8 w-auto"
-                    />
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-r from-tfe-red-950 to-tfe-blue-950 rounded-lg flex items-center justify-center text-white font-bold text-xs">
+                        TFE
+                      </div>
+                    </div>
                     <div>
                       <div className="font-bold text-sm text-gray-900">
                         The Future of English

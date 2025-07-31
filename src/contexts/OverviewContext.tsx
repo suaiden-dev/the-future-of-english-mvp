@@ -11,6 +11,8 @@ interface OverviewStats {
   totalPages: number;
   myAuthentications: number;
   myAuthenticationsThisMonth: number;
+  myTranslations: number; // Documentos enviados pelo autenticador para tradução
+  myTranslationsThisMonth: number;
   averageProcessingTime: number;
   topLanguages: Array<{ language: string; count: number }>;
   recentActivity: Array<{
@@ -43,6 +45,8 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
     totalPages: 0,
     myAuthentications: 0,
     myAuthenticationsThisMonth: 0,
+    myTranslations: 0,
+    myTranslationsThisMonth: 0,
     averageProcessingTime: 0,
     topLanguages: [],
     recentActivity: []
@@ -71,10 +75,13 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
       // Fetch documents based on user role
       let allDocumentsQuery = supabase.from('documents_to_be_verified').select('*');
       let translatedDocsQuery = supabase.from('translated_documents').select('*');
+      let myUploadedDocsQuery = supabase.from('documents_to_be_verified').select('*');
 
-      // If not admin, filter by authenticated_by
+      // If not admin, filter by authenticated_by for translated docs
       if (currentUser.role !== 'admin') {
         translatedDocsQuery = translatedDocsQuery.eq('authenticated_by', currentUser.id);
+        // Also get documents uploaded by this authenticator
+        myUploadedDocsQuery = myUploadedDocsQuery.eq('user_id', currentUser.id);
       }
 
       const { data: allDocuments, error: allError } = await allDocumentsQuery;
@@ -83,7 +90,10 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
       const { data: translatedDocs, error: translatedError } = await translatedDocsQuery;
       if (translatedError) throw translatedError;
 
-      console.log('[OverviewContext] Found documents - all:', allDocuments?.length, 'translated:', translatedDocs?.length);
+      const { data: myUploadedDocs, error: uploadError } = await myUploadedDocsQuery;
+      if (uploadError) throw uploadError;
+
+      console.log('[OverviewContext] Found documents - all:', allDocuments?.length, 'translated:', translatedDocs?.length, 'my uploaded:', myUploadedDocs?.length);
 
       // Calculate statistics based on user role
       let totalDocs, pendingDocs, approvedDocs, rejectedDocs, totalValue, totalPages;
@@ -111,6 +121,9 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
       // My authentications (always based on current user)
       const myAuths = translatedDocs?.filter(doc => doc.authenticated_by === currentUser.id).length || 0;
 
+      // My translations (documents uploaded by authenticator)
+      const myTranslations = currentUser.role !== 'admin' ? (myUploadedDocs?.length || 0) : 0;
+
       // Authentications this month
       const thisMonth = new Date();
       thisMonth.setDate(1);
@@ -121,6 +134,12 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
         doc.authentication_date &&
         new Date(doc.authentication_date) >= thisMonth
       ).length || 0;
+
+      // My translations this month (documents uploaded by authenticator this month)
+      const myTranslationsThisMonth = currentUser.role !== 'admin' ? (myUploadedDocs?.filter(doc =>
+        doc.created_at &&
+        new Date(doc.created_at) >= thisMonth
+      ).length || 0) : 0;
 
       // Calculate average processing time (mock data for now)
       const averageProcessingTime = 2.5; // hours
@@ -141,18 +160,32 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      // Recent activity (my authentications)
-      const recentActivity = translatedDocs
+      // Recent activity (my authentications + my uploads)
+      const authActivity = translatedDocs
         ?.filter(doc => doc.authenticated_by === currentUser.id)
-        .sort((a, b) => new Date(b.authentication_date || '').getTime() - new Date(a.authentication_date || '').getTime())
-        .slice(0, 5)
         .map(doc => ({
           id: doc.id,
           filename: doc.filename,
           action: 'Authenticated',
           date: doc.authentication_date || '',
-          user_name: currentUser.role === 'admin' ? 'You' : 'You'
+          user_name: 'You',
+          type: 'auth' as const
         })) || [];
+
+      const uploadActivity = currentUser.role !== 'admin' ? (myUploadedDocs
+        ?.map(doc => ({
+          id: doc.id,
+          filename: doc.filename,
+          action: doc.client_name ? `Uploaded for ${doc.client_name}` : 'Uploaded for translation',
+          date: doc.created_at || '',
+          user_name: 'You',
+          type: 'upload' as const
+        })) || []) : [];
+
+      const recentActivity = [...authActivity, ...uploadActivity]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 8)
+        .map(({ type, ...activity }) => activity);
 
       const newStats = {
         totalDocuments: totalDocs,
@@ -163,6 +196,8 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
         totalPages,
         myAuthentications: myAuths,
         myAuthenticationsThisMonth: myAuthsThisMonth,
+        myTranslations,
+        myTranslationsThisMonth,
         averageProcessingTime,
         topLanguages,
         recentActivity

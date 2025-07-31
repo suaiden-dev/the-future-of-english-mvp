@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
     console.log("Parsed request body:", parsedBody);
 
     // Recebe o evento do Supabase Storage ou do frontend
-    const { filename, url, mimetype, size, record, user_id, paginas, tipo_trad, valor, idioma_raiz, is_bank_statement } = parsedBody;
+    const { filename, url, mimetype, size, record, user_id, paginas, tipo_trad, valor, idioma_raiz, is_bank_statement, client_name } = parsedBody;
     let payload;
 
     if (record) {
@@ -85,6 +85,7 @@ Deno.serve(async (req: Request) => {
         valor: record.valor || valor || null,
         idioma_raiz: record.idioma_raiz || idioma_raiz || null,
         is_bank_statement: record.is_bank_statement || is_bank_statement || false,
+        client_name: record.client_name || client_name || null,
         // Adicionar informações sobre o tipo de arquivo
         isPdf: (record.mimetype || record.metadata?.mimetype || "application/octet-stream") === 'application/pdf',
         fileExtension: path.split('.').pop()?.toLowerCase(),
@@ -130,6 +131,7 @@ Deno.serve(async (req: Request) => {
         user_id: user_id || null, 
         paginas, tipo_trad, valor, idioma_raiz, 
         is_bank_statement: is_bank_statement || false,
+        client_name: client_name || null,
         // Adicionar informações sobre o tipo de arquivo
         isPdf: mimetype === 'application/pdf',
         fileExtension: filename.split('.').pop()?.toLowerCase(),
@@ -219,7 +221,8 @@ Deno.serve(async (req: Request) => {
             target_language: 'english',
             translation_status: 'pending',
             file_id: docData.id,
-            verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`
+            verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
+            client_name: client_name || null
           };
           
           console.log("Attempting to insert data:", JSON.stringify(insertData, null, 2));

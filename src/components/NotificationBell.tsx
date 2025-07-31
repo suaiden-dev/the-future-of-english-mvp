@@ -107,31 +107,43 @@ export function NotificationBell() {
 
       {/* Dropdown de notificações */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button
-                  onClick={handleMarkAllAsRead}
-                  className="text-sm text-tfe-blue-600 hover:text-tfe-blue-800 font-medium"
-                >
-                  Mark all as read
-                </button>
-              )}
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-                title="Close notifications"
-              >
-                <X className="w-4 h-4" />
-              </button>
+        <div className="fixed inset-0 z-50 lg:absolute lg:inset-auto lg:right-0 lg:top-full lg:mt-2">
+          {/* Mobile backdrop */}
+          <div 
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-25" 
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Notification panel */}
+          <div className="fixed bottom-0 left-0 right-0 max-h-[70vh] lg:static lg:w-80 xl:w-96 lg:max-h-96 bg-white rounded-t-xl lg:rounded-xl shadow-xl lg:shadow-lg border border-gray-200 overflow-hidden">
+            {/* Mobile handle bar */}
+            <div className="lg:hidden flex justify-center py-2">
+              <div className="w-8 h-1 bg-gray-300 rounded-full"></div>
             </div>
-          </div>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    className="text-sm text-tfe-blue-600 hover:text-tfe-blue-800 font-medium"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                  title="Close notifications"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
           {/* Lista de notificações */}
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-60 lg:max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
                 <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
@@ -159,13 +171,13 @@ export function NotificationBell() {
                           }`}>
                             {notification.title}
                           </p>
-                                                     <button
-                             onClick={(e) => handleDeleteNotification(e, notification.id)}
-                             className="text-gray-400 hover:text-tfe-red-500 transition-colors"
-                             title="Delete notification"
-                           >
-                             <Trash2 className="w-3 h-3" />
-                           </button>
+                          <button
+                            onClick={(e) => handleDeleteNotification(e, notification.id)}
+                            className="text-gray-400 hover:text-tfe-red-500 transition-colors"
+                            title="Delete notification"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
                         </div>
                         
                         <p className="text-sm text-gray-600 mt-1 line-clamp-2">
@@ -189,6 +201,7 @@ export function NotificationBell() {
                 ))}
               </div>
             )}
+          </div>
           </div>
         </div>
       )}
