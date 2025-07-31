@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+                                              import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Clock, DollarSign, Globe, Award } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -67,19 +67,36 @@ export default function UploadDocument() {
     setFileUrl(null);
     setPages(1);
     setSelectedFile(file);
+    
+    console.log('DEBUG: File selected:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      lastModified: file.lastModified
+    });
+    
     if (file.type === 'application/pdf') {
       try {
+        console.log('DEBUG: Attempting to read PDF file...');
         const pdfjsLib = await loadPdfJs();
+        console.log('DEBUG: PDF.js library loaded successfully');
+        
         const arrayBuffer = await file.arrayBuffer();
+        console.log('DEBUG: File converted to ArrayBuffer, size:', arrayBuffer.byteLength);
+        
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        console.log('DEBUG: PDF loaded successfully, pages:', pdf.numPages);
         setPages(pdf.numPages);
       } catch (err) {
-        setError('Failed to read PDF pages');
+        console.error('DEBUG: Error reading PDF:', err);
+        setError(`Failed to read PDF pages: ${err instanceof Error ? err.message : 'Unknown error'}`);
         setPages(1);
       }
     } else {
+      console.log('DEBUG: File is not a PDF, type:', file.type);
       setPages(1);
     }
+    
     if (file.type.startsWith('image/')) {
       setFileUrl(URL.createObjectURL(file));
     }

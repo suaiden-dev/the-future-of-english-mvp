@@ -112,15 +112,15 @@ export function Footer() {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Envelope className="w-5 h-5 text-tfe-red-400" weight="fill" />
-                <a href="mailto:contato@thefutureofenglish.com" className="text-gray-300 hover:text-white transition-colors">
-                  contato@thefutureofenglish.com
+                <a href="mailto:info@thefutureofenglish.com" className="text-gray-300 hover:text-white transition-colors">
+                  info@thefutureofenglish.com
                 </a>
               </div>
               
               <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-tfe-red-400" weight="fill" />
-                <a href="tel:+15551234567" className="text-gray-300 hover:text-white transition-colors">
-                  +1 (555) 123-4567
+                <a href="tel:+13237883117" className="text-gray-300 hover:text-white transition-colors">
+                  (323) 788-3117
                 </a>
               </div>
               
@@ -133,7 +133,7 @@ export function Footer() {
               
               <div className="flex items-center gap-3">
                 <WhatsappLogo className="w-5 h-5 text-tfe-red-400" weight="fill" />
-                <a href="https://wa.me/15551234567" className="text-gray-300 hover:text-white transition-colors">
+                <a href="https://wa.me/13237883117?text=Hello%20The%20Future%20of%20English,%20I%20would%20like%20to%20know%20more%20about%20the%20visa%20consulting%20service." className="text-gray-300 hover:text-white transition-colors">
                   WhatsApp
                 </a>
               </div>

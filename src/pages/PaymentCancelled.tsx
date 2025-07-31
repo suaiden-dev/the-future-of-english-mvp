@@ -56,7 +56,7 @@ export function PaymentCancelled() {
           </p>
           <div className="text-sm text-gray-600">
             <p>Email: support@thefutureofenglish.com</p>
-            <p>WhatsApp: +1 (555) 123-4567</p>
+            <p>WhatsApp: (323) 788-3117</p>
           </div>
         </div>
       </div>

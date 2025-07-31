@@ -143,6 +143,7 @@ export const db = {
     total_cost: number;
     file_url?: string;
     verification_code: string; // Adicionar campo obrigatório
+    client_name?: string | null;
   }) => {
     console.log('[db.createDocument] Inserindo documento:', JSON.stringify(document, null, 2));
     const { data, error } = await supabase

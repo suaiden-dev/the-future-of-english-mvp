@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { Database } from '../lib/database.types';
 
 type Document = Database['public']['Tables']['documents']['Row'];
@@ -19,7 +19,13 @@ export function useDocuments(userId?: string) {
 
     try {
       setLoading(true);
-      const data = await db.getDocuments(userId);
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
       setDocuments(data);
       setError(null);
     } catch (err) {
@@ -50,7 +56,13 @@ export function useDocuments(userId?: string) {
         filename: documentData.filename, // garantir obrigatório
         verification_code: documentData.verification_code // garantir obrigatório
       };
-      const newDocument = await db.createDocument(docToInsert);
+      const { data: newDocument, error } = await supabase
+        .from('documents')
+        .insert(docToInsert)
+        .select()
+        .single();
+      
+      if (error) throw error;
       setDocuments(prev => [newDocument, ...prev]);
       return newDocument;
     } catch (err) {
@@ -61,7 +73,14 @@ export function useDocuments(userId?: string) {
 
   const updateDocumentStatus = async (documentId: string, status: 'pending' | 'processing' | 'completed') => {
     try {
-      const updatedDocument = await db.updateDocumentStatus(documentId, status);
+      const { data: updatedDocument, error } = await supabase
+        .from('documents')
+        .update({ status })
+        .eq('id', documentId)
+        .select()
+        .single();
+      
+      if (error) throw error;
       setDocuments(prev => 
         prev.map(doc => 
           doc.id === documentId ? updatedDocument : doc
@@ -98,7 +117,7 @@ export function useAllDocuments() {
         throw new Error('Supabase environment variables not configured');
       }
 
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('documents')
         .select('*')
         .order('created_at', { ascending: false });
@@ -125,7 +144,14 @@ export function useAllDocuments() {
 
   const updateDocumentStatus = async (documentId: string, status: 'pending' | 'processing' | 'completed') => {
     try {
-      const updatedDocument = await db.updateDocumentStatus(documentId, status);
+      const { data: updatedDocument, error } = await supabase
+        .from('documents')
+        .update({ status })
+        .eq('id', documentId)
+        .select()
+        .single();
+      
+      if (error) throw error;
       setDocuments(prev => 
         prev.map(doc => 
           doc.id === documentId ? updatedDocument : doc
@@ -161,7 +187,13 @@ export function useTranslatedDocuments(userId?: string) {
     }
     try {
       setLoading(true);
-      const data = await db.getTranslatedDocuments(userId);
+      const { data, error } = await supabase
+        .from('translated_documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
       setDocuments(data);
       setError(null);
     } catch (err) {

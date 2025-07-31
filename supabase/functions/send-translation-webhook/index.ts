@@ -48,6 +48,7 @@ Deno.serve(async (req: Request) => {
     
     const parsedBody = JSON.parse(requestBody);
     console.log("Parsed request body:", parsedBody);
+    console.log("Request headers:", Object.fromEntries(req.headers.entries()));
 
     // Recebe o evento do Supabase Storage ou do frontend
     const { filename, url, mimetype, size, record, user_id, paginas, tipo_trad, valor, idioma_raiz, is_bank_statement, client_name } = parsedBody;
@@ -96,6 +97,9 @@ Deno.serve(async (req: Request) => {
     } else {
       // Called from frontend
       console.log("Processing frontend payload");
+      console.log("URL received:", url);
+      console.log("User ID:", user_id);
+      console.log("Filename:", filename);
       
       // Verificar se a URL já é válida
       let finalUrl = url;
@@ -139,6 +143,8 @@ Deno.serve(async (req: Request) => {
         tableName: 'profiles',
         schema: 'public'
       };
+      
+      console.log("Final payload for frontend:", JSON.stringify(payload, null, 2));
     }
 
     console.log("Final payload for n8n webhook:", JSON.stringify(payload, null, 2));
@@ -153,6 +159,7 @@ Deno.serve(async (req: Request) => {
     // Send POST to n8n webhook
     const webhookUrl = "https://nwh.thefutureofenglish.com/webhook/tfoetranslations";
     console.log("Sending webhook to:", webhookUrl);
+    console.log("Payload being sent to n8n:", JSON.stringify(payload, null, 2));
 
     const webhookResponse = await fetch(webhookUrl, {
       method: "POST",
@@ -164,12 +171,15 @@ Deno.serve(async (req: Request) => {
     });
     const responseText = await webhookResponse.text();
     console.log("n8n webhook response status:", webhookResponse.status);
+    console.log("n8n webhook response headers:", Object.fromEntries(webhookResponse.headers.entries()));
     console.log("n8n webhook response body:", responseText);
 
     // If webhook call was successful and we have user_id, update document status
     if (webhookResponse.ok && user_id && filename) {
       try {
         console.log("Updating document status to processing...");
+        console.log("Looking for document with user_id:", user_id, "and filename:", filename);
+        
         const { data: updateData, error: updateError } = await supabase
           .from('documents')
           .update({ status: 'processing' })
@@ -195,7 +205,7 @@ Deno.serve(async (req: Request) => {
         // First, find the document ID
         const { data: docData, error: docError } = await supabase
           .from('documents')
-          .select('id, total_cost, tipo_trad, idioma_raiz, is_bank_statement, pages')
+          .select('id, total_cost, tipo_trad, idioma_raiz, is_bank_statement, pages, client_name')
           .eq('user_id', user_id)
           .eq('filename', filename)
           .single();
@@ -222,7 +232,7 @@ Deno.serve(async (req: Request) => {
             translation_status: 'pending',
             file_id: docData.id,
             verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-            client_name: client_name || null
+            client_name: docData.client_name || client_name || null
           };
           
           console.log("Attempting to insert data:", JSON.stringify(insertData, null, 2));

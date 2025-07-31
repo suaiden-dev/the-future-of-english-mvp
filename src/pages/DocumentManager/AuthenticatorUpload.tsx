@@ -68,19 +68,36 @@ export default function AuthenticatorUpload() {
     setFileUrl(null);
     setPages(1);
     setSelectedFile(file);
+    
+    console.log('DEBUG: File selected:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      lastModified: file.lastModified
+    });
+    
     if (file.type === 'application/pdf') {
       try {
+        console.log('DEBUG: Attempting to read PDF file...');
         const pdfjsLib = await loadPdfJs();
+        console.log('DEBUG: PDF.js library loaded successfully');
+        
         const arrayBuffer = await file.arrayBuffer();
+        console.log('DEBUG: File converted to ArrayBuffer, size:', arrayBuffer.byteLength);
+        
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        console.log('DEBUG: PDF loaded successfully, pages:', pdf.numPages);
         setPages(pdf.numPages);
       } catch (err) {
-        setError('Failed to read PDF pages');
+        console.error('DEBUG: Error reading PDF:', err);
+        setError(`Failed to read PDF pages: ${err instanceof Error ? err.message : 'Unknown error'}`);
         setPages(1);
       }
     } else {
+      console.log('DEBUG: File is not a PDF, type:', file.type);
       setPages(1);
     }
+    
     if (file.type.startsWith('image/')) {
       setFileUrl(URL.createObjectURL(file));
     }
@@ -90,6 +107,8 @@ export default function AuthenticatorUpload() {
   const handleDirectUpload = async (fileId: string, customPayload?: any) => {
     try {
       console.log('DEBUG: Autenticador - Upload direto sem pagamento');
+      console.log('DEBUG: File ID recebido:', fileId);
+      console.log('DEBUG: Custom payload:', customPayload);
       
       if (!selectedFile) {
         throw new Error('Nenhum arquivo selecionado');
@@ -118,13 +137,64 @@ export default function AuthenticatorUpload() {
         isCertified: tipoTrad === 'Certificado',
         isNotarized: tipoTrad === 'Notorizado',
         isBankStatement: isExtrato,
-        fileId, // Usar o ID do arquivo no IndexedDB
+        filePath: customPayload?.filePath || fileId, // filePath sempre que possível
         userId: user?.id,
         userEmail: user?.email,
         filename: selectedFile?.name,
         clientName: clientName.trim()
       };
       console.log('Payload enviado para webhook:', payload);
+
+      // Criar documento na tabela documents primeiro (para que a edge function possa puxar client_name)
+      console.log('DEBUG: Criando documento na tabela documents...');
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(payload.filePath);
+
+      const { data: newDocument, error: createError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: user?.id,
+          filename: selectedFile?.name,
+          pages: pages,
+          status: 'pending',
+          total_cost: valor,
+          tipo_trad: tipoTrad,
+          valor: valor,
+          idioma_raiz: idiomaRaiz,
+          is_bank_statement: isExtrato,
+          file_url: publicUrl,
+          verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
+          client_name: clientName.trim(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('ERROR: Erro ao criar documento na tabela documents:', createError);
+        throw new Error('Erro ao salvar documento no banco de dados');
+      }
+
+      console.log('DEBUG: Documento criado na tabela documents:', newDocument);
+
+      // Preparar dados para o webhook
+      const webhookData = {
+        filename: selectedFile?.name,
+        url: payload.filePath, // Sempre o caminho completo
+        user_id: user?.id,
+        paginas: pages,
+        valor: valor,
+        is_bank_statement: isExtrato,
+        client_name: clientName.trim(),
+        idioma_raiz: idiomaRaiz,
+        tipo_trad: tipoTrad,
+        mimetype: selectedFile?.type,
+        size: selectedFile?.size
+      };
+
+      console.log('DEBUG: Dados enviados para webhook:', webhookData);
 
       // Enviar direto para o webhook de tradução (SEM Stripe)
       const response = await fetch('https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/send-translation-webhook', {
@@ -133,25 +203,21 @@ export default function AuthenticatorUpload() {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cG9ncXdod3NjYmRobm9xc212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTYxMzksImV4cCI6MjA2ODE3MjEzOX0.CsbI1OiT2i3EL31kvexrstIsaC48MD4fEHg6BSE6LZ4'
         },
-        body: JSON.stringify({
-          filename: selectedFile?.name,
-          url: payload.filePath || fileId, // Usar filePath se disponível
-          user_id: user?.id,
-          paginas: pages,
-          valor: valor,
-          is_bank_statement: isExtrato,
-          client_name: clientName.trim()
-        })
+        body: JSON.stringify(webhookData)
       });
 
-      console.log('DEBUG: Resposta do webhook:', response.status);
+      console.log('DEBUG: Resposta do webhook status:', response.status);
+      console.log('DEBUG: Resposta do webhook headers:', Object.fromEntries(response.headers.entries()));
+
+      const responseText = await response.text();
+      console.log('DEBUG: Resposta do webhook body:', responseText);
 
       if (!response.ok) {
         let errorData = null;
         try {
-          errorData = await response.json();
+          errorData = JSON.parse(responseText);
         } catch (e) {
-          errorData = { error: 'Resposta não é JSON', raw: await response.text() };
+          errorData = { error: 'Resposta não é JSON', raw: responseText };
         }
         console.error('Erro detalhado do webhook:', errorData);
         throw new Error(errorData.error || 'Erro ao enviar documento para tradução');
@@ -166,74 +232,96 @@ export default function AuthenticatorUpload() {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !user || !clientName.trim()) return;
+    console.log('DEBUG: handleUpload called');
+    console.log('DEBUG: selectedFile:', selectedFile);
+    console.log('DEBUG: user:', user);
+    console.log('DEBUG: clientName:', clientName);
+    console.log('DEBUG: pages:', pages);
+    console.log('DEBUG: tipoTrad:', tipoTrad);
+    console.log('DEBUG: isExtrato:', isExtrato);
+    console.log('DEBUG: idiomaRaiz:', idiomaRaiz);
+    
+    if (!selectedFile || !user) {
+      console.log('DEBUG: Upload bloqueado - validação básica falhou');
+      console.log('DEBUG: selectedFile exists:', !!selectedFile);
+      console.log('DEBUG: user exists:', !!user);
+      return;
+    }
+    
+    if (!clientName.trim()) {
+      console.log('DEBUG: Upload bloqueado - Client Name é obrigatório');
+      setError('Client name is required. Please enter the client\'s full name.');
+      setIsUploading(false);
+      return;
+    }
+    
     setError(null);
     setSuccess(null);
     setIsUploading(true);
     
     try {
       if (isMobile) {
-        // Mobile: Tentar usar IndexedDB primeiro, se falhar usar upload direto
-        try {
-          console.log('DEBUG: Mobile - tentando usar IndexedDB');
-          const fileId = await fileStorage.storeFile(selectedFile, {
-            documentType: tipoTrad,
-            certification: tipoTrad === 'Certificado',
-            notarization: tipoTrad === 'Notorizado',
-            pageCount: pages,
-            isBankStatement: isExtrato,
-            originalLanguage: idiomaRaiz,
-            userId: user.id,
-            clientName: clientName.trim()
-          });
-          
-          console.log('DEBUG: Mobile - IndexedDB funcionou, usando fileId:', fileId);
-          await handleDirectUpload(fileId);
-        } catch (indexedDBError) {
-          console.log('DEBUG: Mobile - IndexedDB falhou, usando upload direto:', indexedDBError);
-          
-          // Fallback: Upload direto para Supabase Storage
-          const fileExt = selectedFile.name.split('.').pop();
-          const filePath = `${user.id}/${Date.now()}_${selectedFile.name}`;
-          const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
-          if (uploadError) throw uploadError;
-          
-          // Payload para mobile com upload direto
-          const payload = {
-            pages,
-            isCertified: tipoTrad === 'Certificado',
-            isNotarized: tipoTrad === 'Notorizado',
-            isBankStatement: isExtrato,
-            filePath, // Caminho do arquivo no Supabase Storage
-            userId: user.id,
-            userEmail: user.email,
-            filename: selectedFile?.name,
-            clientName: clientName.trim(),
-            isMobile: true // Mobile
-          };
-          console.log('Payload mobile com upload direto enviado:', payload);
-          
-          // Chama o upload direto com payload customizado
-          await handleDirectUpload('', payload);
+        // Mobile: Upload direto para Supabase Storage
+        console.log('DEBUG: Mobile - fazendo upload direto para Supabase Storage');
+        const filePath = `${user.id}/${Date.now()}_${selectedFile.name}`;
+        console.log('DEBUG: Mobile - Tentando upload para Supabase Storage:', filePath);
+        
+        const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
+        if (uploadError) {
+          console.error('DEBUG: Mobile - Erro no upload para Supabase Storage:', uploadError);
+          throw uploadError;
         }
-      } else {
-        // Desktop: Salvar arquivo no IndexedDB primeiro
-        console.log('DEBUG: Desktop - salvando arquivo no IndexedDB');
-        const fileId = await fileStorage.storeFile(selectedFile, {
-          documentType: tipoTrad,
-          certification: tipoTrad === 'Certificado',
-          notarization: tipoTrad === 'Notorizado',
-          pageCount: pages,
+        
+        console.log('DEBUG: Mobile - Upload para Supabase Storage bem-sucedido:', data);
+        
+        // Payload para mobile com upload direto
+        const payload = {
+          pages,
+          isCertified: tipoTrad === 'Certificado',
+          isNotarized: tipoTrad === 'Notorizado',
           isBankStatement: isExtrato,
-          originalLanguage: idiomaRaiz,
+          filePath, // Caminho do arquivo no Supabase Storage
           userId: user.id,
-          clientName: clientName.trim()
-        });
+          userEmail: user.email,
+          filename: selectedFile?.name,
+          clientName: clientName.trim(),
+          isMobile: true // Mobile
+        };
+        console.log('DEBUG: Mobile - Payload enviado:', payload);
         
-        console.log('DEBUG: Arquivo salvo no IndexedDB com ID:', fileId);
+        // Chama o upload direto com payload
+        await handleDirectUpload(filePath, payload);
+      } else {
+        // Desktop: Upload direto para Supabase Storage (igual ao cliente)
+        console.log('DEBUG: Desktop - fazendo upload direto para Supabase Storage');
+        const filePath = `${user.id}/${Date.now()}_${selectedFile.name}`;
+        console.log('DEBUG: Desktop - Tentando upload para Supabase Storage:', filePath);
         
-        // Ir direto para o upload (SEM pagamento)
-        await handleDirectUpload(fileId);
+        const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
+        if (uploadError) {
+          console.error('DEBUG: Desktop - Erro no upload para Supabase Storage:', uploadError);
+          throw uploadError;
+        }
+        
+        console.log('DEBUG: Desktop - Upload para Supabase Storage bem-sucedido:', data);
+        
+        // Payload para desktop com upload direto (igual ao mobile)
+        const payload = {
+          pages,
+          isCertified: tipoTrad === 'Certificado',
+          isNotarized: tipoTrad === 'Notorizado',
+          isBankStatement: isExtrato,
+          filePath, // Caminho do arquivo no Supabase Storage
+          userId: user.id,
+          userEmail: user.email,
+          filename: selectedFile?.name,
+          clientName: clientName.trim(),
+          isMobile: false // Desktop
+        };
+        console.log('DEBUG: Desktop - Payload enviado:', payload);
+        
+        // Chama o upload direto com payload
+        await handleDirectUpload(filePath, payload);
       }
       
     } catch (err: any) {

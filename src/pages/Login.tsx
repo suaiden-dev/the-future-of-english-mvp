@@ -30,14 +30,14 @@ const Login: React.FC = () => {
     setError('');
     
     if (!formData.email.trim() || !formData.password.trim()) {
-      setError('📝 Por favor, preencha todos os campos');
+      setError('📝 Please fill in all fields');
       return;
     }
     
     // Validar formato do email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('📧 Por favor, digite um email válido');
+      setError('📧 Please enter a valid email address');
       return;
     }
     
@@ -48,28 +48,28 @@ const Login: React.FC = () => {
       // A navegação será feita automaticamente pelo useEffect no App.tsx
     } catch (err: any) {
       // Tratar diferentes tipos de erro com mensagens específicas
-      let errorMessage = '❌ Email ou senha incorretos. Verifique suas credenciais e tente novamente.';
+      let errorMessage = '❌ Incorrect email or password. Please check your credentials and try again.';
       
       if (err?.message) {
         const message = err.message.toLowerCase();
         if (message.includes('invalid login credentials') || 
             message.includes('invalid email or password') ||
             message.includes('invalid credentials')) {
-          errorMessage = '❌ Email ou senha incorretos. Verifique suas credenciais e tente novamente.';
+          errorMessage = '❌ Incorrect email or password. Please check your credentials and try again.';
         } else if (message.includes('email not confirmed') || 
                    message.includes('email confirmation')) {
-          errorMessage = '📧 Verifique seu email e confirme sua conta antes de fazer login.';
+          errorMessage = '📧 Please check your email and confirm your account before logging in.';
         } else if (message.includes('too many requests') || 
                    message.includes('rate limit')) {
-          errorMessage = '⏰ Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.';
+          errorMessage = '⏰ Too many login attempts. Please wait a few minutes before trying again.';
         } else if (message.includes('user not found') ||
                    message.includes('no user found')) {
-          errorMessage = '👤 Nenhuma conta encontrada com este email. Verifique o email ou crie uma nova conta.';
+          errorMessage = '👤 No account found with this email. Please check the email or create a new account.';
         } else if (message.includes('network') || 
                    message.includes('fetch')) {
-          errorMessage = '🌐 Problema de conexão. Verifique sua internet e tente novamente.';
+          errorMessage = '🌐 Connection problem. Please check your internet and try again.';
         } else {
-          errorMessage = `❌ Erro: ${err.message}`;
+          errorMessage = `❌ Error: ${err.message}`;
         }
       }
       

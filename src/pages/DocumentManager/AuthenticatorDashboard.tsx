@@ -412,7 +412,26 @@ export default function AuthenticatorDashboard() {
                   {doc.translated_file_url && (
                     <div className="flex gap-2">
                       <button
-                        onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
+                        onClick={async () => {
+                          try {
+                            if (!doc.translated_file_url) {
+                              alert('No PDF file available to view.');
+                              return;
+                            }
+                            
+                            // Verificar se o arquivo existe antes de abrir
+                            const response = await fetch(doc.translated_file_url, { method: 'HEAD' });
+                            if (!response.ok) {
+                              alert('PDF file not found or inaccessible.');
+                              return;
+                            }
+                            
+                            window.open(doc.translated_file_url, '_blank', 'noopener,noreferrer');
+                          } catch (error) {
+                            console.error('Error opening PDF:', error);
+                            alert('Failed to open PDF. The file may be corrupted or inaccessible.');
+                          }
+                        }}
                         className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
                         title="View PDF"
                       >
@@ -465,6 +484,16 @@ export default function AuthenticatorDashboard() {
                       </span>
                     </div>
                   </div>
+
+                  {/* Client Name */}
+                  {doc.client_name && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="text-xs">
+                        <span className="font-medium text-gray-600">Client:</span>
+                        <span className="ml-1 text-gray-800 font-medium">{doc.client_name}</span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* User Info */}
                   <div className="flex items-center justify-between">
@@ -579,6 +608,7 @@ export default function AuthenticatorDashboard() {
               <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-900">Document</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-900">Actions</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Client</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-900">User</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-900">Value</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-900">Language</th>
@@ -600,7 +630,26 @@ export default function AuthenticatorDashboard() {
                           {doc.translated_file_url && (
                         <div className="flex gap-2">
                           <button
-                            onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
+                            onClick={async () => {
+                              try {
+                                if (!doc.translated_file_url) {
+                                  alert('No PDF file available to view.');
+                                  return;
+                                }
+                                
+                                // Verificar se o arquivo existe antes de abrir
+                                const response = await fetch(doc.translated_file_url, { method: 'HEAD' });
+                                if (!response.ok) {
+                                  alert('PDF file not found or inaccessible.');
+                                  return;
+                                }
+                                
+                                window.open(doc.translated_file_url, '_blank', 'noopener,noreferrer');
+                              } catch (error) {
+                                console.error('Error opening PDF:', error);
+                                alert('Failed to open PDF. The file may be corrupted or inaccessible.');
+                              }
+                            }}
                                 className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
                             title="View PDF"
                           >
@@ -713,6 +762,12 @@ export default function AuthenticatorDashboard() {
                           </div>
                       )}
                     </td>
+                      {/* Client Name */}
+                      <td className="px-4 py-3">
+                        <span className="text-xs text-gray-800 font-medium">
+                          {doc.client_name || '-'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-600 truncate max-w-32" title={doc.user_name || doc.user_id}>

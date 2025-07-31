@@ -126,7 +126,9 @@ export function ProfilesSection() {
                     </div>
 
                     {/* Button */}
-                    <button className={`w-full py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 whitespace-nowrap text-white mt-auto ${
+                    <button 
+                      onClick={() => window.open('https://wa.me/13237883117?text=Hello%20The%20Future%20of%20English,%20I%20would%20like%20to%20know%20more%20about%20the%20visa%20consulting%20service.', '_blank')}
+                      className={`w-full py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 whitespace-nowrap text-white mt-auto ${
                       index === 0 ? 'bg-tfe-blue-600 hover:bg-tfe-blue-700' :
                       index === 1 ? 'bg-tfe-red-600 hover:bg-tfe-red-700' :
                       'bg-tfe-blue-600 hover:bg-tfe-blue-700'

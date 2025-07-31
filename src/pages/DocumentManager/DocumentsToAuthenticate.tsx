@@ -6,6 +6,7 @@ interface Document {
   id: string;
   filename: string;
   user_id: string;
+  client_name?: string | null;
   tipo_trad?: string;
   valor?: number;
   idioma_raiz?: string;
@@ -261,12 +262,21 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                     </div>
                   </div>
 
-                  {/* User and Date */}
+                  {/* Client/User and Date */}
                   <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-gray-600 truncate max-w-20" title={doc.user_id}>
-                        {doc.user_id.slice(0, 8)}...
-                      </span>
+                      {doc.client_name ? (
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium text-gray-900">{doc.client_name}</span>
+                          <span className="text-xs font-mono text-gray-600 truncate max-w-20" title={doc.user_id}>
+                            {doc.user_id.slice(0, 8)}...
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-mono text-gray-600 truncate max-w-20" title={doc.user_id}>
+                          {doc.user_id.slice(0, 8)}...
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs text-gray-500">
                       {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
@@ -303,7 +313,7 @@ export default function DocumentsToAuthenticate({ user }: Props) {
               <thead className="bg-tfe-blue-50">
                 <tr>
                   <th className="px-4 py-2 text-left font-semibold text-gray-900">Original File</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-900">User</th>
+                  <th className="px-4 py-2 text-left font-semibold text-gray-900">Client / User</th>
                   <th className="px-4 py-2 text-left font-semibold text-gray-900">Type</th>
                   <th className="px-4 py-2 text-left font-semibold text-gray-900">Value</th>
                   <th className="px-4 py-2 text-left font-semibold text-gray-900">Language</th>
@@ -319,9 +329,18 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                       <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-tfe-blue-700 underline font-medium text-sm">{doc.filename}</a>
                     </td>
                     <td className="px-4 py-2 text-sm">
-                      <span className="font-mono text-gray-600 truncate max-w-24" title={doc.user_id}>
-                        {doc.user_id.slice(0, 8)}...
-                      </span>
+                      {doc.client_name ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">{doc.client_name}</span>
+                          <span className="text-xs text-gray-500 font-mono truncate max-w-24" title={doc.user_id}>
+                            {doc.user_id.slice(0, 8)}...
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="font-mono text-gray-600 truncate max-w-24" title={doc.user_id}>
+                          {doc.user_id.slice(0, 8)}...
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-sm">{doc.tipo_trad || '-'}</td>
                     <td className="px-4 py-2 text-sm">{doc.valor ? `$${doc.valor}` : '-'}</td>
