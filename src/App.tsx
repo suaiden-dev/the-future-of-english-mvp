@@ -144,9 +144,9 @@ function App() {
 
   console.log('[App] authLoading false, renderizando página', { pathname: location.pathname, user });
 
-  // Define navigation items based on user status
+  // Define navigation items based on user status and current page
   const getNavItems = () => {
-    console.log('[App] getNavItems chamado com user:', user);
+    console.log('[App] getNavItems chamado com user:', user, 'current path:', location.pathname);
     
     const baseItems = [
       { id: 'mentorship', label: 'Mentorship', icon: HomeIcon, page: 'mentorship' as Page },
@@ -154,42 +154,8 @@ function App() {
       { id: 'verify', label: 'Verify Document', icon: Search, page: 'verify' as Page },
     ];
 
-    if (user) {
-      console.log('[App] User role:', user.role);
-      
-      // Itens para autenticador
-      if (user.role === 'authenticator') {
-        const items = [
-          { id: 'authenticator-dashboard', label: 'Authenticator Dashboard', icon: Shield, page: '/authenticator' },
-          { id: 'documents', label: 'Documents to Authenticate', icon: FileText, page: '/documents' },
-        ];
-        console.log('[App] Retornando itens para autenticador:', items);
-        return items;
-      }
-      
-      // Itens para admin - foco no controle e monitoramento
-      if (user.role === 'admin') {
-        const items = [
-          { id: 'admin', label: 'Admin Dashboard', icon: Shield, page: 'admin' as Page },
-          { id: 'user-management', label: 'User Management', icon: Users, page: 'user-management' as Page },
-          { id: 'authenticator-control', label: 'Authenticator Control', icon: UserCheck, page: 'authenticator-control' as Page },
-        ];
-        console.log('[App] Retornando itens para admin:', items);
-        return items;
-      }
-      
-      // Itens para usuário comum - apenas itens do dashboard
-      const userItems = [
-        { id: 'dashboard', label: 'Overview', icon: UserIcon, page: '/dashboard' },
-        { id: 'upload-document', label: 'Get Translation', icon: UploadIcon, page: '/dashboard/upload' },
-        { id: 'my-translations', label: 'My Translations', icon: FileText, page: '/dashboard/progress' },
-        { id: 'my-documents', label: 'My Documents', icon: Folder, page: '/dashboard/documents' },
-        { id: 'profile', label: 'Profile', icon: UserIcon, page: '/dashboard/profile' },
-      ];
-      
-      console.log('[App] Retornando itens para usuário:', userItems);
-      return userItems;
-    } else {
+    // Se não está logado, retorna itens básicos + login/register
+    if (!user) {
       const result = [
         ...baseItems,
         { id: 'login', label: 'Login', icon: LogIn, page: 'login' as Page },
@@ -198,6 +164,58 @@ function App() {
       console.log('[App] Retornando itens para usuário não logado:', result);
       return result;
     }
+
+    console.log('[App] User role:', user.role);
+    
+    // Verificar se está nas páginas do Dashboard ou outras páginas específicas
+    const isDashboardArea = location.pathname.startsWith('/dashboard') || 
+                           location.pathname.startsWith('/admin') || 
+                           location.pathname.startsWith('/authenticator');
+    
+    console.log('[App] isDashboardArea:', isDashboardArea, 'pathname:', location.pathname);
+
+    // Se está na área de Dashboard, mostrar apenas itens do Dashboard (botão Home é separado)
+    if (isDashboardArea) {
+      if (user.role === 'authenticator') {
+        const items = [
+          { id: 'authenticator-dashboard', label: 'Authenticator Dashboard', icon: Shield, page: '/authenticator' },
+          { id: 'documents', label: 'Documents to Authenticate', icon: FileText, page: '/documents' },
+        ];
+        console.log('[App] Retornando itens para autenticador (dashboard area):', items);
+        return items;
+      }
+      
+      if (user.role === 'admin') {
+        const items = [
+          { id: 'admin', label: 'Admin Dashboard', icon: Shield, page: 'admin' as Page },
+          { id: 'user-management', label: 'User Management', icon: Users, page: 'user-management' as Page },
+          { id: 'authenticator-control', label: 'Authenticator Control', icon: UserCheck, page: 'authenticator-control' as Page },
+        ];
+        console.log('[App] Retornando itens para admin (dashboard area):', items);
+        return items;
+      }
+      
+      // Usuário comum no dashboard
+      const userItems = [
+        { id: 'dashboard', label: 'Overview', icon: UserIcon, page: '/dashboard' },
+        { id: 'upload-document', label: 'Get Translation', icon: UploadIcon, page: '/dashboard/upload' },
+        { id: 'my-translations', label: 'My Translations', icon: FileText, page: '/dashboard/progress' },
+        { id: 'my-documents', label: 'My Documents', icon: Folder, page: '/dashboard/documents' },
+        { id: 'profile', label: 'Profile', icon: UserIcon, page: '/dashboard/profile' },
+      ];
+      
+      console.log('[App] Retornando itens para usuário (dashboard area):', userItems);
+      return userItems;
+    }
+    
+    // Se está na Home ou outras páginas públicas, mostrar itens da Home + ir para Dashboard
+    const homeItems = [
+      ...baseItems,
+      { id: 'go-to-dashboard', label: 'My Dashboard →', icon: UserIcon, page: '/dashboard' },
+    ];
+    
+    console.log('[App] Retornando itens para home area:', homeItems);
+    return homeItems;
   };
 
   // Mobile menu component
@@ -241,6 +259,24 @@ function App() {
           </div>
           
           <div className="p-3 sm:p-4 h-full overflow-y-auto">
+            {/* Botão Back to Home para área do Dashboard */}
+            {user && (location.pathname.startsWith('/dashboard') || 
+                     location.pathname.startsWith('/admin') || 
+                     location.pathname.startsWith('/authenticator')) && (
+              <div className="mb-4">
+                <button
+                  onClick={() => {
+                    navigate('/');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-3 px-3 py-2 text-left text-gray-600 hover:text-tfe-blue-600 hover:bg-tfe-blue-50 rounded-lg transition-colors"
+                >
+                  <HomeIcon className="w-5 h-5" />
+                  <span className="font-medium">← Back to Home</span>
+                </button>
+              </div>
+            )}
+            
             <Sidebar 
               navItems={getNavItems()} 
               user={user} 
