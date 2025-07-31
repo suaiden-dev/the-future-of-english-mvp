@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Home } from 'lucide-react';
 import type { CustomUser } from '../hooks/useAuth';
 import { FileText as FileTextIcon } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -22,11 +22,7 @@ export function Sidebar({ navItems, user, onLogout }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  console.log('DEBUG: Sidebar renderizada com navItems:', navItems);
-  console.log('DEBUG: User role:', user?.role);
-
   const handleNavigation = (page: string) => {
-    console.log('DEBUG: Navegando para:', page);
     if (page.startsWith('/')) {
       navigate(page);
     } else {
@@ -105,19 +101,22 @@ export function Sidebar({ navItems, user, onLogout }: SidebarProps) {
             );
           })}
 
-          {/* Seção de logout e voltar para home */}
+          {/* Botão Back to Mentorship após os outros itens */}
+          {user && (
+            <button
+              onClick={() => {
+                navigate('/');
+              }}
+              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            >
+              <Home className="w-5 h-5 text-gray-400" />
+              <span className="font-medium">Back to Mentorship</span>
+            </button>
+          )}
+
+          {/* Seção de logout */}
           {user && (
             <div className="mt-8 pt-4 border-t border-gray-200">
-              <button
-                onClick={() => {
-                  console.log('[Sidebar] Navegando para / (Back to Home)');
-                  navigate('/');
-                }}
-                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-tfe-blue-50 hover:text-tfe-blue-950 mb-2"
-              >
-                <FileTextIcon className="w-5 h-5 text-gray-400" />
-                <span className="font-medium">Back to Mentorship</span>
-              </button>
               <button
                 onClick={onLogout}
                 className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-tfe-red-600 hover:bg-tfe-red-50 hover:text-tfe-red-700"

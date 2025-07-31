@@ -35,7 +35,6 @@ export function useDocuments(userId?: string) {
   }, [userId]);
 
   const createDocument = async (documentData: Partial<DocumentInsert> & { file_url?: string }) => {
-    console.log('DEBUG: [useDocuments] createDocument chamado com:', JSON.stringify(documentData, null, 2));
     if (!userId) throw new Error('User not authenticated');
     if (!documentData.filename) throw new Error('Filename is required');
     if (!documentData.verification_code) throw new Error('Verification code is required');
@@ -51,7 +50,6 @@ export function useDocuments(userId?: string) {
         filename: documentData.filename, // garantir obrigatório
         verification_code: documentData.verification_code // garantir obrigatório
       };
-      console.log('DEBUG: [useDocuments] docToInsert:', JSON.stringify(docToInsert, null, 2));
       const newDocument = await db.createDocument(docToInsert);
       setDocuments(prev => [newDocument, ...prev]);
       return newDocument;
@@ -94,31 +92,28 @@ export function useAllDocuments() {
   const fetchAllDocuments = async () => {
     try {
       setLoading(true);
-      console.log('[useAllDocuments] Buscando todos os documentos...');
       
       // Check if Supabase is properly configured
       if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        throw new Error('Supabase environment variables not configured. Please check your .env file.');
+        throw new Error('Supabase environment variables not configured');
       }
-      
-      const data = await db.getAllDocuments();
-      console.log('[useAllDocuments] Documentos encontrados:', data?.length || 0);
-      setDocuments(data);
+
+      const { data, error } = await db
+        .from('documents')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching all documents:', error);
+        setError('Failed to fetch documents');
+        return;
+      }
+
+      setDocuments(data || []);
       setError(null);
     } catch (err) {
-      console.error('[useAllDocuments] Erro ao buscar documentos:', err);
-      
-      let errorMessage = 'Failed to fetch documents';
-      if (err instanceof Error) {
-        if (err.message.includes('Failed to fetch')) {
-          errorMessage = 'Cannot connect to Supabase. Please check if Supabase is running and .env is configured correctly.';
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      
-      setError(`Erro ao carregar documentos: ${errorMessage}`);
-      setDocuments([]);
+      console.error('Error fetching all documents:', err);
+      setError('Failed to fetch documents');
     } finally {
       setLoading(false);
     }
@@ -133,7 +128,7 @@ export function useAllDocuments() {
       const updatedDocument = await db.updateDocumentStatus(documentId, status);
       setDocuments(prev => 
         prev.map(doc => 
-          doc.id === documentId ? { ...doc, ...updatedDocument } : doc
+          doc.id === documentId ? updatedDocument : doc
         )
       );
       return updatedDocument;

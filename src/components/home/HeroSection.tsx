@@ -87,7 +87,7 @@ export function HeroSection() {
               <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl sm:rounded-3xl transform rotate-2 sm:rotate-3 group-hover:rotate-4 sm:group-hover:rotate-6 transition-transform duration-300"></div>
               <div className="relative bg-white p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-2xl">
                 <img 
-                  src="https://readdy.ai/api/search-image?query=Professional%20confident%20international%20student%20at%20American%20university%20campus%2C%20modern%20casual%20attire%2C%20holding%20textbooks%20and%20laptop%2C%20beautiful%20brick%20campus%20buildings%20in%20background%2C%20golden%20hour%20lighting%2C%20inspiring%20educational%20atmosphere%2C%20portrait%20style%20photography%2C%20success-oriented%20mood%2C%20diverse%20multicultural%20setting%2C%20premium%20quality&width=600&height=700&seq=modern-hero-student&orientation=portrait"
+                  src="/foto main tfe.jpg"
                   alt="International Student"
                   className="w-full h-auto rounded-xl sm:rounded-2xl object-cover object-top"
                   loading="lazy"

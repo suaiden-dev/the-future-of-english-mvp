@@ -114,10 +114,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setLoading(false);
       throw error;
     }
     // O listener de onAuthStateChange vai processar o usuário

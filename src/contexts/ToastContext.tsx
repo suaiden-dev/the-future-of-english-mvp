@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { ToastNotification } from '../components/ToastNotification';
 import { Notification } from '../hooks/useNotifications';
-import { useNotifications } from '../hooks/useNotifications';
 
 interface ToastContextType {
   showToast: (notification: Notification) => void;
@@ -12,7 +11,6 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [currentNotification, setCurrentNotification] = useState<Notification | null>(null);
-  const { markAsRead, registerToastCallback } = useNotifications();
 
   const showToast = useCallback((notification: Notification) => {
     setCurrentNotification(notification);
@@ -23,13 +21,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleMarkAsRead = useCallback((id: string) => {
-    markAsRead(id);
-  }, [markAsRead]);
-
-  // Registrar o callback do toast no hook de notificações
-  useEffect(() => {
-    registerToastCallback(showToast);
-  }, [registerToastCallback, showToast]);
+    // Mark as read logic can be implemented here if needed
+    console.log('Marking notification as read:', id);
+  }, []);
 
   return (
     <ToastContext.Provider value={{ showToast, hideToast }}>

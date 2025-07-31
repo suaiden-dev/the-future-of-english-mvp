@@ -11,56 +11,70 @@ const Login: React.FC = () => {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Limpar erro quando usuário digita
+    if (error) {
+      setError('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Limpar erro anterior
+    setError('');
+    
     if (!formData.email.trim() || !formData.password.trim()) {
-      setError('Please fill in all fields');
+      setError('📝 Por favor, preencha todos os campos');
       return;
     }
     
     // Validar formato do email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError('📧 Por favor, digite um email válido');
       return;
     }
     
-    setError(null);
     setIsLoading(true);
-    console.log('[Login] Tentando fazer login com:', formData.email);
-    console.log('[Login] Estado antes do login:', { isLoading, error });
     
     try {
-      console.log('[Login] Chamando signIn...');
       await signIn(formData.email, formData.password);
-      console.log('[Login] signIn completado com sucesso');
       // A navegação será feita automaticamente pelo useEffect no App.tsx
     } catch (err: any) {
-      console.log('[Login] Erro no signIn:', err);
-      
       // Tratar diferentes tipos de erro com mensagens específicas
-      let errorMessage = 'Login failed. Please try again.';
+      let errorMessage = '❌ Email ou senha incorretos. Verifique suas credenciais e tente novamente.';
       
       if (err?.message) {
-        if (err.message.includes('Invalid login credentials') || err.message.includes('Invalid email or password')) {
-          errorMessage = 'Email or password is incorrect. Please check your credentials and try again.';
-        } else if (err.message.includes('Email not confirmed')) {
-          errorMessage = 'Please check your email and confirm your account before logging in.';
-        } else if (err.message.includes('Too many requests')) {
-          errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
-        } else if (err.message.includes('User not found')) {
-          errorMessage = 'No account found with this email address. Please check your email or create a new account.';
+        const message = err.message.toLowerCase();
+        if (message.includes('invalid login credentials') || 
+            message.includes('invalid email or password') ||
+            message.includes('invalid credentials')) {
+          errorMessage = '❌ Email ou senha incorretos. Verifique suas credenciais e tente novamente.';
+        } else if (message.includes('email not confirmed') || 
+                   message.includes('email confirmation')) {
+          errorMessage = '📧 Verifique seu email e confirme sua conta antes de fazer login.';
+        } else if (message.includes('too many requests') || 
+                   message.includes('rate limit')) {
+          errorMessage = '⏰ Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.';
+        } else if (message.includes('user not found') ||
+                   message.includes('no user found')) {
+          errorMessage = '👤 Nenhuma conta encontrada com este email. Verifique o email ou crie uma nova conta.';
+        } else if (message.includes('network') || 
+                   message.includes('fetch')) {
+          errorMessage = '🌐 Problema de conexão. Verifique sua internet e tente novamente.';
         } else {
-          errorMessage = err.message;
+          errorMessage = `❌ Erro: ${err.message}`;
         }
       }
       
       setError(errorMessage);
     } finally {
-      console.log('[Login] Finalizando login, setIsLoading(false)');
       setIsLoading(false);
     }
   };
@@ -99,7 +113,7 @@ const Login: React.FC = () => {
                   className="appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 sm:text-sm transition-colors"
                   placeholder="Enter your email address"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={handleChange}
                 />
               </div>
             </div>
@@ -120,7 +134,7 @@ const Login: React.FC = () => {
                   className="appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 sm:text-sm transition-colors"
                   placeholder="Enter your password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={handleChange}
                 />
               </div>
               <div className="mt-2 text-right">
@@ -137,10 +151,19 @@ const Login: React.FC = () => {
               </div>
             </div>
             {error && (
-              <div className="bg-tfe-red-50 border border-tfe-red-200 rounded-lg p-4">
-                <p className="text-sm text-tfe-red-600 flex items-center">
-                  <span className="mr-2">❌</span> {error}
-                </p>
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4 animate-pulse">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-red-800">
+                      {error}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
             <div>

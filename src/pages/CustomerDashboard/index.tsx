@@ -11,7 +11,7 @@ import { Document, Folder } from '../../App';
 import { Database } from '../../lib/database.types';
 import { Link, Route, Routes, useNavigate } from 'react-router-dom';
 import ProfilePage from './ProfilePage';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Home } from 'lucide-react';
 import UploadDocument from './UploadDocument';
 import { CustomUser } from '../../hooks/useAuth';
 type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register' | 'documents';
@@ -40,6 +40,7 @@ export function CustomerDashboard({
   onFolderDelete,
   onViewDocument
 }: CustomerDashboardProps) {
+  const navigate = useNavigate();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 

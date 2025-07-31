@@ -17,9 +17,11 @@ import {
   FileText as FileTextIcon,
   CheckCircle as CheckCircleIcon,
   XCircle,
-  BarChart3
+  BarChart3,
+  Home
 } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { useNavigate } from 'react-router-dom';
 
 interface OverviewStats {
   totalDocuments: number;
@@ -48,6 +50,7 @@ interface AuthenticatorOverviewProps {
 }
 
 export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverviewProps) {
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { stats, loading, error, refreshStats, lastUpdated } = useOverview();
 

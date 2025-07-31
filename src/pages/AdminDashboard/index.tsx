@@ -3,6 +3,8 @@ import { StatsCards } from './StatsCards';
 import { DocumentsTable } from './DocumentsTable';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
 import { Document } from '../../App';
+import { Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface AdminDashboardProps {
   documents: Document[];
@@ -10,6 +12,7 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProps) {
+  const navigate = useNavigate();
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 
   const handleViewDocument = (document: Document) => {

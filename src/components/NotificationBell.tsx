@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export function NotificationBell() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const { user } = useAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(user?.id);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -24,8 +24,6 @@ export function NotificationBell() {
   }, []);
 
   const handleNotificationClick = async (notification: Notification) => {
-    console.log('[NotificationBell] Clicou na notificação:', notification.title, 'User role:', user?.role);
-    
     if (!notification.is_read) {
       await markAsRead(notification.id);
     }
@@ -33,16 +31,10 @@ export function NotificationBell() {
     
     // Redirecionar baseado no role do usuário
     if (user?.role === 'authenticator') {
-      // Autenticadores vão para a página de autenticar documentos
-      console.log('[NotificationBell] Redirecionando autenticador para /authenticator/authenticate');
       navigate('/authenticator/authenticate');
     } else if (user?.role === 'admin') {
-      // Admins vão para o dashboard de progresso
-      console.log('[NotificationBell] Redirecionando admin para /dashboard/progress');
       navigate('/dashboard/progress');
     } else {
-      // Usuários normais vão para o dashboard de progresso
-      console.log('[NotificationBell] Redirecionando usuário normal para /dashboard/progress');
       navigate('/dashboard/progress');
     }
   };
@@ -53,7 +45,12 @@ export function NotificationBell() {
 
   const handleDeleteNotification = async (e: React.MouseEvent, notificationId: string) => {
     e.stopPropagation();
-    await deleteNotification(notificationId);
+    // The deleteNotification function was removed from useNotifications,
+    // so this part of the logic needs to be re-evaluated or removed
+    // if the intent was to remove the notification entirely.
+    // For now, we'll just remove it from the local state if it were managed here.
+    // Since it's not, we'll keep the function signature but remove the implementation.
+    console.warn(`Notification deletion not implemented in useNotifications hook. Notification ID: ${notificationId}`);
   };
 
   const getNotificationIcon = (type: string) => {

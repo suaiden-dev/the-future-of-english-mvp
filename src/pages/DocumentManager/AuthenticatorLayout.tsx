@@ -15,6 +15,8 @@ export default function AuthenticatorLayout() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+
+
   // Determine current page from URL
   const getCurrentPage = () => {
     if (location.pathname.includes('/authenticate')) return 'authenticate';
@@ -25,16 +27,9 @@ export default function AuthenticatorLayout() {
 
   const currentPage = getCurrentPage();
 
-  console.log('[AuthenticatorLayout] Usuário:', user);
-  console.log('[AuthenticatorLayout] Role:', user?.role);
-  console.log('[AuthenticatorLayout] Current page:', currentPage);
-
   if (!user || (user.role !== 'authenticator' && user.role !== 'admin')) {
-    console.log('[AuthenticatorLayout] Acesso negado - role:', user?.role);
     return <div>Access denied. Only authenticators can view this page.</div>;
   }
-
-
 
   const handleLogout = () => {
     signOut();
@@ -101,118 +96,6 @@ export default function AuthenticatorLayout() {
           {/* Navigation */}
           <nav className="space-y-2">
             <button
-              onClick={() => handleNavigation('overview')}
-              className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors ${
-                currentPage === 'overview'
-                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <HomeIcon className="w-5 h-5" />
-              <span className="font-medium">Overview</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavigation('authenticate')}
-              className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors ${
-                currentPage === 'authenticate'
-                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <FileText className="w-5 h-5" />
-              <span className="font-medium">Authenticate Documents</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavigation('translated')}
-              className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors ${
-                currentPage === 'translated'
-                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <CheckCircle className="w-5 h-5" />
-              <span className="font-medium">Translated Documents</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavigation('upload')}
-              className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors ${
-                currentPage === 'upload'
-                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <Upload className="w-5 h-5" />
-              <span className="font-medium">Upload Document</span>
-            </button>
-          </nav>
-
-          {/* Logout */}
-          <div className="mt-8 pt-4 border-t border-gray-200">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-colors text-tfe-red-600 hover:bg-tfe-red-50 hover:text-tfe-red-700"
-            >
-              <LogOut className="w-5 h-5 text-tfe-red-500" />
-              <span className="font-medium">Logout</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Mobile Menu */}
-      <MobileMenu />
-
-      {/* Sidebar - Hidden on mobile */}
-      <div className="hidden lg:block w-64 bg-white shadow-sm border-r border-gray-200">
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex justify-center mb-4">
-              <button
-                onClick={() => navigate('/')}
-                className="focus:outline-none group"
-                aria-label="Go to Mentorship"
-              >
-                <div className="text-center">
-                  <div className="flex flex-col items-center group-hover:scale-105 transition-transform">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <div className="w-12 h-12 bg-gradient-to-r from-tfe-red-950 to-tfe-blue-950 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                        TFE
-                      </div>
-                    </div>
-                    <h3 className="font-bold text-sm text-tfe-blue-950">The Future of English</h3>
-                  </div>
-                  <div className="text-xs text-gray-600 font-medium">
-                    Professional Translation
-                  </div>
-                </div>
-              </button>
-            </div>
-            
-            {user && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-sm font-medium text-gray-900">{user.user_metadata?.name || 'Authenticator'}</p>
-                <p className="text-xs text-gray-600">{user.email || ''}</p>
-                <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${
-                  user.role === 'admin'
-                    ? 'bg-tfe-red-100 text-tfe-red-800'
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {user.role === 'admin' ? 'Administrator' : 'Authenticator'}
-                </span>
-              </div>
-            )}
-          </div>
-          
-          {/* Navigation */}
-          <nav className="space-y-2">
-            <button
               onClick={() => navigate('/authenticator')}
               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                 currentPage === 'overview'
@@ -261,8 +144,22 @@ export default function AuthenticatorLayout() {
             </button>
           </nav>
 
+                     {/* Back to Mentorship Button */}
+           {user && (
+             <button
+               onClick={() => {
+                 navigate('/');
+                 setIsMobileMenuOpen(false);
+               }}
+               className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+             >
+               <HomeIcon className="w-5 h-5 text-gray-400" />
+               <span className="font-medium">Back to Mentorship</span>
+             </button>
+           )}
+
           {/* Logout */}
-          <div className="mt-8 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
               className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-tfe-red-600 hover:bg-tfe-red-50 hover:text-tfe-red-700"
@@ -273,9 +170,122 @@ export default function AuthenticatorLayout() {
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Mobile Menu */}
+      <MobileMenu />
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
+        <div className="flex flex-col flex-grow bg-white shadow-sm border-r border-gray-200">
+          <div className="flex items-center justify-center p-6 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">TFE</span>
+              </div>
+              <h3 className="text-xl font-bold">The Future of English</h3>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col overflow-y-auto">
+            <div className="p-6">
+              {/* User Info */}
+              {user && (
+                <div className="bg-gray-50 p-3 rounded-lg mb-6">
+                  <p className="text-sm font-medium text-gray-900">{user.user_metadata?.name || 'Authenticator'}</p>
+                  <p className="text-xs text-gray-600">{user.email || ''}</p>
+                  <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${
+                    user.role === 'admin'
+                      ? 'bg-tfe-red-100 text-tfe-red-800'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {user.role === 'admin' ? 'Administrator' : 'Authenticator'}
+                  </span>
+                </div>
+              )}
+              
+              {/* Navigation */}
+              <nav className="space-y-2">
+                <button
+                  onClick={() => navigate('/authenticator')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    currentPage === 'overview'
+                      ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <HomeIcon className="w-5 h-5" />
+                  <span className="font-medium">Overview</span>
+                </button>
+                
+                <button
+                  onClick={() => navigate('/authenticator/authenticate')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    currentPage === 'authenticate'
+                      ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <FileText className="w-5 h-5" />
+                  <span className="font-medium">Authenticate Documents</span>
+                </button>
+                
+                <button
+                  onClick={() => navigate('/authenticator/translated')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    currentPage === 'translated'
+                      ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-medium">Translated Documents</span>
+                </button>
+                
+                <button
+                  onClick={() => navigate('/authenticator/upload')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    currentPage === 'upload'
+                      ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <Upload className="w-5 h-5" />
+                  <span className="font-medium">Upload Document</span>
+                </button>
+              </nav>
+
+                             {/* Back to Mentorship Button */}
+               {user && (
+                 <button
+                                    onClick={() => navigate('/')}
+                   className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                 >
+                   <HomeIcon className="w-5 h-5 text-gray-400" />
+                   <span className="font-medium">Back to Mentorship</span>
+                 </button>
+               )}
+
+              {/* Logout */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-tfe-red-600 hover:bg-tfe-red-50 hover:text-tfe-red-700"
+                >
+                  <LogOut className="w-5 h-5 text-tfe-red-500" />
+                  <span className="font-medium">Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col lg:ml-64">
         {/* Mobile Header */}
         <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">

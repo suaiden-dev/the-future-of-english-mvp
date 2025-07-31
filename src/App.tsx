@@ -59,7 +59,6 @@ function App() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    console.log('[App] handleLogout chamado');
     signOut();
     navigate('/login');
   };
@@ -73,7 +72,7 @@ function App() {
     }
   };
 
-  const handleDocumentStatusUpdate = async (documentId: string, status: Document['status']) => {
+  const handleDocumentStatusUpdate = async (documentId: string, status: 'pending' | 'processing' | 'completed') => {
     try {
       if (user?.role === 'admin') {
         await updateAllDocumentStatus(documentId, status);
@@ -95,7 +94,7 @@ function App() {
     }
   };
 
-  const handleFolderUpdate = async (folderId: string, updates: { name?: string; color?: string }) => {
+  const handleFolderUpdate = async (folderId: string, updates: { name?: string; color?: string; parent_id?: string | null }) => {
     try {
       await updateFolder(folderId, updates);
     } catch (error) {
@@ -119,12 +118,9 @@ function App() {
 
   const location = useLocation();
 
-  console.log('DEBUG: App render', { user });
-
   // Bloquear loading apenas para páginas protegidas
   const protectedPages: Page[] = ['dashboard-customer', 'admin', 'upload'];
   if (authLoading && protectedPages.includes(location.pathname as Page)) {
-    console.log('[App] authLoading=true, exibindo tela de loading', { pathname: location.pathname });
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -142,11 +138,8 @@ function App() {
     );
   }
 
-  console.log('[App] authLoading false, renderizando página', { pathname: location.pathname, user });
-
   // Define navigation items based on user status and current page
   const getNavItems = () => {
-    console.log('[App] getNavItems chamado com user:', user, 'current path:', location.pathname);
     
     const baseItems = [
       { id: 'mentorship', label: 'Mentorship', icon: HomeIcon, page: 'mentorship' as Page },
@@ -161,19 +154,14 @@ function App() {
         { id: 'login', label: 'Login', icon: LogIn, page: 'login' as Page },
         { id: 'register', label: 'Register', icon: UserPlus, page: 'register' as Page },
       ];
-      console.log('[App] Retornando itens para usuário não logado:', result);
       return result;
     }
 
-    console.log('[App] User role:', user.role);
-    
     // Verificar se está nas páginas do Dashboard ou outras páginas específicas
     const isDashboardArea = location.pathname.startsWith('/dashboard') || 
                            location.pathname.startsWith('/admin') || 
                            location.pathname.startsWith('/authenticator');
     
-    console.log('[App] isDashboardArea:', isDashboardArea, 'pathname:', location.pathname);
-
     // Se está na área de Dashboard, mostrar apenas itens do Dashboard (botão Home é separado)
     if (isDashboardArea) {
       if (user.role === 'authenticator') {
@@ -181,7 +169,6 @@ function App() {
           { id: 'authenticator-dashboard', label: 'Authenticator Dashboard', icon: Shield, page: '/authenticator' },
           { id: 'documents', label: 'Documents to Authenticate', icon: FileText, page: '/documents' },
         ];
-        console.log('[App] Retornando itens para autenticador (dashboard area):', items);
         return items;
       }
       
@@ -191,7 +178,6 @@ function App() {
           { id: 'user-management', label: 'User Management', icon: Users, page: 'user-management' as Page },
           { id: 'authenticator-control', label: 'Authenticator Control', icon: UserCheck, page: 'authenticator-control' as Page },
         ];
-        console.log('[App] Retornando itens para admin (dashboard area):', items);
         return items;
       }
       
@@ -204,7 +190,6 @@ function App() {
         { id: 'profile', label: 'Profile', icon: UserIcon, page: '/dashboard/profile' },
       ];
       
-      console.log('[App] Retornando itens para usuário (dashboard area):', userItems);
       return userItems;
     }
     
@@ -214,13 +199,11 @@ function App() {
       { id: 'go-to-dashboard', label: 'My Dashboard →', icon: UserIcon, page: '/dashboard' },
     ];
     
-    console.log('[App] Retornando itens para home area:', homeItems);
     return homeItems;
   };
 
   // Mobile menu component
   const MobileMenu = () => {
-    console.log('[App] MobileMenu renderizado, isMobileMenuOpen:', isMobileMenuOpen);
     return (
       <div className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         {/* Backdrop */}

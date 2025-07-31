@@ -63,11 +63,9 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
     const thirtySecondsAgo = new Date(now.getTime() - 30 * 1000);
     
     if (!forceRefresh && lastUpdated && lastUpdated > thirtySecondsAgo) {
-      console.log('[OverviewContext] Using cached data, last updated:', lastUpdated);
       return;
     }
 
-    console.log('[OverviewContext] Fetching fresh data for user:', currentUser.id, 'role:', currentUser.role);
     setLoading(true);
     setError(null);
 
@@ -92,8 +90,6 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
 
       const { data: myUploadedDocs, error: uploadError } = await myUploadedDocsQuery;
       if (uploadError) throw uploadError;
-
-      console.log('[OverviewContext] Found documents - all:', allDocuments?.length, 'translated:', translatedDocs?.length, 'my uploaded:', myUploadedDocs?.length);
 
       // Calculate statistics based on user role
       let totalDocs, pendingDocs, approvedDocs, rejectedDocs, totalValue, totalPages;
@@ -205,7 +201,6 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
 
       setStats(newStats);
       setLastUpdated(now);
-      console.log('[OverviewContext] Data updated successfully for', currentUser.role);
 
     } catch (err: any) {
       console.error('[OverviewContext] Error fetching stats:', err);
