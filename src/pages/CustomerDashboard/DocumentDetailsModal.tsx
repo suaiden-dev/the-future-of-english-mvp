@@ -4,6 +4,7 @@ import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
 import { Document } from '../../App';
 import { db } from '../../lib/supabase';
 import { ImageViewerModal } from '../../components/ImageViewerModal';
+import { getValidFileUrl } from '../../utils/fileUtils';
 
 interface DocumentDetailsModalProps {
   document: Document | null;
@@ -72,95 +73,30 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
   };
 
   // Função para visualizar arquivo
-  const handleViewFile = (url: string, filename: string) => {
-    if (isImageFile(filename)) {
-      setImageToView({ url, filename });
-      setShowImageViewer(true);
-    } else {
-      // Para PDFs e outros arquivos, abrir em nova aba
-      window.open(url, '_blank');
+  const handleViewFile = async (url: string, filename: string) => {
+    try {
+      const validUrl = await getValidFileUrl(url);
+      if (isImageFile(filename)) {
+        setImageToView({ url: validUrl, filename });
+        setShowImageViewer(true);
+      } else {
+        // Para PDFs e outros arquivos, abrir em nova aba
+        window.open(validUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error opening file:', error);
+      alert((error as Error).message || 'Failed to open file.');
     }
   };
 
   // Função para download automático (incluindo PDFs)
   const handleDownload = async (url: string, filename: string) => {
     try {
-      // Tentar baixar com URL atual
-      const response = await fetch(url);
+      // Obter uma URL válida
+      const validUrl = await getValidFileUrl(url);
       
-      // Se der erro de acesso negado, tentar gerar URL público
-      if (!response.ok && response.status === 403) {
-        console.log('URL expirado, gerando URL público...');
-        
-        // Extrair o caminho do arquivo da URL
-        console.log('URL original:', url);
-        const urlParts = url.split('/');
-        console.log('URL parts:', urlParts);
-        
-        // Tentar diferentes formas de extrair o filePath
-        let filePath = '';
-        
-        // Se a URL contém 'storage/v1/object/public/documents/', extrair o que vem depois
-        if (url.includes('storage/v1/object/public/documents/')) {
-          const documentsIndex = url.indexOf('documents/');
-          filePath = url.substring(documentsIndex + 'documents/'.length);
-        } else {
-          // Fallback: pegar os últimos 2 segmentos
-          filePath = urlParts.slice(-2).join('/');
-        }
-        
-        console.log('File path extraído:', filePath);
-        
-        // Tentar URL público primeiro (não expira)
-        const publicUrl = await db.generatePublicUrl(filePath);
-        if (publicUrl) {
-          try {
-            const publicResponse = await fetch(publicUrl);
-            if (publicResponse.ok) {
-              const blob = await publicResponse.blob();
-              const downloadUrl = window.URL.createObjectURL(blob);
-              
-              const link = window.document.createElement('a');
-              link.href = downloadUrl;
-              link.download = filename;
-              window.document.body.appendChild(link);
-              link.click();
-              window.document.body.removeChild(link);
-              
-              window.URL.revokeObjectURL(downloadUrl);
-              return;
-            }
-          } catch (error) {
-            console.log('URL público falhou, tentando URL pré-assinado...');
-          }
-        }
-        
-        // Se URL público falhou, tentar URL pré-assinado de 7 dias
-        const signedUrl = await db.generateSignedUrl(filePath);
-        if (signedUrl) {
-          try {
-            const signedResponse = await fetch(signedUrl);
-            if (signedResponse.ok) {
-              const blob = await signedResponse.blob();
-              const downloadUrl = window.URL.createObjectURL(blob);
-              
-              const link = window.document.createElement('a');
-              link.href = downloadUrl;
-              link.download = filename;
-              window.document.body.appendChild(link);
-              link.click();
-              window.document.body.removeChild(link);
-              
-              window.URL.revokeObjectURL(downloadUrl);
-              return;
-            }
-          } catch (error) {
-            console.error('Erro com URL pré-assinado:', error);
-          }
-        }
-      }
-      
-      // Se chegou aqui, o URL original funcionou
+      // Fazer o download
+      const response = await fetch(validUrl);
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       
@@ -175,14 +111,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error('Erro ao baixar arquivo:', error);
-      // Fallback para download direto
-      const link = window.document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.target = '_blank';
-      window.document.body.appendChild(link);
-      link.click();
-      window.document.body.removeChild(link);
+      alert((error as Error).message || 'Failed to download file.');
     }
   };
 

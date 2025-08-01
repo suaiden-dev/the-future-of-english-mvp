@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { FileText, Download, Eye, Calendar, DollarSign, User, CheckCircle, XCircle } from 'lucide-react';
+import { getValidFileUrl } from '../../utils/fileUtils';
 
 interface TranslatedDocument {
   id: string;
@@ -237,17 +238,12 @@ export default function TranslatedDocuments() {
                             return;
                           }
                           
-                          // Verificar se o arquivo existe antes de abrir
-                          const response = await fetch(doc.translated_file_url, { method: 'HEAD' });
-                          if (!response.ok) {
-                            alert('PDF file not found or inaccessible.');
-                            return;
-                          }
-                          
-                          window.open(doc.translated_file_url, '_blank', 'noopener,noreferrer');
+                          // Tentar obter uma URL válida
+                          const validUrl = await getValidFileUrl(doc.translated_file_url);
+                          window.open(validUrl, '_blank', 'noopener,noreferrer');
                         } catch (error) {
                           console.error('Error opening PDF:', error);
-                          alert('Failed to open PDF. The file may be corrupted or inaccessible.');
+                          alert(error.message || 'Failed to open PDF. The file may be corrupted or inaccessible.');
                         }
                       }}
                       className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
@@ -260,7 +256,8 @@ export default function TranslatedDocuments() {
                       onClick={async e => {
                         e.preventDefault();
                         try {
-                          const response = await fetch(doc.translated_file_url || '');
+                          const validUrl = await getValidFileUrl(doc.translated_file_url || '');
+                          const response = await fetch(validUrl);
                           const blob = await response.blob();
                           const url = window.URL.createObjectURL(blob);
                           const link = document.createElement('a');
@@ -271,7 +268,8 @@ export default function TranslatedDocuments() {
                           document.body.removeChild(link);
                           window.URL.revokeObjectURL(url);
                         } catch (err) {
-                          alert('Failed to download file.');
+                          console.error('Error downloading file:', err);
+                          alert(err.message || 'Failed to download file.');
                         }
                       }}
                       title="Download PDF"
@@ -375,17 +373,12 @@ export default function TranslatedDocuments() {
                                     return;
                                   }
                                   
-                                  // Verificar se o arquivo existe antes de abrir
-                                  const response = await fetch(doc.translated_file_url, { method: 'HEAD' });
-                                  if (!response.ok) {
-                                    alert('PDF file not found or inaccessible.');
-                                    return;
-                                  }
-                                  
-                                  window.open(doc.translated_file_url, '_blank', 'noopener,noreferrer');
+                                  // Tentar obter uma URL válida
+                                  const validUrl = await getValidFileUrl(doc.translated_file_url);
+                                  window.open(validUrl, '_blank', 'noopener,noreferrer');
                                 } catch (error) {
                                   console.error('Error opening PDF:', error);
-                                  alert('Failed to open PDF. The file may be corrupted or inaccessible.');
+                                  alert((error as Error).message || 'Failed to open PDF. The file may be corrupted or inaccessible.');
                                 }
                               }}
                               className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
@@ -398,7 +391,8 @@ export default function TranslatedDocuments() {
                               onClick={async e => {
                                 e.preventDefault();
                                 try {
-                                  const response = await fetch(doc.translated_file_url || '');
+                                  const validUrl = await getValidFileUrl(doc.translated_file_url || '');
+                                  const response = await fetch(validUrl);
                                   const blob = await response.blob();
                                   const url = window.URL.createObjectURL(blob);
                                   const link = document.createElement('a');
@@ -409,7 +403,8 @@ export default function TranslatedDocuments() {
                                   document.body.removeChild(link);
                                   window.URL.revokeObjectURL(url);
                                 } catch (err) {
-                                  alert('Failed to download file.');
+                                  console.error('Error downloading file:', err);
+                                  alert((err as Error).message || 'Failed to download file.');
                                 }
                               }}
                               title="Download PDF"
@@ -422,7 +417,20 @@ export default function TranslatedDocuments() {
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => window.open(doc.translated_file_url || '', '_blank', 'noopener,noreferrer')}
+                            onClick={async () => {
+                              try {
+                                if (!doc.translated_file_url) {
+                                  alert('No PDF file available to view.');
+                                  return;
+                                }
+                                
+                                const validUrl = await getValidFileUrl(doc.translated_file_url);
+                                window.open(validUrl, '_blank', 'noopener,noreferrer');
+                              } catch (error) {
+                                console.error('Error opening PDF:', error);
+                                alert((error as Error).message || 'Failed to open PDF. The file may be corrupted or inaccessible.');
+                              }
+                            }}
                             className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
                             title="View PDF"
                           >
@@ -433,7 +441,8 @@ export default function TranslatedDocuments() {
                             onClick={async e => {
                               e.preventDefault();
                               try {
-                                const response = await fetch(doc.translated_file_url || '');
+                                const validUrl = await getValidFileUrl(doc.translated_file_url || '');
+                                const response = await fetch(validUrl);
                                 const blob = await response.blob();
                                 const url = window.URL.createObjectURL(blob);
                                 const link = document.createElement('a');
@@ -444,7 +453,8 @@ export default function TranslatedDocuments() {
                                 document.body.removeChild(link);
                                 window.URL.revokeObjectURL(url);
                               } catch (err) {
-                                alert('Failed to download file.');
+                                console.error('Error downloading file:', err);
+                                alert((err as Error).message || 'Failed to download file.');
                               }
                             }}
                             title="Download PDF"

@@ -3,6 +3,7 @@ import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { fileStorage } from '../utils/fileStorage';
+import { generateUniqueFileName } from '../utils/fileUtils';
 
 export function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -66,9 +67,7 @@ export function PaymentSuccess() {
             setIsUploading(true);
             setUploadProgress(0);
 
-        const fileExt = file.name.split('.').pop();
-            const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-        const uploadPath = `${userId}/${fileName}`;
+        const uploadPath = generateUniqueFileName(file.name, userId);
 
         console.log('DEBUG: Fazendo upload para:', uploadPath);
         console.log('DEBUG: Nome do arquivo:', file.name);

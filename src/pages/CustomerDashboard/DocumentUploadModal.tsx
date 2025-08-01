@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, XCircle, FileText, CheckCircle, AlertCircle, Info, Shield, Clock, DollarSign, Globe, Award } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { fileStorage } from '../../utils/fileStorage';
+import { generateUniqueFileName } from '../../utils/fileUtils';
 
 interface DocumentUploadModalProps {
   isOpen: boolean;
@@ -182,8 +183,8 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
           console.log('DEBUG: Mobile - IndexedDB falhou, usando upload direto:', indexedDBError);
           
           // Fallback: Upload direto para Supabase Storage
-          const fileExt = selectedFile.name.split('.').pop();
-          const filePath = `${userId}/${Date.now()}_${selectedFile.name}`;
+          const filePath = generateUniqueFileName(selectedFile.name, userId);
+          console.log('DEBUG: Mobile - Upload path sanitizado:', filePath);
           const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
           if (uploadError) throw uploadError;
       

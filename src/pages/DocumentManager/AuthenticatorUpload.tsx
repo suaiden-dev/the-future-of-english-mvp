@@ -3,6 +3,7 @@ import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Clock, Dollar
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { fileStorage } from '../../utils/fileStorage';
+import { generateUniqueFileName } from '../../utils/fileUtils';
 
 export default function AuthenticatorUpload() {
   const { user } = useAuth();
@@ -263,7 +264,7 @@ export default function AuthenticatorUpload() {
       if (isMobile) {
         // Mobile: Upload direto para Supabase Storage
         console.log('DEBUG: Mobile - fazendo upload direto para Supabase Storage');
-        const filePath = `${user.id}/${Date.now()}_${selectedFile.name}`;
+        const filePath = generateUniqueFileName(selectedFile.name, user.id);
         console.log('DEBUG: Mobile - Tentando upload para Supabase Storage:', filePath);
         
         const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
@@ -294,7 +295,7 @@ export default function AuthenticatorUpload() {
       } else {
         // Desktop: Upload direto para Supabase Storage (igual ao cliente)
         console.log('DEBUG: Desktop - fazendo upload direto para Supabase Storage');
-        const filePath = `${user.id}/${Date.now()}_${selectedFile.name}`;
+        const filePath = generateUniqueFileName(selectedFile.name, user.id);
         console.log('DEBUG: Desktop - Tentando upload para Supabase Storage:', filePath);
         
         const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);

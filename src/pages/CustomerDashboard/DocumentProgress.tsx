@@ -5,6 +5,7 @@ import { useTranslatedDocuments } from '../../hooks/useDocuments';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
 import { db } from '../../lib/supabase';
+import { getValidFileUrl } from '../../utils/fileUtils';
 
 export default function DocumentProgress() {
   const { user } = useAuth();
@@ -16,82 +17,11 @@ export default function DocumentProgress() {
   // Função para download automático (incluindo PDFs)
   const handleDownload = async (url: string, filename: string) => {
     try {
-      // Tentar baixar com URL atual
-      const response = await fetch(url);
+      // Obter uma URL válida
+      const validUrl = await getValidFileUrl(url);
       
-      // Se der erro de acesso negado, tentar gerar URL público
-      if (!response.ok && response.status === 403) {
-        console.log('URL expirado, gerando URL público...');
-        
-        // Extrair o caminho do arquivo da URL
-        console.log('URL original:', url);
-        const urlParts = url.split('/');
-        console.log('URL parts:', urlParts);
-        
-        // Tentar diferentes formas de extrair o filePath
-        let filePath = '';
-        
-        // Se a URL contém 'storage/v1/object/public/documents/', extrair o que vem depois
-        if (url.includes('storage/v1/object/public/documents/')) {
-          const documentsIndex = url.indexOf('documents/');
-          filePath = url.substring(documentsIndex + 'documents/'.length);
-        } else {
-          // Fallback: pegar os últimos 2 segmentos
-          filePath = urlParts.slice(-2).join('/');
-        }
-        
-        console.log('File path extraído:', filePath);
-        
-        // Tentar URL público primeiro (não expira)
-        const publicUrl = await db.generatePublicUrl(filePath);
-        if (publicUrl) {
-          try {
-            const publicResponse = await fetch(publicUrl);
-            if (publicResponse.ok) {
-              const blob = await publicResponse.blob();
-              const downloadUrl = window.URL.createObjectURL(blob);
-              
-              const link = window.document.createElement('a');
-              link.href = downloadUrl;
-              link.download = filename;
-              window.document.body.appendChild(link);
-              link.click();
-              window.document.body.removeChild(link);
-              
-              window.URL.revokeObjectURL(downloadUrl);
-              return;
-            }
-          } catch (error) {
-            console.log('URL público falhou, tentando URL pré-assinado...');
-          }
-        }
-        
-        // Se URL público falhou, tentar URL pré-assinado de 7 dias
-        const signedUrl = await db.generateSignedUrl(filePath);
-        if (signedUrl) {
-          try {
-            const signedResponse = await fetch(signedUrl);
-            if (signedResponse.ok) {
-              const blob = await signedResponse.blob();
-              const downloadUrl = window.URL.createObjectURL(blob);
-              
-              const link = window.document.createElement('a');
-              link.href = downloadUrl;
-              link.download = filename;
-              window.document.body.appendChild(link);
-              link.click();
-              window.document.body.removeChild(link);
-              
-              window.URL.revokeObjectURL(downloadUrl);
-              return;
-            }
-          } catch (error) {
-            console.error('Erro com URL pré-assinado:', error);
-          }
-        }
-      }
-      
-      // Se chegou aqui, o URL original funcionou
+      // Fazer o download
+      const response = await fetch(validUrl);
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       
@@ -238,13 +168,21 @@ export default function DocumentProgress() {
             <span className="hidden sm:inline">Download</span>
           </button>
           <button
-            onClick={() => {
-              if (doc.translated_file_url && (doc.translated_file_url.endsWith('.pdf') || doc.filename?.toLowerCase().endsWith('.pdf'))) {
-                window.open(doc.translated_file_url, '_blank', 'noopener,noreferrer');
-              } else if (doc.translated_file_url && (doc.translated_file_url.match(/\.(jpg|jpeg|png)$/i) || doc.filename?.toLowerCase().match(/\.(jpg|jpeg|png)$/i))) {
-                setImageModalUrl(doc.translated_file_url);
-              } else {
-                window.open(doc.translated_file_url, '_blank', 'noopener,noreferrer');
+            onClick={async () => {
+              try {
+                if (doc.translated_file_url && (doc.translated_file_url.endsWith('.pdf') || doc.filename?.toLowerCase().endsWith('.pdf'))) {
+                  const validUrl = await getValidFileUrl(doc.translated_file_url);
+                  window.open(validUrl, '_blank', 'noopener,noreferrer');
+                } else if (doc.translated_file_url && (doc.translated_file_url.match(/\.(jpg|jpeg|png)$/i) || doc.filename?.toLowerCase().match(/\.(jpg|jpeg|png)$/i))) {
+                  const validUrl = await getValidFileUrl(doc.translated_file_url);
+                  setImageModalUrl(validUrl);
+                } else {
+                  const validUrl = await getValidFileUrl(doc.translated_file_url);
+                  window.open(validUrl, '_blank', 'noopener,noreferrer');
+                }
+              } catch (error) {
+                console.error('Error opening file:', error);
+                alert(error.message || 'Failed to open file.');
               }
             }}
             className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-xs sm:text-sm"
@@ -320,13 +258,21 @@ export default function DocumentProgress() {
                 <span className="hidden sm:inline">Download</span>
               </button>
               <button
-                onClick={() => {
-                  if (doc.translated_file_url && (doc.translated_file_url.endsWith('.pdf') || doc.filename?.toLowerCase().endsWith('.pdf'))) {
-                    window.open(doc.translated_file_url, '_blank', 'noopener,noreferrer');
-                  } else if (doc.translated_file_url && (doc.translated_file_url.match(/\.(jpg|jpeg|png)$/i) || doc.filename?.toLowerCase().match(/\.(jpg|jpeg|png)$/i))) {
-                    setImageModalUrl(doc.translated_file_url);
-                  } else {
-                    window.open(doc.translated_file_url, '_blank', 'noopener,noreferrer');
+                onClick={async () => {
+                  try {
+                    if (doc.translated_file_url && (doc.translated_file_url.endsWith('.pdf') || doc.filename?.toLowerCase().endsWith('.pdf'))) {
+                      const validUrl = await getValidFileUrl(doc.translated_file_url);
+                      window.open(validUrl, '_blank', 'noopener,noreferrer');
+                    } else if (doc.translated_file_url && (doc.translated_file_url.match(/\.(jpg|jpeg|png)$/i) || doc.filename?.toLowerCase().match(/\.(jpg|jpeg|png)$/i))) {
+                      const validUrl = await getValidFileUrl(doc.translated_file_url);
+                      setImageModalUrl(validUrl);
+                    } else {
+                      const validUrl = await getValidFileUrl(doc.translated_file_url);
+                      window.open(validUrl, '_blank', 'noopener,noreferrer');
+                    }
+                  } catch (error) {
+                    console.error('Error opening file:', error);
+                    alert((error as Error).message || 'Failed to open file.');
                   }
                 }}
                 className="inline-flex items-center justify-center gap-1 px-3 py-2 sm:py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-xs"
