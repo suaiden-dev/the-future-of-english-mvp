@@ -409,57 +409,7 @@ export default function AuthenticatorDashboard() {
                     </a>
                   </div>
 
-                  {/* Document Actions */}
-                  {doc.translated_file_url && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={async () => {
-                          try {
-                            if (!doc.translated_file_url) {
-                              alert('No PDF file available to view.');
-                              return;
-                            }
-                            
-                            // Tentar obter uma URL válida
-                            const validUrl = await getValidFileUrl(doc.translated_file_url);
-                            window.open(validUrl, '_blank', 'noopener,noreferrer');
-                          } catch (error) {
-                            console.error('Error opening PDF:', error);
-                            alert((error as Error).message || 'Failed to open PDF. The file may be corrupted or inaccessible.');
-                          }
-                        }}
-                        className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
-                        title="View PDF"
-                      >
-                        <FileText className="w-3 h-3" /> View
-                      </button>
-                      <button
-                        className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
-                        onClick={async e => {
-                          e.preventDefault();
-                          try {
-                            const validUrl = await getValidFileUrl(doc.translated_file_url || '');
-                            const response = await fetch(validUrl);
-                            const blob = await response.blob();
-                            const url = window.URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            window.URL.revokeObjectURL(url);
-                          } catch (err) {
-                            console.error('Error downloading file:', err);
-                            alert((err as Error).message || 'Failed to download file.');
-                          }
-                        }}
-                        title="Download PDF"
-                      >
-                        <Download className="w-3 h-3" /> Download
-                      </button>
-                    </div>
-                  )}
+
 
                   {/* Document Details */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
