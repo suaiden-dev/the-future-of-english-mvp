@@ -146,39 +146,55 @@ export default function AuthenticatorUpload() {
       };
       console.log('Payload enviado para webhook:', payload);
 
-      // Criar documento na tabela documents primeiro (para que a edge function possa puxar client_name)
-      console.log('DEBUG: Criando documento na tabela documents...');
-      const { data: { publicUrl } } = supabase.storage
+      // Verificar se o documento já existe na tabela documents
+      console.log('DEBUG: Verificando se documento já existe na tabela documents...');
+      const { data: existingDoc, error: checkError } = await supabase
         .from('documents')
-        .getPublicUrl(payload.filePath);
-
-      const { data: newDocument, error: createError } = await supabase
-        .from('documents')
-        .insert({
-          user_id: user?.id,
-          filename: selectedFile?.name,
-          pages: pages,
-          status: 'pending',
-          total_cost: valor,
-          tipo_trad: tipoTrad,
-          valor: valor,
-          idioma_raiz: idiomaRaiz,
-          is_bank_statement: isExtrato,
-          file_url: publicUrl,
-          verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
-          client_name: clientName.trim(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
+        .select('id, filename, user_id')
+        .eq('user_id', user?.id)
+        .eq('filename', selectedFile?.name)
         .single();
 
-      if (createError) {
-        console.error('ERROR: Erro ao criar documento na tabela documents:', createError);
-        throw new Error('Erro ao salvar documento no banco de dados');
-      }
+      let newDocument;
+      if (existingDoc && !checkError) {
+        console.log('DEBUG: Documento já existe na tabela documents:', existingDoc);
+        newDocument = existingDoc;
+      } else {
+        // Criar documento na tabela documents primeiro (para que a edge function possa puxar client_name)
+        console.log('DEBUG: Criando documento na tabela documents...');
+        const { data: { publicUrl } } = supabase.storage
+          .from('documents')
+          .getPublicUrl(payload.filePath);
 
-      console.log('DEBUG: Documento criado na tabela documents:', newDocument);
+        const { data: createdDoc, error: createError } = await supabase
+          .from('documents')
+          .insert({
+            user_id: user?.id,
+            filename: selectedFile?.name,
+            pages: pages,
+            status: 'pending',
+            total_cost: valor,
+            tipo_trad: tipoTrad,
+            valor: valor,
+            idioma_raiz: idiomaRaiz,
+            is_bank_statement: isExtrato,
+            file_url: publicUrl,
+            verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
+            client_name: clientName.trim(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('ERROR: Erro ao criar documento na tabela documents:', createError);
+          throw new Error('Erro ao salvar documento no banco de dados');
+        }
+
+        console.log('DEBUG: Documento criado na tabela documents:', createdDoc);
+        newDocument = createdDoc;
+      }
 
       // Preparar dados para o webhook
       const webhookData = {
@@ -242,6 +258,12 @@ export default function AuthenticatorUpload() {
     console.log('DEBUG: isExtrato:', isExtrato);
     console.log('DEBUG: idiomaRaiz:', idiomaRaiz);
     
+    // Proteção contra chamadas duplicadas
+    if (isUploading) {
+      console.log('DEBUG: Upload já em andamento, ignorando chamada duplicada');
+      return;
+    }
+    
     if (!selectedFile || !user) {
       console.log('DEBUG: Upload bloqueado - validação básica falhou');
       console.log('DEBUG: selectedFile exists:', !!selectedFile);
@@ -252,7 +274,6 @@ export default function AuthenticatorUpload() {
     if (!clientName.trim()) {
       console.log('DEBUG: Upload bloqueado - Client Name é obrigatório');
       setError('Client name is required. Please enter the client\'s full name.');
-      setIsUploading(false);
       return;
     }
     
