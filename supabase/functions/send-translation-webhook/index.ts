@@ -44,7 +44,11 @@ Deno.serve(async (req: Request) => {
 
     // Parse request body
     const requestBody = await req.text();
+    console.log("=== WEBHOOK CALL START ===");
+    console.log("Timestamp:", new Date().toISOString());
     console.log("Raw request body:", requestBody);
+    
+
     
     const parsedBody = JSON.parse(requestBody);
     console.log("Parsed request body:", parsedBody);
@@ -200,6 +204,9 @@ Deno.serve(async (req: Request) => {
     // Also update documents_to_be_verified table if needed (instead of creating duplicate)
     if (webhookResponse.ok && user_id && url) {
       try {
+        console.log("=== CHECKING FOR DUPLICATES ===");
+        console.log("user_id:", user_id);
+        console.log("filename:", filename);
         console.log("Checking for existing document in documents_to_be_verified...");
         
         // First, find the document ID
@@ -216,53 +223,81 @@ Deno.serve(async (req: Request) => {
           console.log("Client marked is_bank_statement:", docData.is_bank_statement);
           
           // Check if document already exists in documents_to_be_verified
-          const { data: existingDoc, error: checkError } = await supabase
+          console.log("=== CHECKING FOR EXISTING DOCUMENTS ===");
+          
+          // Primeiro, verificar se já existe um documento com o mesmo file_id
+          const { data: existingDocsByFileId, error: checkErrorByFileId } = await supabase
             .from('documents_to_be_verified')
-            .select('id, translated_file_url')
-            .eq('user_id', user_id)
-            .eq('filename', filename)
-            .single();
+            .select('id, translated_file_url, created_at, status, file_id')
+            .eq('file_id', docData.id)
+            .order('created_at', { ascending: false });
 
-          if (existingDoc && !checkError) {
-            console.log("Document already exists in documents_to_be_verified, skipping duplicate creation");
-            console.log("Existing document ID:", existingDoc.id);
-            console.log("Existing translated_file_url:", existingDoc.translated_file_url);
+          console.log("Check by file_id error:", checkErrorByFileId);
+          console.log("Existing docs by file_id found:", existingDocsByFileId?.length || 0);
+
+          if (existingDocsByFileId && existingDocsByFileId.length > 0 && !checkErrorByFileId) {
+            console.log("Document already exists in documents_to_be_verified (by file_id), skipping duplicate creation");
+            console.log("Found existing documents by file_id:", existingDocsByFileId.length);
+            existingDocsByFileId.forEach((doc, index) => {
+              console.log(`Document ${index + 1}:`, doc.id, "translated_file_url:", doc.translated_file_url, "status:", doc.status, "file_id:", doc.file_id);
+            });
+            console.log("=== SKIPPING DUPLICATE CREATION (by file_id) ===");
           } else {
-            console.log("Document not found in documents_to_be_verified, creating new entry...");
-            
-            const insertData = {
-              user_id: user_id,
-              filename: filename,
-              pages: docData.pages || paginas || 1,
-              status: 'pending',
-              total_cost: docData.total_cost || parseFloat(valor) || 0,
-              // Usar o valor validado pelo N8N se disponível, senão usar o valor do cliente
-              is_bank_statement: (() => {
-                const finalValue = is_bank_statement !== undefined ? is_bank_statement : (docData.is_bank_statement || false);
-                console.log("Final is_bank_statement value being used:", finalValue);
-                return finalValue;
-              })(),
-              source_language: docData.idioma_raiz?.toLowerCase() || 'portuguese',
-              target_language: 'english',
-              translation_status: 'pending',
-              file_id: docData.id,
-              verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-              client_name: docData.client_name || client_name || null
-            };
-            
-            console.log("Attempting to insert data:", JSON.stringify(insertData, null, 2));
-            
-            const { data: verifyData, error: verifyError } = await supabase
+            // Verificar também por user_id e filename como fallback
+            const { data: existingDocs, error: checkError } = await supabase
               .from('documents_to_be_verified')
-              .insert(insertData)
-              .select();
+              .select('id, translated_file_url, created_at, status')
+              .eq('user_id', user_id)
+              .eq('filename', filename)
+              .order('created_at', { ascending: false });
 
-            if (verifyError) {
-              console.error("Error inserting into documents_to_be_verified:", verifyError);
-              console.error("Error details:", JSON.stringify(verifyError, null, 2));
-            } else {
-              console.log("Inserted into documents_to_be_verified successfully:", verifyData);
-              console.log("Notifications will be created automatically by database trigger");
+            console.log("Check error:", checkError);
+            console.log("Existing docs found:", existingDocs?.length || 0);
+
+            if (existingDocs && existingDocs.length > 0 && !checkError) {
+              console.log("Document already exists in documents_to_be_verified, skipping duplicate creation");
+              console.log("Found existing documents:", existingDocs.length);
+              existingDocs.forEach((doc, index) => {
+                console.log(`Document ${index + 1}:`, doc.id, "translated_file_url:", doc.translated_file_url, "status:", doc.status);
+              });
+              console.log("=== SKIPPING DUPLICATE CREATION ===");
+                        } else {
+              console.log("Document not found in documents_to_be_verified, creating new entry...");
+              
+              const insertData = {
+                user_id: user_id,
+                filename: filename,
+                pages: docData.pages || paginas || 1,
+                status: 'pending',
+                total_cost: docData.total_cost || parseFloat(valor) || 0,
+                // Usar o valor validado pelo N8N se disponível, senão usar o valor do cliente
+                is_bank_statement: (() => {
+                  const finalValue = is_bank_statement !== undefined ? is_bank_statement : (docData.is_bank_statement || false);
+                  console.log("Final is_bank_statement value being used:", finalValue);
+                  return finalValue;
+                })(),
+                source_language: docData.idioma_raiz?.toLowerCase() || 'portuguese',
+                target_language: 'english',
+                translation_status: 'pending',
+                file_id: docData.id,
+                verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
+                client_name: docData.client_name || client_name || null
+              };
+              
+              console.log("Attempting to insert data:", JSON.stringify(insertData, null, 2));
+              
+              const { data: verifyData, error: verifyError } = await supabase
+                .from('documents_to_be_verified')
+                .insert(insertData)
+                .select();
+
+              if (verifyError) {
+                console.error("Error inserting into documents_to_be_verified:", verifyError);
+                console.error("Error details:", JSON.stringify(verifyError, null, 2));
+              } else {
+                console.log("Inserted into documents_to_be_verified successfully:", verifyData);
+                console.log("Notifications will be created automatically by database trigger");
+              }
             }
           }
         } else {

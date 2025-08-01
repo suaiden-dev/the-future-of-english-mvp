@@ -107,6 +107,8 @@ export default function AuthenticatorUpload() {
   // Função para processar upload direto (SEM PAGAMENTO para autenticador)
   const handleDirectUpload = async (fileId: string, customPayload?: any) => {
     try {
+      console.log('DEBUG: === HANDLE DIRECT UPLOAD START ===');
+      console.log('DEBUG: Timestamp:', new Date().toISOString());
       console.log('DEBUG: Autenticador - Upload direto sem pagamento');
       console.log('DEBUG: File ID recebido:', fileId);
       console.log('DEBUG: Custom payload:', customPayload);
@@ -148,17 +150,20 @@ export default function AuthenticatorUpload() {
 
       // Verificar se o documento já existe na tabela documents
       console.log('DEBUG: Verificando se documento já existe na tabela documents...');
-      const { data: existingDoc, error: checkError } = await supabase
+      const { data: existingDocs, error: checkError } = await supabase
         .from('documents')
-        .select('id, filename, user_id')
+        .select('id, filename, user_id, created_at')
         .eq('user_id', user?.id)
         .eq('filename', selectedFile?.name)
-        .single();
+        .order('created_at', { ascending: false });
 
       let newDocument;
-      if (existingDoc && !checkError) {
-        console.log('DEBUG: Documento já existe na tabela documents:', existingDoc);
-        newDocument = existingDoc;
+      if (existingDocs && existingDocs.length > 0 && !checkError) {
+        console.log('DEBUG: Documento já existe na tabela documents:', existingDocs.length, 'entradas encontradas');
+        existingDocs.forEach((doc, index) => {
+          console.log(`DEBUG: Documento ${index + 1}:`, doc.id, doc.created_at);
+        });
+        newDocument = existingDocs[0]; // Usar o mais recente
       } else {
         // Criar documento na tabela documents primeiro (para que a edge function possa puxar client_name)
         console.log('DEBUG: Criando documento na tabela documents...');
@@ -214,6 +219,11 @@ export default function AuthenticatorUpload() {
       console.log('DEBUG: Dados enviados para webhook:', webhookData);
 
       // Enviar direto para o webhook de tradução (SEM Stripe)
+      console.log('DEBUG: === ENVIANDO PARA WEBHOOK ===');
+      console.log('DEBUG: Timestamp:', new Date().toISOString());
+      console.log('DEBUG: Webhook URL:', 'https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/send-translation-webhook');
+      console.log('DEBUG: Webhook data:', JSON.stringify(webhookData, null, 2));
+      
       const response = await fetch('https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/send-translation-webhook', {
         method: 'POST',
         headers: {
@@ -240,15 +250,21 @@ export default function AuthenticatorUpload() {
         throw new Error(errorData.error || 'Erro ao enviar documento para tradução');
       }
 
+      console.log('DEBUG: === HANDLE DIRECT UPLOAD SUCCESS ===');
+      console.log('DEBUG: Timestamp:', new Date().toISOString());
       setSuccess('Document uploaded successfully and sent for translation!');
 
     } catch (err: any) {
+      console.error('ERROR: === HANDLE DIRECT UPLOAD ERROR ===');
+      console.error('ERROR: Timestamp:', new Date().toISOString());
       console.error('ERROR: Erro no upload:', err);
       setError(err.message || 'Erro ao processar upload');
     }
   };
 
   const handleUpload = async () => {
+    console.log('DEBUG: === HANDLE UPLOAD START ===');
+    console.log('DEBUG: Timestamp:', new Date().toISOString());
     console.log('DEBUG: handleUpload called');
     console.log('DEBUG: selectedFile:', selectedFile);
     console.log('DEBUG: user:', user);
@@ -257,6 +273,7 @@ export default function AuthenticatorUpload() {
     console.log('DEBUG: tipoTrad:', tipoTrad);
     console.log('DEBUG: isExtrato:', isExtrato);
     console.log('DEBUG: idiomaRaiz:', idiomaRaiz);
+    console.log('DEBUG: isUploading:', isUploading);
     
     // Proteção contra chamadas duplicadas
     if (isUploading) {
@@ -347,9 +364,14 @@ export default function AuthenticatorUpload() {
       }
       
     } catch (err: any) {
+      console.error('ERROR: === HANDLE UPLOAD ERROR ===');
+      console.error('ERROR: Timestamp:', new Date().toISOString());
       console.error('ERROR: Erro ao processar upload:', err);
       setError(err.message || 'Erro ao processar upload');
     } finally {
+      console.log('DEBUG: === HANDLE UPLOAD FINALLY ===');
+      console.log('DEBUG: Timestamp:', new Date().toISOString());
+      console.log('DEBUG: Setting isUploading to false');
       setIsUploading(false);
     }
   };
@@ -571,7 +593,13 @@ export default function AuthenticatorUpload() {
                 {/* Upload Button */}
                 <div className="pt-4">
                   <button
-                    onClick={handleUpload}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!isUploading) {
+                        handleUpload();
+                      }
+                    }}
                     disabled={!selectedFile || !clientName.trim() || isUploading}
                     className="w-full bg-gradient-to-r from-tfe-blue-950 to-tfe-red-950 text-white py-4 rounded-xl font-bold shadow-lg hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-all"
                   >
