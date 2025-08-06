@@ -64,43 +64,47 @@ export default function AuthenticatorUpload() {
   }
 
   const handleFileChange = async (file: File) => {
+    console.log('DEBUG: handleFileChange called with file:', file);
+    setSelectedFile(file);
     setError(null);
     setSuccess(null);
-    setFileUrl(null);
-    setPages(1);
-    setSelectedFile(file);
     
-    console.log('DEBUG: File selected:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      lastModified: file.lastModified
-    });
+    // Reset upload state
+    setIsUploading(false);
     
-    if (file.type === 'application/pdf') {
-      try {
-        console.log('DEBUG: Attempting to read PDF file...');
-        const pdfjsLib = await loadPdfJs();
-        console.log('DEBUG: PDF.js library loaded successfully');
-        
-        const arrayBuffer = await file.arrayBuffer();
-        console.log('DEBUG: File converted to ArrayBuffer, size:', arrayBuffer.byteLength);
-        
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        console.log('DEBUG: PDF loaded successfully, pages:', pdf.numPages);
-        setPages(pdf.numPages);
-      } catch (err) {
-        console.error('DEBUG: Error reading PDF:', err);
-        setError(`Failed to read PDF pages: ${err instanceof Error ? err.message : 'Unknown error'}`);
-        setPages(1);
-      }
-    } else {
-      console.log('DEBUG: File is not a PDF, type:', file.type);
-      setPages(1);
+    // Validate file type
+    if (!file.type.includes('pdf')) {
+      setError('Please select a PDF file.');
+      return;
     }
     
-    if (file.type.startsWith('image/')) {
-      setFileUrl(URL.createObjectURL(file));
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB.');
+      return;
+    }
+    
+    try {
+      // Load PDF.js for page counting
+      if (!pdfjsLib) {
+        await loadPdfJs();
+      }
+      
+      // Count pages
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pageCount = pdf.numPages;
+      setPages(pageCount);
+      
+      console.log('DEBUG: PDF loaded, pages:', pageCount);
+      
+      // Generate preview URL
+      const url = URL.createObjectURL(file);
+      setFileUrl(url);
+      
+    } catch (error) {
+      console.error('Error processing PDF:', error);
+      setError('Error processing PDF file. Please try again.');
     }
   };
 
@@ -265,7 +269,7 @@ export default function AuthenticatorUpload() {
   const handleUpload = async () => {
     console.log('DEBUG: === HANDLE UPLOAD START ===');
     console.log('DEBUG: Timestamp:', new Date().toISOString());
-    console.log('DEBUG: handleUpload called');
+    console.log('DEBUG: handleUpload called - USER CLICKED UPLOAD BUTTON');
     console.log('DEBUG: selectedFile:', selectedFile);
     console.log('DEBUG: user:', user);
     console.log('DEBUG: clientName:', clientName);
@@ -299,79 +303,46 @@ export default function AuthenticatorUpload() {
     setIsUploading(true);
     
     try {
-      if (isMobile) {
-        // Mobile: Upload direto para Supabase Storage
-        console.log('DEBUG: Mobile - fazendo upload direto para Supabase Storage');
-        const filePath = generateUniqueFileName(selectedFile.name, user.id);
-        console.log('DEBUG: Mobile - Tentando upload para Supabase Storage:', filePath);
-        
-        const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
-        if (uploadError) {
-          console.error('DEBUG: Mobile - Erro no upload para Supabase Storage:', uploadError);
-          throw uploadError;
-        }
-        
-        console.log('DEBUG: Mobile - Upload para Supabase Storage bem-sucedido:', data);
-        
-        // Payload para mobile com upload direto
-        const payload = {
-          pages,
-          isCertified: tipoTrad === 'Certificado',
-          isNotarized: tipoTrad === 'Notorizado',
-          isBankStatement: isExtrato,
-          filePath, // Caminho do arquivo no Supabase Storage
-          userId: user.id,
-          userEmail: user.email,
-          filename: selectedFile?.name,
-          clientName: clientName.trim(),
-          isMobile: true // Mobile
-        };
-        console.log('DEBUG: Mobile - Payload enviado:', payload);
-        
-        // Chama o upload direto com payload
-        await handleDirectUpload(filePath, payload);
-      } else {
-        // Desktop: Upload direto para Supabase Storage (igual ao cliente)
-        console.log('DEBUG: Desktop - fazendo upload direto para Supabase Storage');
-        const filePath = generateUniqueFileName(selectedFile.name, user.id);
-        console.log('DEBUG: Desktop - Tentando upload para Supabase Storage:', filePath);
-        
-        const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
-        if (uploadError) {
-          console.error('DEBUG: Desktop - Erro no upload para Supabase Storage:', uploadError);
-          throw uploadError;
-        }
-        
-        console.log('DEBUG: Desktop - Upload para Supabase Storage bem-sucedido:', data);
-        
-        // Payload para desktop com upload direto (igual ao mobile)
-        const payload = {
-          pages,
-          isCertified: tipoTrad === 'Certificado',
-          isNotarized: tipoTrad === 'Notorizado',
-          isBankStatement: isExtrato,
-          filePath, // Caminho do arquivo no Supabase Storage
-          userId: user.id,
-          userEmail: user.email,
-          filename: selectedFile?.name,
-          clientName: clientName.trim(),
-          isMobile: false // Desktop
-        };
-        console.log('DEBUG: Desktop - Payload enviado:', payload);
-        
-        // Chama o upload direto com payload
-        await handleDirectUpload(filePath, payload);
+      console.log('DEBUG: === INICIANDO UPLOAD E ENVIO PARA WEBHOOK ===');
+      console.log('DEBUG: Usuário clicou no botão - fazendo upload agora');
+      
+      // Upload direto para Supabase Storage
+      console.log('DEBUG: Fazendo upload para Supabase Storage');
+      const filePath = generateUniqueFileName(selectedFile.name, user.id);
+      console.log('DEBUG: Tentando upload para Supabase Storage:', filePath);
+      
+      const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
+      if (uploadError) {
+        console.error('DEBUG: Erro no upload para Supabase Storage:', uploadError);
+        throw uploadError;
       }
+      
+      console.log('DEBUG: Upload para Supabase Storage bem-sucedido:', data);
+      
+      // Payload para webhook
+      const payload = {
+        pages,
+        isCertified: tipoTrad === 'Certificado',
+        isNotarized: tipoTrad === 'Notorizado',
+        isBankStatement: isExtrato,
+        filePath: filePath,
+        userId: user.id,
+        userEmail: user.email,
+        filename: selectedFile?.name,
+        clientName: clientName.trim(),
+        isMobile: isMobile
+      };
+      console.log('DEBUG: Payload enviado:', payload);
+      
+      // Chama o upload direto com payload
+      await handleDirectUpload(filePath, payload);
       
     } catch (err: any) {
       console.error('ERROR: === HANDLE UPLOAD ERROR ===');
       console.error('ERROR: Timestamp:', new Date().toISOString());
-      console.error('ERROR: Erro ao processar upload:', err);
+      console.error('ERROR: Erro no upload:', err);
       setError(err.message || 'Erro ao processar upload');
     } finally {
-      console.log('DEBUG: === HANDLE UPLOAD FINALLY ===');
-      console.log('DEBUG: Timestamp:', new Date().toISOString());
-      console.log('DEBUG: Setting isUploading to false');
       setIsUploading(false);
     }
   };

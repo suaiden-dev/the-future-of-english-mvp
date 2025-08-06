@@ -17,35 +17,23 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
         <div className="flex justify-between items-center h-14 sm:h-16">
-          {/* Logo - Only on desktop */}
-          <div className="hidden lg:flex items-center min-w-0 flex-shrink-0">
+          {/* Logo - Visible on all screen sizes */}
+          <div className="flex items-center min-w-0 flex-shrink-0 flex-1">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center space-x-2 sm:space-x-3 text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors"
+              className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-3 text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors"
             >
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-sm">TFE</span>
+              <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-xs sm:text-sm">TFE</span>
                 </div>
-                <h3 className="text-xl font-bold">The Future of English</h3>
+                <h3 className="text-sm sm:text-base lg:text-xl font-bold truncate max-w-[120px] sm:max-w-[200px] lg:max-w-none">The Future of English</h3>
               </div>
             </button>
           </div>
 
-          {/* Mobile-only: Just user info, no logo */}
-          <div className="flex lg:hidden items-center min-w-0 flex-shrink-0">
-            {user && (
-              <span className="text-sm font-medium text-gray-700 truncate max-w-32">
-                Welcome, {user.user_metadata?.name ? 
-                  user.user_metadata.name.split(' ')[0] : 
-                  user.email.split('@')[0]
-                }
-              </span>
-            )}
-          </div>
-
           {/* Mobile Menu Button - Always visible on mobile */}
-          <div className="flex items-center lg:hidden">
+          <div className="flex items-center lg:hidden flex-shrink-0">
             <button
               onClick={() => {
                 console.log('[Header] Mobile menu button clicked');

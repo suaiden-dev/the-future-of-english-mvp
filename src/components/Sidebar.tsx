@@ -16,9 +16,10 @@ interface SidebarProps {
   navItems: NavItem[];
   user: CustomUser | null;
   onLogout: () => void;
+  showLogo?: boolean; // Nova prop para controlar se o logo deve ser exibido
 }
 
-export function Sidebar({ navItems, user, onLogout }: SidebarProps) {
+export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -41,22 +42,25 @@ export function Sidebar({ navItems, user, onLogout }: SidebarProps) {
     <div className="w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen">
       <div className="p-6">
         <div className="mb-6">
-          <div className="flex justify-center mb-4">
-          <button
-            onClick={() => navigate('/')}
-              className="focus:outline-none group"
-            aria-label="Go to Mentorship"
-          >
-            <div className="text-center">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">TFE</span>
+          {/* Logo - apenas se showLogo for true */}
+          {showLogo && (
+            <div className="flex justify-center mb-4">
+              <button
+                onClick={() => navigate('/')}
+                className="focus:outline-none group"
+                aria-label="Go to Mentorship"
+              >
+                <div className="text-center">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">TFE</span>
+                    </div>
+                    <h3 className="text-xl font-bold">The Future of English</h3>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold">The Future of English</h3>
-              </div>
+              </button>
             </div>
-            </button>
-            </div>
+          )}
           
           {user && (
             <div className="bg-gray-50 p-3 rounded-lg">

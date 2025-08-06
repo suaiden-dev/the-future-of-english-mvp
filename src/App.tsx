@@ -267,6 +267,7 @@ function App() {
                 handleLogout();
                 setIsMobileMenuOpen(false);
               }} 
+              showLogo={false}
             />
           </div>
         </div>
