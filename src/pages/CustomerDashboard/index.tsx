@@ -152,6 +152,7 @@ export function CustomerDashboard({
           onUpload={onDocumentUpload}
           userId={user?.id || ''}
           userEmail={user?.email || ''} // Adicionar email do usuário
+          userName={user?.name || ''} // Adicionar nome do usuário
         />
         <DocumentDetailsModal
           document={selectedDocument}

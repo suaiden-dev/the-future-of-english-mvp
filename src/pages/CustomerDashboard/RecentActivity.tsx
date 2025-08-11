@@ -24,9 +24,9 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
       // Tentar baixar com URL atual
       const response = await fetch(url);
       
-      // Se der erro de acesso negado, tentar gerar URL público
+      // Se der erro de acesso negado, tentar regenerar URL
       if (!response.ok && response.status === 403) {
-        console.log('URL expirado, gerando URL público...');
+        console.log('URL expirado, regenerando URL...');
         
         // Extrair o caminho do arquivo da URL
         const urlParts = url.split('/');
@@ -56,7 +56,7 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
           }
         }
         
-        // Se URL público falhou, tentar URL pré-assinado de 7 dias
+        // Se URL público falhou, tentar URL pré-assinado de 30 dias
         const signedUrl = await db.generateSignedUrl(filePath);
         if (signedUrl) {
           try {
@@ -76,34 +76,32 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
               return;
             }
           } catch (error) {
-            console.error('Erro com URL pré-assinado:', error);
+            console.error('Erro ao baixar com URL pré-assinada:', error);
           }
         }
+        
+        throw new Error('Não foi possível baixar o arquivo. Tente novamente mais tarde.');
       }
       
-      // Se chegou aqui, o URL original funcionou
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      
-      const link = window.document.createElement('a');
-      link.href = downloadUrl;
-      link.download = filename;
-      window.document.body.appendChild(link);
-      link.click();
-      window.document.body.removeChild(link);
-      
-      // Limpar o URL do blob
-      window.URL.revokeObjectURL(downloadUrl);
+      // Se a URL original funcionou, fazer download
+      if (response.ok) {
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        
+        const link = window.document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        window.document.body.appendChild(link);
+        link.click();
+        window.document.body.removeChild(link);
+        
+        window.URL.revokeObjectURL(downloadUrl);
+      } else {
+        throw new Error(`Erro ao baixar arquivo: ${response.status} ${response.statusText}`);
+      }
     } catch (error) {
-      console.error('Erro ao baixar arquivo:', error);
-      // Fallback para download direto
-      const link = window.document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.target = '_blank';
-      window.document.body.appendChild(link);
-      link.click();
-      window.document.body.removeChild(link);
+      console.error('Erro no download:', error);
+      alert(`Erro ao baixar arquivo: ${error.message}`);
     }
   };
 

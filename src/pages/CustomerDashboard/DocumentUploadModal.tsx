@@ -10,10 +10,11 @@ interface DocumentUploadModalProps {
   onUpload: (documentData: { filename: string; file_url: string; pages: number; folder_id?: string }) => Promise<void>;
   userId: string;
   userEmail: string; // Adicionar email do usuário
+  userName?: string; // Adicionar nome do usuário
   currentFolderId?: string | null;
 }
 
-export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEmail, currentFolderId }: DocumentUploadModalProps) {
+export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEmail, userName, currentFolderId }: DocumentUploadModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pages, setPages] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
@@ -97,7 +98,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
   // Função para processar pagamento direto com Stripe
   const handleDirectPayment = async (fileId: string, customPayload?: any) => {
     try {
-      console.log('DEBUG: Iniciando pagamento direto com Stripe');
+      console.log('DEBUG: Iniciando processamento do pagamento');
       
       // Salvar arquivo no IndexedDB antes do pagamento
       if (!selectedFile) {
@@ -118,13 +119,47 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
       };
       console.log('Payload enviado para checkout:', payload);
 
+      // CRIAR DOCUMENTO NO BANCO ANTES DO PAGAMENTO
+      console.log('DEBUG: Criando documento no banco antes do pagamento');
+      const { data: newDocument, error: createError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: userId,
+          filename: selectedFile.name,
+          pages: pages,
+          status: 'pending',
+          total_cost: calculateValue(pages, tipoTrad, isExtrato),
+          verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+          is_authenticated: true,
+          upload_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('ERROR: Erro ao criar documento no banco:', createError);
+        throw new Error('Erro ao criar documento no banco de dados');
+      }
+
+      console.log('DEBUG: Documento criado no banco:', newDocument.id);
+
+      // Adicionar o documentId ao payload
+      const payloadWithDocumentId = {
+        ...payload,
+        documentId: newDocument.id
+      };
+
+      console.log('Payload com documentId enviado para checkout:', payloadWithDocumentId);
+
       const response = await fetch('https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cG9ncXdod3NjYmRobm9xc212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTYxMzksImV4cCI6MjA2ODE3MjEzOX0.CsbI1OiT2i3EL31kvexrstIsaC48MD4fEHg6BSE6LZ4'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payloadWithDocumentId)
       });
 
       console.log('DEBUG: Resposta da Edge Function:', response.status);
@@ -183,10 +218,36 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
           console.log('DEBUG: Mobile - IndexedDB falhou, usando upload direto:', indexedDBError);
           
           // Fallback: Upload direto para Supabase Storage
-          const filePath = generateUniqueFileName(selectedFile.name, userId);
+          const filePath = generateUniqueFileName(selectedFile.name, userId, userName);
           console.log('DEBUG: Mobile - Upload path sanitizado:', filePath);
           const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
           if (uploadError) throw uploadError;
+      
+          // CRIAR DOCUMENTO NO BANCO ANTES DO PAGAMENTO (MOBILE)
+          console.log('DEBUG: Mobile - Criando documento no banco antes do pagamento');
+          const { data: newDocument, error: createError } = await supabase
+            .from('documents')
+            .insert({
+              user_id: userId,
+              filename: selectedFile.name,
+              pages: pages,
+              status: 'pending',
+              total_cost: calculateValue(pages, tipoTrad, isExtrato),
+              verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+              is_authenticated: true,
+              upload_date: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('ERROR: Erro ao criar documento no banco (mobile):', createError);
+            throw new Error('Erro ao criar documento no banco de dados');
+          }
+
+          console.log('DEBUG: Mobile - Documento criado no banco:', newDocument.id);
       
           // Payload para mobile com upload direto
           const payload = {
@@ -198,7 +259,8 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
             userId,
             userEmail, // Adicionar email do usuário
             filename: selectedFile?.name,
-            isMobile: true // Mobile
+            isMobile: true, // Mobile
+            documentId: newDocument.id // Adicionar documentId
           };
           console.log('Payload mobile com upload direto enviado para checkout:', payload);
           

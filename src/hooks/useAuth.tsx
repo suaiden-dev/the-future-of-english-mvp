@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { getResetPasswordUrl } from '../utils/urlUtils';
 
 export interface CustomUser extends SupabaseUser {
   role: 'user' | 'authenticator' | 'admin';
@@ -147,8 +148,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetPassword = async (email: string) => {
+    const resetUrl = getResetPasswordUrl();
+    console.log('[resetPassword] Usando URL de reset:', resetUrl);
+    
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`
+      redirectTo: resetUrl
     });
     if (error) {
       throw error;

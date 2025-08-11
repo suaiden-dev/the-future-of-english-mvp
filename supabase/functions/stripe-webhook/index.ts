@@ -7,6 +7,10 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req: Request) => {
+  console.log(`[${new Date().toISOString()}] Webhook Stripe chamado`);
+  console.log(`Method: ${req.method}`);
+  console.log(`URL: ${req.url}`);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -108,49 +112,30 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
       isCertified,
       isNotarized,
       isBankStatement,
-      totalPrice
+      totalPrice,
+      documentId
     } = session.metadata;
 
     console.log('DEBUG: Metadados da sessão:', {
-      fileId, userId, filename, pages, isCertified, isNotarized, isBankStatement, totalPrice
+      fileId, userId, filename, pages, isCertified, isNotarized, isBankStatement, totalPrice, documentId
     });
 
-    // Criar documento real no banco (sem file_url por enquanto)
-    // O arquivo será enviado posteriormente na página de sucesso
-    console.log('DEBUG: Criando documento real no banco');
-    
-    const { data: newDocument, error: createError } = await supabase
-      .from('documents')
-      .insert({
-        user_id: userId,
-        filename: filename,
-        pages: parseInt(pages),
-        status: 'pending',
-        total_cost: parseFloat(totalPrice),
-        tipo_trad: isCertified === 'true' ? 'Certificado' : 'Notorizado',
-        valor: parseFloat(totalPrice),
-        is_bank_statement: isBankStatement === 'true',
-        idioma_raiz: 'Portuguese', // Assumindo português
-        file_id: fileId // Salvar o fileId para referência
-      })
-      .select()
-      .single();
-
-    if (createError) {
-      console.error('ERROR: Erro ao criar documento:', createError);
-      throw new Error('Failed to create document');
+    if (!documentId) {
+      console.log('WARNING: documentId não encontrado nos metadados, pulando processamento');
+      return;
     }
 
-    console.log('DEBUG: Documento criado com sucesso:', newDocument);
+    // Atualizar o documento existente com status processing
+    console.log('DEBUG: Atualizando documento existente para status processing');
     
-    // Atualizar o documento com status processing
     const { data: updatedDocument, error: updateError } = await supabase
       .from('documents')
       .update({
         status: 'processing',
         updated_at: new Date().toISOString()
       })
-      .eq('id', newDocument.id)
+      .eq('id', documentId)
+      .eq('user_id', userId)
       .select()
       .single();
 
@@ -161,56 +146,9 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
 
     console.log('DEBUG: Documento atualizado com sucesso:', updatedDocument);
 
-    // Nota: A inserção na tabela documents_to_be_verified será feita pelo n8n
-    console.log('DEBUG: Documento criado. A inserção em documents_to_be_verified será feita pelo n8n.');
-    
-    const realDocumentId = newDocument.id;
-
-    // Atualizar a sessão do Stripe com o documentId real
-    try {
-      const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-      if (!stripeSecretKey) {
-        throw new Error('STRIPE_SECRET_KEY not configured');
-      }
-      
-      const stripeInstance = new (await import('https://esm.sh/stripe@14.21.0')).default(stripeSecretKey, {
-        apiVersion: '2024-12-18.acacia',
-      });
-      
-      console.log('DEBUG: Tentando atualizar sessão:', session.id);
-      console.log('DEBUG: Metadados atuais:', session.metadata);
-      
-      // Usar a API correta do Stripe
-      const updatedSession = await stripeInstance.checkout.sessions.update(session.id, {
-        metadata: {
-          fileId: session.metadata.fileId,
-          userId: session.metadata.userId,
-          filename: session.metadata.filename,
-          pages: session.metadata.pages,
-          isCertified: session.metadata.isCertified,
-          isNotarized: session.metadata.isNotarized,
-          isBankStatement: session.metadata.isBankStatement,
-          totalPrice: session.metadata.totalPrice,
-          documentId: realDocumentId
-        }
-      });
-      
-      console.log('DEBUG: Sessão do Stripe atualizada com sucesso:', updatedSession.id);
-      console.log('DEBUG: Novos metadados:', updatedSession.metadata);
-    } catch (updateError) {
-      console.error('ERROR: Erro ao atualizar sessão do Stripe:', updateError);
-      console.error('ERROR: Detalhes do erro:', updateError.message);
-      console.error('ERROR: Stack trace:', updateError.stack);
-      
-      // Log do erro de atualização da sessão (não crítico)
-      console.log('WARNING: Não foi possível atualizar a sessão do Stripe, mas o documento foi criado com sucesso');
-      
-      // Não falhar se isso der erro
-    }
-
     // Log do pagamento bem-sucedido
-    console.log('SUCCESS: Pagamento processado com sucesso para documento:', realDocumentId);
-    console.log('SUCCESS: Documento criado no banco. Arquivo será enviado na página de sucesso.');
+    console.log('SUCCESS: Pagamento processado com sucesso para documento:', documentId);
+    console.log('SUCCESS: Documento atualizado para status processing.');
 
   } catch (error) {
     console.error('ERROR: Erro ao processar checkout session:', error);

@@ -69,7 +69,8 @@ Deno.serve(async (req: Request) => {
       filename,
       fileSize,
       fileType,
-      originalLanguage
+      originalLanguage,
+      documentId // Adicionar documentId
     } = await req.json();
 
     console.log('DEBUG: Dados recebidos:', {
@@ -140,6 +141,7 @@ Deno.serve(async (req: Request) => {
                 fileSize: fileSize?.toString() || '',
                 fileType: fileType || '',
                 originalLanguage: originalLanguage || '',
+                documentId: documentId || '', // Adicionar documentId aos metadados
               },
             },
             unit_amount: Math.round(totalPrice * 100), // Stripe uses cents
@@ -172,6 +174,7 @@ Deno.serve(async (req: Request) => {
         fileSize: fileSize?.toString() || '',
         fileType: fileType || '',
         originalLanguage: originalLanguage || '',
+        documentId: documentId || '', // Adicionar documentId aos metadados
       },
     });
 

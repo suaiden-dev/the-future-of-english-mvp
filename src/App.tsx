@@ -5,6 +5,7 @@ import { useFolders } from './hooks/useFolders';
 import { ToastProvider } from './contexts/ToastContext';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
+import { AdminLayout } from './components/AdminLayout';
 import { NotificationBell } from './components/NotificationBell';
 import { Footer } from './components/Footer';
 import { Mentorship } from './pages/Home';
@@ -21,7 +22,7 @@ import ResetPassword from './pages/ResetPassword';
 import { DocumentManager } from './pages/DocumentManager';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentCancelled } from './pages/PaymentCancelled';
-import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, LogOut, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User } from 'lucide-react';
+import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, LogOut, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, CheckCircle } from 'lucide-react';
 
 import { Page } from './types/Page';
 import { Database } from './lib/database.types';
@@ -160,7 +161,9 @@ function App() {
     // Verificar se está nas páginas do Dashboard ou outras páginas específicas
     const isDashboardArea = location.pathname.startsWith('/dashboard') || 
                            location.pathname.startsWith('/admin') || 
-                           location.pathname.startsWith('/authenticator');
+                           location.pathname.startsWith('/authenticator') ||
+                           location.pathname === '/user-management' ||
+                           location.pathname === '/authenticator-control';
     
     // Se está na área de Dashboard, mostrar apenas itens do Dashboard (botão Home é separado)
     if (isDashboardArea) {
@@ -177,6 +180,8 @@ function App() {
           { id: 'admin', label: 'Admin Dashboard', icon: Shield, page: 'admin' as Page },
           { id: 'user-management', label: 'User Management', icon: Users, page: 'user-management' as Page },
           { id: 'authenticator-control', label: 'Authenticator Control', icon: UserCheck, page: 'authenticator-control' as Page },
+          { id: 'admin-to-authenticate', label: 'To Authenticate', icon: FileText, page: 'admin#to-authenticate' as Page },
+          { id: 'admin-translated', label: 'Translated', icon: CheckCircle, page: 'admin#translated' as Page },
         ];
         return items;
       }
@@ -372,120 +377,41 @@ function App() {
             <DocumentManagerPage />
           ) : <Navigate to="/login" />} />
           
-          {/* Admin routes */}
+          {/* Admin routes with shared layout */}
           <Route path="/admin" element={user && user.role === 'admin' ? (
-            <div className="flex flex-col lg:flex-row">
-              {/* Mobile header */}
-              <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">TFE</span>
-                      </div>
-                      <h3 className="text-xl font-bold">The Future of English</h3>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setIsMobileMenuOpen(true)}
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                    aria-label="Open menu"
-                    title="Open menu"
-                  >
-                    <Menu className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-              
-              {/* Desktop sidebar */}
-              <div className="hidden lg:block">
-                <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
-              </div>
-              
-              {/* Main content */}
-              <main className="flex-1 lg:ml-0">
-                <AdminDashboard documents={allDocuments} onStatusUpdate={handleDocumentStatusUpdate} />
-              </main>
-            </div>
+            <AdminLayout 
+              user={user} 
+              onLogout={handleLogout} 
+              onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
+              navItems={getNavItems()}
+            >
+              <AdminDashboard documents={allDocuments} onStatusUpdate={handleDocumentStatusUpdate} />
+            </AdminLayout>
           ) : <Navigate to="/login" />} />
           
           <Route path="/user-management" element={user && user.role === 'admin' ? (
-            <div className="flex flex-col lg:flex-row">
-              {/* Mobile header */}
-              <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="flex justify-center">
-                      <div className="w-8 h-8 bg-gradient-to-r from-tfe-red-950 to-tfe-blue-950 rounded-lg flex items-center justify-center text-white font-bold text-xs">
-                        TFE
-                      </div>
-                    </div>
-                    <span className="text-lg font-bold text-gray-900">User Management</span>
-                  </div>
-                  <button
-                    onClick={() => setIsMobileMenuOpen(true)}
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                    aria-label="Open menu"
-                    title="Open menu"
-                  >
-                    <Menu className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-              
-              {/* Desktop sidebar */}
-              <div className="hidden lg:block">
-                <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
-              </div>
-              
-              {/* Main content */}
-              <main className="flex-1 lg:ml-0">
-                <UserManagement />
-              </main>
-            </div>
+            <AdminLayout 
+              user={user} 
+              onLogout={handleLogout} 
+              onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
+              navItems={getNavItems()}
+              title="User Management"
+            >
+              <UserManagement />
+            </AdminLayout>
           ) : <Navigate to="/login" />} />
           
           <Route path="/authenticator-control" element={user && user.role === 'admin' ? (
-            <div className="flex flex-col lg:flex-row">
-              {/* Mobile header */}
-              <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex justify-center">
-                      <div className="w-8 h-8 bg-gradient-to-r from-tfe-red-950 to-tfe-blue-950 rounded-lg flex items-center justify-center text-white font-bold text-xs">
-                        TFE
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm text-gray-900">
-                        The Future of English
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        Professional Translation
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setIsMobileMenuOpen(true)}
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                    aria-label="Open menu"
-                    title="Open menu"
-                  >
-                    <Menu className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-              
-              {/* Desktop sidebar */}
-              <div className="hidden lg:block">
-                <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
-              </div>
-              
-              {/* Main content */}
-              <main className="flex-1 lg:ml-0">
-                <AuthenticatorControl />
-              </main>
-            </div>
+            <AdminLayout 
+              user={user} 
+              onLogout={handleLogout} 
+              onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
+              navItems={getNavItems()}
+              title="Authenticator Control"
+              subtitle="Professional Translation"
+            >
+              <AuthenticatorControl />
+            </AdminLayout>
           ) : <Navigate to="/login" />} />
           
           {/* Legacy routes for backward compatibility */}

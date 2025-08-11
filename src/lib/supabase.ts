@@ -283,26 +283,26 @@ export const db = {
     return data;
   },
 
-  // Função para gerar URL público (não expira)
+  // Função para gerar URL pública permanente (não expira)
   generatePublicUrl: async (filePath: string) => {
     try {
-      const { data } = supabase.storage
+      const { data: { publicUrl } } = supabase.storage
         .from('documents')
         .getPublicUrl(filePath);
       
-      return data.publicUrl;
+      return publicUrl;
     } catch (error) {
-      console.error('Erro ao gerar URL público:', error);
+      console.error('Erro ao gerar URL pública:', error);
       return null;
     }
   },
 
-  // Função para gerar URL pré-assinado com tempo maior (7 dias)
+  // Função para gerar URL pré-assinado com tempo maior (30 dias)
   generateSignedUrl: async (filePath: string) => {
     try {
       const { data, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(filePath, 604800); // 7 dias de validade
+        .createSignedUrl(filePath, 2592000); // 30 dias de validade
       
       if (error) {
         console.error('Erro ao gerar URL:', error);
@@ -312,6 +312,37 @@ export const db = {
       return data.signedUrl;
     } catch (error) {
       console.error('Erro ao gerar URL do arquivo:', error);
+      return null;
+    }
+  },
+
+  // Função para verificar se arquivo está acessível
+  checkFileAccessibility: async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .list(filePath.split('/').slice(0, -1).join('/'));
+      
+      if (error) return false;
+      
+      const fileName = filePath.split('/').pop();
+      return data?.some(file => file.name === fileName) || false;
+    } catch (error) {
+      console.error('Erro ao verificar acessibilidade:', error);
+      return false;
+    }
+  },
+
+  // Função para regenerar URL se necessário
+  regenerateFileUrl: async (filePath: string, useSignedUrl: boolean = false) => {
+    try {
+      if (useSignedUrl) {
+        return await db.generateSignedUrl(filePath);
+      } else {
+        return await db.generatePublicUrl(filePath);
+      }
+    } catch (error) {
+      console.error('Erro ao regenerar URL:', error);
       return null;
     }
   }
