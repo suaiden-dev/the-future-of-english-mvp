@@ -134,16 +134,33 @@ export function PaymentSuccess() {
           publicUrl = storagePublicUrl;
           console.log('DEBUG: ✅ Arquivo encontrado no Storage (upload direto):', publicUrl);
           
+          // Obter informações do arquivo do Storage
+          const { data: fileInfo } = await supabase.storage
+            .from('documents')
+            .list('', {
+              search: fileId
+            });
+          
+          let fileSize = 0;
+          if (fileInfo && fileInfo.length > 0) {
+            fileSize = fileInfo[0].metadata?.size || 0;
+            console.log('DEBUG: Tamanho do arquivo no Storage:', fileSize);
+          }
+          
           // Criar objeto simulado para compatibilidade
           storedFile = {
-            file: { name: filename, type: 'application/pdf', size: 0 },
+            file: { 
+              name: filename, 
+              type: 'application/pdf', 
+              size: fileSize 
+            },
             metadata: {
               pageCount: parseInt(sessionData.metadata.pages),
               documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado'
             }
           };
         
-        console.log('DEBUG: ✅ USANDO ARQUIVO DO STORAGE - SEM UPLOAD DUPLICADO');
+          console.log('DEBUG: ✅ USANDO ARQUIVO DO STORAGE - SEM UPLOAD DUPLICADO');
         } catch (storageError) {
           console.log('DEBUG: fileId não é um filePath no Storage, tentando IndexedDB');
           
@@ -308,14 +325,20 @@ export function PaymentSuccess() {
         filename: filename,
         url: finalUrl,
         mimetype: 'application/pdf',
-        size: 0,
+        size: storedFile?.file?.size || 0,
         user_id: userId,
+        pages: parseInt(sessionData.metadata.pages),
+        document_type: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado',
+        total_cost: sessionData.metadata.totalPrice,
+        source_language: 'Portuguese',
+        target_language: 'English',
+        is_bank_statement: sessionData.metadata.isBankStatement === 'true',
+        document_id: finalDocumentId,
+        // Campos adicionais para compatibilidade
         paginas: parseInt(sessionData.metadata.pages),
         tipo_trad: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado',
         valor: sessionData.metadata.totalPrice,
-        idioma_raiz: 'Portuguese', // Assumindo português
-        is_bank_statement: sessionData.metadata.isBankStatement === 'true',
-        document_id: finalDocumentId
+        idioma_raiz: 'Portuguese'
       };
 
       console.log('DEBUG: Payload para send-translation-webhook:', webhookPayload);

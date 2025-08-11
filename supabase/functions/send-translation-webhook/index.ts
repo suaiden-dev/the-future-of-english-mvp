@@ -100,7 +100,25 @@ Deno.serve(async (req: Request) => {
     }
 
     // Recebe o evento do Supabase Storage ou do frontend
-    const { filename, url, mimetype, size, record, user_id, paginas, tipo_trad, valor, idioma_raiz, is_bank_statement, client_name } = parsedBody;
+    const { 
+      filename, 
+      url, 
+      mimetype, 
+      size, 
+      record, 
+      user_id, 
+      pages,
+      paginas,
+      document_type,
+      tipo_trad, 
+      total_cost,
+      valor, 
+      source_language,
+      target_language,
+      idioma_raiz, 
+      is_bank_statement, 
+      client_name 
+    } = parsedBody;
     let payload;
 
     if (record) {
@@ -130,10 +148,11 @@ Deno.serve(async (req: Request) => {
         mimetype: record.mimetype || record.metadata?.mimetype || "application/octet-stream",
         size: record.size || record.metadata?.size || null,
         user_id: record.user_id || record.metadata?.user_id || null,
-        paginas: record.paginas || paginas || null,
-        tipo_trad: record.tipo_trad || tipo_trad || null,
-        valor: record.valor || valor || null,
-        idioma_raiz: record.idioma_raiz || idioma_raiz || null,
+        pages: record.pages || pages || paginas || null,
+        document_type: record.document_type || document_type || record.tipo_trad || tipo_trad || null,
+        total_cost: record.total_cost || total_cost || record.valor || valor || null,
+        source_language: record.source_language || source_language || record.idioma_raiz || idioma_raiz || null,
+        target_language: record.target_language || target_language || 'english',
         is_bank_statement: record.is_bank_statement || is_bank_statement || false,
         client_name: record.client_name || client_name || null,
         // Adicionar informações sobre o tipo de arquivo
@@ -182,7 +201,11 @@ Deno.serve(async (req: Request) => {
         mimetype, 
         size, 
         user_id: user_id || null, 
-        paginas, tipo_trad, valor, idioma_raiz, 
+        pages: pages || paginas || null,
+        document_type: document_type || tipo_trad || null,
+        total_cost: total_cost || valor || null,
+        source_language: source_language || idioma_raiz || null,
+        target_language: target_language || 'english',
         is_bank_statement: is_bank_statement || false,
         client_name: client_name || null,
         // Adicionar informações sobre o tipo de arquivo
@@ -500,17 +523,17 @@ Deno.serve(async (req: Request) => {
             const insertData = {
               user_id: user_id,
               filename: filename,
-              pages: docData.pages || paginas || 1,
+              pages: docData.pages || pages || paginas || 1,
               status: 'pending',
-              total_cost: docData.total_cost || parseFloat(valor) || 0,
+              total_cost: docData.total_cost || total_cost || parseFloat(valor) || 0,
               // Usar o valor validado pelo N8N se disponível, senão usar o valor do cliente
               is_bank_statement: (() => {
                 const finalValue = is_bank_statement !== undefined ? is_bank_statement : (docData.is_bank_statement || false);
                 console.log("Final is_bank_statement value being used:", finalValue);
                 return finalValue;
               })(),
-              source_language: docData.idioma_raiz?.toLowerCase() || 'portuguese',
-              target_language: 'english',
+              source_language: docData.source_language || source_language || docData.idioma_raiz?.toLowerCase() || 'portuguese',
+              target_language: target_language || 'english',
               translation_status: 'pending',
               file_id: docData.id,
               verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`,

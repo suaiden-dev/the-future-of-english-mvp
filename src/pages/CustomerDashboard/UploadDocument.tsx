@@ -113,6 +113,32 @@ export default function UploadDocument() {
         throw new Error('Nenhum arquivo selecionado');
       }
 
+      // CRIAR DOCUMENTO NO BANCO ANTES DO PAGAMENTO
+      console.log('DEBUG: Criando documento no banco antes do pagamento');
+      const { data: newDocument, error: createError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: user?.id,
+          filename: selectedFile.name,
+          pages: pages,
+          status: 'pending',
+          total_cost: calcularValor(pages, tipoTrad, isExtrato),
+          verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+          is_authenticated: true,
+          upload_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('ERROR: Erro ao criar documento no banco:', createError);
+        throw new Error('Erro ao criar documento no banco de dados');
+      }
+
+      console.log('DEBUG: Documento criado no banco:', newDocument.id);
+
       const metadata = {
         documentType: tipoTrad,
         certification: tipoTrad === 'Certificado',
@@ -136,7 +162,14 @@ export default function UploadDocument() {
         userEmail: user?.email, // Adicionar email do usuário
         filename: selectedFile?.name
       };
-      console.log('Payload enviado para checkout:', payload);
+
+      // Adicionar o documentId ao payload
+      const payloadWithDocumentId = {
+        ...payload,
+        documentId: newDocument.id
+      };
+
+      console.log('Payload enviado para checkout:', payloadWithDocumentId);
 
       const response = await fetch('https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/create-checkout-session', {
         method: 'POST',
@@ -144,7 +177,7 @@ export default function UploadDocument() {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cG9ncXdod3NjYmRobm9xc212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTYxMzksImV4cCI6MjA2ODE3MjEzOX0.CsbI1OiT2i3EL31kvexrstIsaC48MD4fEHg6BSE6LZ4'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payloadWithDocumentId)
       });
 
       console.log('DEBUG: Resposta da Edge Function:', response.status);
@@ -214,7 +247,8 @@ export default function UploadDocument() {
             userId: user.id,
             userEmail: user.email, // Adicionar email do usuário
             filename: selectedFile?.name,
-            isMobile: true // Mobile
+            isMobile: true, // Mobile
+            documentId: newDocument.id // Adicionar documentId
           };
           console.log('Payload mobile com upload direto enviado para checkout:', payload);
           
