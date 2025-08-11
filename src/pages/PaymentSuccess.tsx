@@ -14,9 +14,6 @@ export function PaymentSuccess() {
   const [success, setSuccess] = useState(false);
   const hasProcessedRef = useRef(false);
 
-  // Detecta se é mobile (iOS/Android)
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
     if (!sessionId) {
@@ -59,7 +56,7 @@ export function PaymentSuccess() {
       const sessionData = await response.json();
       console.log('DEBUG: Dados da sessão:', sessionData);
 
-      const { fileId, userId, filename, documentId } = sessionData.metadata;
+      const { fileId, userId, filename, documentId, isMobile: sessionIsMobile } = sessionData.metadata;
 
       let storedFile = null;
       let filePath = null;
@@ -118,27 +115,32 @@ export function PaymentSuccess() {
       };
 
       // Lógica unificada para recuperar e fazer upload do arquivo
-      if (isMobile) {
-        // Mobile: Verificar se arquivo está no IndexedDB ou no Storage
-        console.log('DEBUG: Mobile detectado, verificando localização do arquivo');
+      if (sessionIsMobile === 'true') {
+        // Mobile: Verificar se arquivo está no Storage ou fazer upload
+        console.log('DEBUG: Mobile detectado via metadados da sessão');
         console.log('DEBUG: fileId recebido:', fileId);
         console.log('DEBUG: userId recebido:', userId);
+        
+        // Verificar se fileId é um filePath válido no Storage (upload direto do DocumentUploadModal)
+        if (fileId && fileId.includes('/') && !fileId.startsWith('file_')) {
+          // É um filePath válido do Storage
+          console.log('DEBUG: ✅ fileId é um filePath válido do Storage:', fileId);
           
-        // Verificar se fileId é na verdade um filePath no Storage (upload direto do DocumentUploadModal)
-        try {
-          console.log('DEBUG: Verificando se fileId é um filePath no Storage');
+          // Obter URL pública do arquivo
           const { data: { publicUrl: storagePublicUrl } } = supabase.storage
             .from('documents')
             .getPublicUrl(fileId);
           
           publicUrl = storagePublicUrl;
+          filePath = fileId;
+          
           console.log('DEBUG: ✅ Arquivo encontrado no Storage (upload direto):', publicUrl);
           
           // Obter informações do arquivo do Storage
           const { data: fileInfo } = await supabase.storage
             .from('documents')
             .list('', {
-              search: fileId
+              search: fileId.split('/').pop() // Buscar pelo nome do arquivo
             });
           
           let fileSize = 0;
@@ -161,10 +163,10 @@ export function PaymentSuccess() {
           };
         
           console.log('DEBUG: ✅ USANDO ARQUIVO DO STORAGE - SEM UPLOAD DUPLICADO');
-        } catch (storageError) {
-          console.log('DEBUG: fileId não é um filePath no Storage, tentando IndexedDB');
+        } else {
+          // Não é um filePath válido, tentar IndexedDB como fallback
+          console.log('DEBUG: fileId não é um filePath válido do Storage, tentando IndexedDB');
           
-          // Tentar recuperar do IndexedDB como fallback
           try {
             console.log('DEBUG: Tentando recuperar do IndexedDB:', fileId);
             storedFile = await fileStorage.getFile(fileId);
@@ -334,11 +336,11 @@ export function PaymentSuccess() {
         target_language: 'English',
         is_bank_statement: sessionData.metadata.isBankStatement === 'true',
         document_id: finalDocumentId,
-        // Campos adicionais para compatibilidade
-        paginas: parseInt(sessionData.metadata.pages),
-        tipo_trad: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado',
-        valor: sessionData.metadata.totalPrice,
-        idioma_raiz: 'Portuguese'
+        // Campos padronizados para compatibilidade com n8n
+        isPdf: true,
+        fileExtension: 'pdf',
+        tableName: 'profiles',
+        schema: 'public'
       };
 
       console.log('DEBUG: Payload para send-translation-webhook:', webhookPayload);
@@ -365,7 +367,7 @@ export function PaymentSuccess() {
       }
 
       // Remover arquivo do IndexedDB (apenas desktop usa IndexedDB)
-      if (!isMobile && fileId) {
+      if (sessionIsMobile !== 'true' && fileId) {
         try {
           await fileStorage.deleteFile(fileId);
           console.log('DEBUG: Arquivo removido do IndexedDB');

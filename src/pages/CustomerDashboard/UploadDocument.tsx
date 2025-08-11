@@ -108,68 +108,42 @@ export default function UploadDocument() {
     try {
       console.log('DEBUG: Iniciando pagamento direto com Stripe');
       
-      // Salvar arquivo no IndexedDB antes do pagamento
+      // Verificar se o arquivo foi selecionado
       if (!selectedFile) {
         throw new Error('Nenhum arquivo selecionado');
       }
 
-      // CRIAR DOCUMENTO NO BANCO ANTES DO PAGAMENTO
-      console.log('DEBUG: Criando documento no banco antes do pagamento');
-      const { data: newDocument, error: createError } = await supabase
-        .from('documents')
-        .insert({
-          user_id: user?.id,
-          filename: selectedFile.name,
-          pages: pages,
-          status: 'pending',
-          total_cost: calcularValor(pages, tipoTrad, isExtrato),
-          verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-          is_authenticated: true,
-          upload_date: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('ERROR: Erro ao criar documento no banco:', createError);
-        throw new Error('Erro ao criar documento no banco de dados');
+      // Verificar se o documentId foi fornecido
+      if (!customPayload?.documentId) {
+        throw new Error('Document ID não fornecido');
       }
 
-      console.log('DEBUG: Documento criado no banco:', newDocument.id);
-
-      const metadata = {
-        documentType: tipoTrad,
-        certification: tipoTrad === 'Certificado',
-        notarization: tipoTrad === 'Notorizado',
-        pageCount: pages,
-        isBankStatement: isExtrato,
-        originalLanguage: idiomaRaiz,
-        userId: user?.id
-      };
-
-      console.log('DEBUG: Salvando arquivo no IndexedDB com metadata:', metadata);
+      console.log('DEBUG: Usando documentId fornecido:', customPayload.documentId);
       
-      // Usar payload customizado se fornecido, senão criar padrão
-      const payload = customPayload || {
+      // Criar payload completo igual ao DocumentUploadModal
+      const payload = {
         pages,
         isCertified: tipoTrad === 'Certificado',
         isNotarized: tipoTrad === 'Notorizado',
         isBankStatement: isExtrato,
-        fileId, // Usar o ID do arquivo no IndexedDB
+        fileId: fileId || '', // Usar o ID do arquivo no IndexedDB
         userId: user?.id,
         userEmail: user?.email, // Adicionar email do usuário
-        filename: selectedFile?.name
+        filename: selectedFile?.name,
+        documentId: customPayload.documentId // Adicionar o documentId
       };
 
-      // Adicionar o documentId ao payload
-      const payloadWithDocumentId = {
-        ...payload,
-        documentId: newDocument.id
-      };
+      console.log('DEBUG: Payload completo criado:', payload);
+      console.log('DEBUG: pages:', pages);
+      console.log('DEBUG: tipoTrad:', tipoTrad);
+      console.log('DEBUG: isExtrato:', isExtrato);
+      console.log('DEBUG: fileId:', fileId);
+      console.log('DEBUG: userId:', user?.id);
+      console.log('DEBUG: userEmail:', user?.email);
+      console.log('DEBUG: filename:', selectedFile?.name);
+      console.log('DEBUG: documentId:', customPayload.documentId);
 
-      console.log('Payload enviado para checkout:', payloadWithDocumentId);
+      console.log('Payload enviado para checkout:', payload);
 
       const response = await fetch('https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/create-checkout-session', {
         method: 'POST',
@@ -177,7 +151,7 @@ export default function UploadDocument() {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cG9ncXdod3NjYmRobm9xc212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTYxMzksImV4cCI6MjA2ODE3MjEzOX0.CsbI1OiT2i3EL31kvexrstIsaC48MD4fEHg6BSE6LZ4'
         },
-        body: JSON.stringify(payloadWithDocumentId)
+        body: JSON.stringify(payload)
       });
 
       console.log('DEBUG: Resposta da Edge Function:', response.status);
@@ -212,6 +186,32 @@ export default function UploadDocument() {
     setIsUploading(true);
     
     try {
+      // CRIAR DOCUMENTO NO BANCO ANTES DO PAGAMENTO
+      console.log('DEBUG: Criando documento no banco antes do pagamento');
+      const { data: newDocument, error: createError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: user.id,
+          filename: selectedFile.name,
+          pages: pages,
+          status: 'pending',
+          total_cost: calcularValor(pages, tipoTrad, isExtrato),
+          verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+          is_authenticated: true,
+          upload_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('ERROR: Erro ao criar documento no banco:', createError);
+        throw new Error('Erro ao criar documento no banco de dados');
+      }
+
+      console.log('DEBUG: Documento criado no banco:', newDocument.id);
+
       if (isMobile) {
         // Mobile: Tentar usar IndexedDB primeiro, se falhar usar upload direto
         try {
@@ -227,7 +227,7 @@ export default function UploadDocument() {
           });
           
           console.log('DEBUG: Mobile - IndexedDB funcionou, usando fileId:', fileId);
-          await handleDirectPayment(fileId);
+          await handleDirectPayment(fileId, { documentId: newDocument.id });
         } catch (indexedDBError) {
           console.log('DEBUG: Mobile - IndexedDB falhou, usando upload direto:', indexedDBError);
           
@@ -258,20 +258,20 @@ export default function UploadDocument() {
       } else {
         // Desktop: Salvar arquivo no IndexedDB primeiro
         console.log('DEBUG: Desktop - salvando arquivo no IndexedDB');
-      const fileId = await fileStorage.storeFile(selectedFile, {
-        documentType: tipoTrad,
-        certification: tipoTrad === 'Certificado',
-        notarization: tipoTrad === 'Notorizado',
-        pageCount: pages,
-        isBankStatement: isExtrato,
-        originalLanguage: idiomaRaiz,
-        userId: user.id
-      });
-      
-      console.log('DEBUG: Arquivo salvo no IndexedDB com ID:', fileId);
-      
-      // Ir direto para o pagamento com Stripe
-      await handleDirectPayment(fileId);
+        const fileId = await fileStorage.storeFile(selectedFile, {
+          documentType: tipoTrad,
+          certification: tipoTrad === 'Certificado',
+          notarization: tipoTrad === 'Notorizado',
+          pageCount: pages,
+          isBankStatement: isExtrato,
+          originalLanguage: idiomaRaiz,
+          userId: user.id
+        });
+        
+        console.log('DEBUG: Arquivo salvo no IndexedDB com ID:', fileId);
+        
+        // Ir direto para o pagamento com Stripe
+        await handleDirectPayment(fileId, { documentId: newDocument.id });
       }
       
     } catch (err: any) {
