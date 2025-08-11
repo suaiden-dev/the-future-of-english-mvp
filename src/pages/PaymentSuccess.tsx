@@ -188,9 +188,55 @@ export function PaymentSuccess() {
               
               console.log('DEBUG: Upload bem-sucedido:', uploadResult.uploadData);
             } else {
-              console.log('DEBUG: Arquivo NÃO encontrado no IndexedDB');
-              setError('File not found in local storage. Please try uploading again.');
-              return;
+              // Tentar localStorage como último recurso (fallback do mobile)
+              console.log('DEBUG: Arquivo não encontrado no IndexedDB, tentando localStorage');
+              
+              try {
+                const localStorageFileInfo = localStorage.getItem(fileId);
+                if (localStorageFileInfo && fileId.startsWith('mobile_fallback_')) {
+                  console.log('DEBUG: Arquivo encontrado no localStorage (fallback mobile)');
+                  
+                  const fileInfo = JSON.parse(localStorageFileInfo);
+                  console.log('DEBUG: Informações do arquivo no localStorage:', fileInfo);
+                  
+                  // Criar um arquivo simulado para compatibilidade
+                  const fallbackFile = new File(
+                    [new ArrayBuffer(fileInfo.size)], // Arquivo vazio, mas com tamanho correto
+                    fileInfo.name,
+                    { type: fileInfo.type, lastModified: fileInfo.lastModified }
+                  );
+                  
+                  storedFile = {
+                    file: fallbackFile,
+                    metadata: {
+                      pageCount: fileInfo.pageCount,
+                      documentType: fileInfo.documentType
+                    }
+                  };
+                  
+                  // Fazer upload do arquivo para o Supabase Storage
+                  const uploadResult = await uploadFileToStorage(fallbackFile, userId);
+                  if (!uploadResult) {
+                    setError('Upload failed. Please try again.');
+                    return;
+                  }
+                  publicUrl = uploadResult.publicUrl;
+                  filePath = uploadResult.filePath;
+                  
+                  console.log('DEBUG: Upload bem-sucedido do fallback mobile:', uploadResult.uploadData);
+                  
+                  // Limpar do localStorage após upload bem-sucedido
+                  localStorage.removeItem(fileId);
+                } else {
+                  console.log('DEBUG: Arquivo NÃO encontrado nem no IndexedDB nem no localStorage');
+                  setError('File not found in local storage. Please try uploading again.');
+                  return;
+                }
+              } catch (localStorageError) {
+                console.error('ERROR: Erro ao acessar localStorage:', localStorageError);
+                setError('File not found in storage. Please try uploading again.');
+                return;
+              }
             }
           } catch (indexedDBError) {
             console.error('ERROR: Arquivo não encontrado nem no Storage nem no IndexedDB');

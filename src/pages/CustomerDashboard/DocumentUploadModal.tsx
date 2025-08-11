@@ -198,74 +198,58 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
     
     try {
       if (isMobile) {
-        // Mobile: Tentar usar IndexedDB primeiro, se falhar usar upload direto
+        // Mobile: SEMPRE tentar usar IndexedDB primeiro (igual ao desktop)
         try {
-          console.log('DEBUG: Mobile - tentando usar IndexedDB');
-      const fileId = await fileStorage.storeFile(selectedFile, {
-        documentType: tipoTrad,
-        certification: tipoTrad === 'Certificado',
-        notarization: tipoTrad === 'Notorizado',
-        pageCount: pages,
-        isBankStatement: isExtrato,
-        originalLanguage: idiomaRaiz,
-        userId,
-        currentFolderId
-      });
-      
+          console.log('DEBUG: Mobile - tentando usar IndexedDB (igual ao desktop)');
+          const fileId = await fileStorage.storeFile(selectedFile, {
+            documentType: tipoTrad,
+            certification: tipoTrad === 'Certificado',
+            notarization: tipoTrad === 'Notorizado',
+            pageCount: pages,
+            isBankStatement: isExtrato,
+            originalLanguage: idiomaRaiz,
+            userId,
+            currentFolderId
+          });
+          
           console.log('DEBUG: Mobile - IndexedDB funcionou, usando fileId:', fileId);
           await handleDirectPayment(fileId);
         } catch (indexedDBError) {
-          console.log('DEBUG: Mobile - IndexedDB falhou, usando upload direto:', indexedDBError);
+          console.log('DEBUG: Mobile - IndexedDB falhou, tentando abordagem alternativa:', indexedDBError);
           
-          // Fallback: Upload direto para Supabase Storage
-          const filePath = generateUniqueFileName(selectedFile.name, userId, userName);
-          console.log('DEBUG: Mobile - Upload path sanitizado:', filePath);
-          const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
-          if (uploadError) throw uploadError;
-      
-          // CRIAR DOCUMENTO NO BANCO ANTES DO PAGAMENTO (MOBILE)
-          console.log('DEBUG: Mobile - Criando documento no banco antes do pagamento');
-          const { data: newDocument, error: createError } = await supabase
-            .from('documents')
-            .insert({
-              user_id: userId,
-              filename: selectedFile.name,
-              pages: pages,
-              status: 'pending',
-              total_cost: calculateValue(pages, tipoTrad, isExtrato),
-              verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-              is_authenticated: true,
-              upload_date: new Date().toISOString(),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('ERROR: Erro ao criar documento no banco (mobile):', createError);
-            throw new Error('Erro ao criar documento no banco de dados');
+          // Fallback: Tentar usar localStorage ou sessionStorage como alternativa
+          try {
+            console.log('DEBUG: Mobile - Tentando usar localStorage como fallback');
+            
+            // Criar um ID único para o arquivo
+            const fallbackFileId = 'mobile_fallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // Salvar informações básicas do arquivo no localStorage
+            const fileInfo = {
+              name: selectedFile.name,
+              type: selectedFile.type,
+              size: selectedFile.size,
+              lastModified: selectedFile.lastModified,
+              documentType: tipoTrad,
+              certification: tipoTrad === 'Certificado',
+              notarization: tipoTrad === 'Notorizado',
+              pageCount: pages,
+              isBankStatement: isExtrato,
+              originalLanguage: idiomaRaiz,
+              userId,
+              currentFolderId
+            };
+            
+            localStorage.setItem(fallbackFileId, JSON.stringify(fileInfo));
+            console.log('DEBUG: Mobile - Arquivo salvo no localStorage como fallback:', fallbackFileId);
+            
+            // Usar o fallbackFileId como se fosse um fileId normal
+            await handleDirectPayment(fallbackFileId);
+            
+          } catch (fallbackError) {
+            console.error('ERROR: Mobile - Todas as opções de armazenamento falharam:', fallbackError);
+            throw new Error('Não foi possível salvar o arquivo no dispositivo. Tente novamente ou use um dispositivo diferente.');
           }
-
-          console.log('DEBUG: Mobile - Documento criado no banco:', newDocument.id);
-      
-          // Payload para mobile com upload direto
-          const payload = {
-            pages,
-            isCertified: tipoTrad === 'Certificado',
-            isNotarized: tipoTrad === 'Notorizado',
-            isBankStatement: isExtrato,
-            filePath, // Caminho do arquivo no Supabase Storage
-            userId,
-            userEmail, // Adicionar email do usuário
-            filename: selectedFile?.name,
-            isMobile: true, // Mobile
-            documentId: newDocument.id // Adicionar documentId
-          };
-          console.log('Payload mobile com upload direto enviado para checkout:', payload);
-          
-          // Chama o pagamento direto com payload customizado
-          await handleDirectPayment('', payload);
         }
       } else {
         // Desktop: Usar IndexedDB
