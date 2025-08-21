@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { StatsCards } from './StatsCards';
 import { PaymentsTable } from './PaymentsTable';
+import { PaymentStatsCards } from './PaymentStatsCards';
+import { FinanceCharts } from './FinanceCharts';
 import AuthenticatorDocumentsTable from './AuthenticatorDocumentsTable';
 import { ReportsTable } from './ReportsTable';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
+import { DateRangeFilter, DateRange } from '../../components/DateRangeFilter';
 import { Document } from '../../App';
 import { Home, CreditCard, FileText } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -18,6 +21,11 @@ export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboard
   const location = useLocation();
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'authenticator-docs' | 'reports'>('overview');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: null,
+    endDate: null,
+    preset: 'all'
+  });
 
   // Detectar se o usuário veio de um link específico da sidebar
   useEffect(() => {
@@ -26,6 +34,8 @@ export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboard
       setActiveTab('payments');
     } else if (hash === '#reports') {
       setActiveTab('reports');
+    } else if (hash === '#authenticator-docs') {
+      setActiveTab('authenticator-docs');
     } else {
       // Se não há hash específico, vai para Overview (padrão)
       setActiveTab('overview');
@@ -58,7 +68,7 @@ export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboard
   ];
 
   return (
-    <div className="bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <div className="p-6 w-full max-w-none">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Finance Dashboard</h1>
@@ -88,28 +98,32 @@ export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboard
         <div className="w-full">
           {activeTab === 'overview' && (
             <div className="space-y-6 w-full">
-              <StatsCards documents={documents} />
+              <StatsCards documents={documents} dateRange={dateRange} />
+              <FinanceCharts dateRange={dateRange} />
               <PaymentsTable 
                 documents={documents}
                 onStatusUpdate={onStatusUpdate}
                 onViewDocument={handleViewDocument}
+                dateRange={dateRange}
               />
             </div>
           )}
 
           {activeTab === 'payments' && (
             <div className="space-y-6 w-full">
+              <PaymentStatsCards dateRange={dateRange} />
               <PaymentsTable 
                 documents={documents}
                 onStatusUpdate={onStatusUpdate}
                 onViewDocument={handleViewDocument}
+                dateRange={dateRange}
               />
             </div>
           )}
 
           {activeTab === 'authenticator-docs' && (
             <div className="space-y-6 w-full">
-              <AuthenticatorDocumentsTable />
+              <AuthenticatorDocumentsTable dateRange={dateRange} />
             </div>
           )}
 

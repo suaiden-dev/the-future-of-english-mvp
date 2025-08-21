@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { FileText, CheckCircle, Clock, DollarSign, TrendingUp, Users, AlertCircle, CreditCard, FileBarChart, UserCheck, UserX } from 'lucide-react';
 import { Document } from '../../App';
 import { supabase } from '../../lib/supabase';
+import { DateRange } from '../../components/DateRangeFilter';
 
 interface StatsCardsProps {
   documents: Document[];
+  dateRange?: DateRange;
 }
 
-export function StatsCards({ documents }: StatsCardsProps) {
+export function StatsCards({ documents, dateRange }: StatsCardsProps) {
   const [paymentStats, setPaymentStats] = useState<any>(null);
   const [translationStats, setTranslationStats] = useState<any>(null);
   const [enhancedStats, setEnhancedStats] = useState<any>(null);
@@ -16,59 +18,95 @@ export function StatsCards({ documents }: StatsCardsProps) {
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [dateRange]);
 
   const loadStats = async () => {
     try {
       setLoading(true);
       
-      console.log('🔍 Carregando estatísticas...');
+      console.log('🔍 Carregando estatísticas...', { dateRange });
       
-      // Carregar estatísticas de pagamentos
+      // Preparar parâmetros de data para as funções RPC
+      const startDateParam = dateRange?.startDate ? dateRange.startDate.toISOString() : null;
+      const endDateParam = dateRange?.endDate ? dateRange.endDate.toISOString() : null;
+      
+      // Carregar estatísticas de pagamentos com filtro de data
       const { data: paymentData, error: paymentError } = await supabase
-        .rpc('get_payment_stats');
+        .rpc('get_payment_stats_filtered', {
+          start_date: startDateParam,
+          end_date: endDateParam
+        });
       
       if (paymentError) {
-        console.error('❌ Erro ao carregar estatísticas de pagamentos:', paymentError);
-        throw paymentError;
+        console.error('❌ Erro ao carregar estatísticas de pagamentos (tentando função original):', paymentError);
+        // Fallback para função original sem filtro
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .rpc('get_payment_stats');
+        if (!fallbackError) {
+          setPaymentStats(fallbackData[0] || null);
+        }
+      } else {
+        console.log('💰 Estatísticas de pagamentos (filtradas):', paymentData);
+        setPaymentStats(paymentData[0] || null);
       }
-      
-      console.log('💰 Estatísticas de pagamentos:', paymentData);
-      setPaymentStats(paymentData[0] || null);
 
-      // Carregar estatísticas de traduções (mantido para compatibilidade)
+      // Carregar estatísticas de traduções com filtro de data
       const { data: translationData, error: translationError } = await supabase
-        .rpc('get_translation_stats');
+        .rpc('get_translation_stats_filtered', {
+          start_date: startDateParam,
+          end_date: endDateParam
+        });
       
       if (translationError) {
-        console.error('❌ Erro ao carregar estatísticas de traduções:', translationError);
-        throw translationError;
+        console.error('❌ Erro ao carregar estatísticas de traduções (tentando função original):', translationError);
+        // Fallback para função original
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .rpc('get_translation_stats');
+        if (!fallbackError) {
+          setTranslationStats(fallbackData[0] || null);
+        }
+      } else {
+        console.log('📊 Estatísticas de traduções (filtradas):', translationData);
+        setTranslationStats(translationData[0] || null);
       }
-      
-      console.log('📊 Estatísticas de traduções:', translationData);
-      setTranslationStats(translationData[0] || null);
 
-      // Carregar estatísticas aprimoradas com separação por tipo de usuário
+      // Carregar estatísticas aprimoradas com separação por tipo de usuário e filtro de data
       const { data: enhancedData, error: enhancedError } = await supabase
-        .rpc('get_enhanced_translation_stats');
+        .rpc('get_enhanced_translation_stats_filtered', {
+          start_date: startDateParam,
+          end_date: endDateParam
+        });
       
       if (enhancedError) {
-        console.error('❌ Erro ao carregar estatísticas aprimoradas:', enhancedError);
-        // Não falhar se a função nova não existir ainda
+        console.error('❌ Erro ao carregar estatísticas aprimoradas (tentando função original):', enhancedError);
+        // Fallback para função original
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .rpc('get_enhanced_translation_stats');
+        if (!fallbackError) {
+          setEnhancedStats(fallbackData[0] || null);
+        }
       } else {
-        console.log('🚀 Estatísticas aprimoradas:', enhancedData);
+        console.log('🚀 Estatísticas aprimoradas (filtradas):', enhancedData);
         setEnhancedStats(enhancedData[0] || null);
       }
 
-      // Carregar breakdown por tipo de usuário
+      // Carregar breakdown por tipo de usuário com filtro de data
       const { data: breakdownData, error: breakdownError } = await supabase
-        .rpc('get_user_type_breakdown');
+        .rpc('get_user_type_breakdown_filtered', {
+          start_date: startDateParam,
+          end_date: endDateParam
+        });
       
       if (breakdownError) {
-        console.error('❌ Erro ao carregar breakdown por tipo de usuário:', breakdownError);
-        // Não falhar se a função nova não existir ainda
+        console.error('❌ Erro ao carregar breakdown por tipo de usuário (tentando função original):', breakdownError);
+        // Fallback para função original
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .rpc('get_user_type_breakdown');
+        if (!fallbackError) {
+          setUserTypeBreakdown(fallbackData || []);
+        }
       } else {
-        console.log('👥 Breakdown por tipo de usuário:', breakdownData);
+        console.log('👥 Breakdown por tipo de usuário (filtrado):', breakdownData);
         setUserTypeBreakdown(breakdownData || []);
       }
 
@@ -152,23 +190,21 @@ export function StatsCards({ documents }: StatsCardsProps) {
   return (
     <div className="space-y-6 mb-8 w-full">
       {/* Main Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-            <div key={index} className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 w-full">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs sm:text-sm text-gray-600 font-medium">{stat.title}</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                  {stat.subtitle && (
-                    <p className="text-xs text-gray-500 mt-1">{stat.subtitle}</p>
-                  )}
+            <div key={index} className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition-shadow duration-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-8 h-8 ${stat.bgColor} rounded-lg flex items-center justify-center`}>
+                  <Icon className={`w-4 h-4 ${stat.iconColor}`} />
                 </div>
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 ${stat.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                  <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.iconColor}`} />
               </div>
-              </div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">{stat.title}</div>
+              <div className="text-2xl font-semibold text-gray-900 mb-1">{stat.value}</div>
+              {stat.subtitle && (
+                <div className="text-xs text-gray-500">{stat.subtitle}</div>
+              )}
             </div>
           );
         })}
@@ -176,44 +212,55 @@ export function StatsCards({ documents }: StatsCardsProps) {
 
       {/* User Type Breakdown */}
       {userTypeBreakdown.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 w-full">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Breakdown por Tipo de Usuário</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 w-full">
+          <div className="flex items-center gap-2 mb-6">
+            <Users className="w-4 h-4 text-gray-600" />
+            <h3 className="text-sm font-semibold text-gray-900">User Performance</h3>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
             {userTypeBreakdown.map((breakdown, index) => (
-              <div key={index} className="p-4 rounded-lg bg-gray-50 border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-lg font-semibold text-gray-900">{breakdown.user_type}</h4>
-                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    breakdown.user_type === 'Regular Users' 
-                      ? 'bg-purple-100 text-purple-800' 
-                      : 'bg-orange-100 text-orange-800'
-                  }`}>
-                    {breakdown.total_documents} docs
+              <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center ${
+                      breakdown.user_type === 'Regular Users' 
+                        ? 'bg-purple-100' 
+                        : 'bg-orange-100'
+                    }`}>
+                      {breakdown.user_type === 'Regular Users' ? (
+                        <Users className="w-3 h-3 text-purple-600" />
+                      ) : (
+                        <UserCheck className="w-3 h-3 text-orange-600" />
+                      )}
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-900">{breakdown.user_type}</h4>
+                  </div>
+                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">{breakdown.total_documents} docs</span>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-gray-900">{breakdown.completed_documents}</div>
+                    <div className="text-xs text-gray-500">Completed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-gray-900">{breakdown.pending_documents}</div>
+                    <div className="text-xs text-gray-500">Pending</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-gray-900">{breakdown.rejected_documents}</div>
+                    <div className="text-xs text-gray-500">Rejected</div>
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Completados:</span>
-                    <span className="font-medium text-green-600">{breakdown.completed_documents}</span>
+                <div className="pt-3 border-t border-gray-300">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">Total Revenue</span>
+                    <span className="text-sm font-semibold text-green-600">${breakdown.total_revenue?.toFixed(2) || '0.00'}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Pendentes:</span>
-                    <span className="font-medium text-yellow-600">{breakdown.pending_documents}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Rejeitados:</span>
-                    <span className="font-medium text-red-600">{breakdown.rejected_documents}</span>
-                  </div>
-                  <div className="border-t pt-2 mt-2">
-                    <div className="flex justify-between text-sm font-medium">
-                      <span className="text-gray-700">Receita Total:</span>
-                      <span className="text-green-600">${breakdown.total_revenue?.toFixed(2) || '0.00'}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>Média por doc:</span>
-                      <span>${breakdown.avg_revenue_per_doc?.toFixed(2) || '0.00'}</span>
-                    </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-xs text-gray-400">Avg per doc</span>
+                    <span className="text-xs text-gray-600">${breakdown.avg_revenue_per_doc?.toFixed(2) || '0.00'}</span>
                   </div>
                 </div>
               </div>

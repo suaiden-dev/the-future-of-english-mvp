@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { FileText, Check, X, Clock, ShieldCheck, Download, User, Mail, Calendar, DollarSign, AlertCircle, CheckCircle, XCircle, Eye, Trash2, Upload, RefreshCw, Upload as UploadIcon, Phone } from 'lucide-react';
+import { FileText, Check, Clock, ShieldCheck, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone } from 'lucide-react';
 import { getValidFileUrl } from '../../utils/fileUtils';
 
 interface Document {
@@ -27,6 +27,7 @@ interface Document {
   // Dados do usuário
   user_name?: string | null;
   user_email?: string | null;
+  client_name?: string | null;
 }
 
 interface UserProfile {
@@ -52,8 +53,7 @@ export default function AuthenticatorDashboard() {
   // Estatísticas separadas
   const [stats, setStats] = useState({
     pending: 0,
-    approved: 0,
-    rejected: 0
+    approved: 0
   });
   
   // Paginação
@@ -110,19 +110,17 @@ export default function AuthenticatorDashboard() {
         
         const pendingCount = allDocuments.filter(doc => doc.status === 'pending').length;
         const approvedCount = allDocuments.filter(doc => doc.status === 'completed').length;
-        const rejectedCount = allDocuments.filter(doc => doc.status === 'rejected').length;
         
         setStats({
           pending: pendingCount,
-          approved: approvedCount,
-          rejected: rejectedCount
+          approved: approvedCount
         });
 
         // Filtrar apenas documentos pendentes para a lista
         const pendingDocs = allDocuments.filter(doc => doc.status === 'pending');
         setDocuments(pendingDocs);
         
-        console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount, rejectedCount });
+        console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount });
         console.log('[AuthenticatorDashboard] Documentos pendentes:', pendingDocs.length);
         
       } catch (err) {
@@ -207,45 +205,7 @@ export default function AuthenticatorDashboard() {
     console.log('[AuthenticatorDashboard] Documento aprovado com sucesso');
   }
 
-  async function handleReject(id: string) {
-    if (!currentUser) return;
-    
-    console.log('[AuthenticatorDashboard] Rejeitando documento:', id);
-    
-    // Dados do autenticador
-    const authData = {
-      authenticated_by: currentUser.id,
-      authenticated_by_name: currentUser.user_metadata?.name || currentUser.email,
-      authenticated_by_email: currentUser.email,
-      authentication_date: new Date().toISOString()
-    };
-    
-    const { error: updateError } = await supabase
-      .from('documents_to_be_verified')
-      .update({ 
-        status: 'rejected',
-        ...authData
-      })
-      .eq('id', id);
-    
-    if (updateError) {
-      console.error('[AuthenticatorDashboard] Erro ao rejeitar documento:', updateError);
-      alert('Erro ao rejeitar documento. Tente novamente.');
-      return;
-    }
-    
-    // Atualizar estatísticas
-    setStats(prev => ({
-      ...prev,
-      pending: prev.pending - 1,
-      rejected: prev.rejected + 1
-    }));
-    
-    // Remover documento da lista
-    setDocuments(docs => docs.filter(doc => doc.id !== id));
-    
-    console.log('[AuthenticatorDashboard] Documento rejeitado com sucesso');
-  }
+
 
   async function handleCorrectionUpload(doc: Document) {
     const state = uploadStates[doc.id];
@@ -359,7 +319,7 @@ export default function AuthenticatorDashboard() {
         </div>
 
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-10">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-900" />
@@ -376,15 +336,6 @@ export default function AuthenticatorDashboard() {
             <div className="min-w-0 flex-1">
               <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.approved}</div>
               <div className="text-sm sm:text-base text-gray-600 font-medium">Approved</div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-tfe-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <X className="w-6 h-6 sm:w-7 sm:h-7 text-tfe-red-950" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.rejected}</div>
-              <div className="text-sm sm:text-base text-gray-600 font-medium">Rejected</div>
             </div>
           </div>
         </div>

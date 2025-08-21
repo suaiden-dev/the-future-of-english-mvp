@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { FileText, CurrencyDollar, Clock, Shield, CheckCircle, ArrowRight, Star, Users, Globe, Trophy, ChatCircle, CaretDown, CaretUp, Phone, Envelope, Lightning, HeartStraight, Target, TrendUp, Download, Upload, Eye, Lock } from '@phosphor-icons/react';
+import { useState } from 'react';
+import { FileText, CurrencyDollar, Clock, Shield, CheckCircle, ArrowRight, Star, Globe, ChatCircle, CaretDown, CaretUp, Phone, Envelope, Download, Upload, Eye, Lock } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
+import { Footer } from '../components/Footer';
 
 export function Translations() {
   const navigate = useNavigate();
@@ -156,24 +157,27 @@ export function Translations() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section with Background Image */}
-      <section className="relative bg-gradient-to-r from-tfe-blue-950 via-tfe-blue-900 to-red-600 text-white py-20 overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}></div>
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 text-white py-20 overflow-hidden">
+        {/* Decorative Elements */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-slate-900/30"></div>
+          <div className="absolute top-0 left-0 w-full h-full">
+            <div className="absolute top-20 left-10 w-32 h-32 bg-red-600/10 rounded-full blur-3xl"></div>
+            <div className="absolute top-40 right-20 w-48 h-48 bg-slate-600/10 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 left-20 w-40 h-40 bg-red-500/10 rounded-full blur-3xl"></div>
+          </div>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
-                         <h1 className="text-4xl md:text-6xl font-bold mb-6">
-               Professional
-               <span className="bg-gradient-to-r from-tfe-blue-400 to-red-500 bg-clip-text text-transparent">
-                 {' '}Document Translation
-               </span>
-             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-tfe-blue-100 max-w-4xl mx-auto">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white">
+              Professional
+              <span className="text-red-500">
+                {' '}Document Translation
+              </span>
+            </h1>
+            <p className="text-xl md:text-2xl mb-8 text-slate-200 max-w-4xl mx-auto">
               Certified translation services for immigration documents with
               official authentication and verification. 99.9% USCIS acceptance rate.
             </p>
@@ -181,9 +185,9 @@ export function Translations() {
             {/* Stats Preview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 max-w-4xl mx-auto">
               {stats.map((stat, index) => (
-                <div key={index} className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                  <div className="text-2xl font-bold text-tfe-blue-200">{stat.number}</div>
-                  <div className="text-sm text-tfe-blue-100">{stat.label}</div>
+                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-xl p-6 border border-slate-400/20">
+                  <div className="text-2xl font-bold text-white">{stat.number}</div>
+                  <div className="text-sm text-slate-300">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -191,14 +195,14 @@ export function Translations() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={() => navigate('/register')}
-                className="bg-white text-tfe-blue-950 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2 shadow-lg"
+                className="bg-red-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-red-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2 shadow-xl"
               >
                 <span>Start Translation</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
                 onClick={() => navigate('/verify')}
-                className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-tfe-blue-950 transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
+                className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white hover:text-slate-800 transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
               >
                 <Eye className="w-5 h-5" />
                 <span>Verify Document</span>
@@ -223,39 +227,39 @@ export function Translations() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {pricingPlans.map((plan, index) => (
               <div key={index} className={`relative bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 ${
-                plan.popular ? 'ring-2 ring-tfe-blue-500 scale-105' : 'border border-gray-200'
+                plan.popular ? 'ring-2 ring-red-500 scale-105' : 'border border-gray-200'
               }`}>
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-tfe-blue-500 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                    <span className="bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
                       Most Popular
                     </span>
                   </div>
                 )}
                 
                 <div className="text-center">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                  <h3 className="text-2xl font-bold text-slate-800 mb-2">{plan.name}</h3>
                   <div className="mb-4">
-                    <span className="text-4xl font-bold text-tfe-blue-950">{plan.price}</span>
-                    <span className="text-gray-600 ml-2">{plan.period}</span>
+                    <span className="text-4xl font-bold text-slate-800">{plan.price}</span>
+                    <span className="text-slate-600 ml-2">{plan.period}</span>
                   </div>
-                  <p className="text-gray-600 mb-8">{plan.description}</p>
+                  <p className="text-slate-600 mb-8">{plan.description}</p>
                   
                   <div className="space-y-4 mb-8">
                     {plan.features.map((feature, featureIndex) => (
                       <div key={featureIndex} className="flex items-center space-x-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                        <span className="text-gray-700">{feature}</span>
+                        <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                        <span className="text-slate-700">{feature}</span>
                       </div>
                     ))}
                   </div>
 
                   <button
                     onClick={() => navigate('/register')}
-                    className={`w-full px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
+                    className={`w-full px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
                       plan.popular
-                        ? 'bg-tfe-blue-950 text-white hover:bg-tfe-blue-800'
-                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                        ? 'bg-red-600 text-white hover:bg-red-700'
+                        : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
                     }`}
                   >
                     Choose {plan.name}
@@ -314,40 +318,40 @@ export function Translations() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="w-16 h-16 bg-gradient-to-br from-tfe-blue-500 to-tfe-blue-600 rounded-2xl flex items-center justify-center mb-6">
+            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow border border-slate-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl flex items-center justify-center mb-6">
                 <Shield className="w-8 h-8 text-white" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Certified & Authenticated
+              <h3 className="text-xl font-semibold text-slate-800 mb-4">
+                Certified & Notarized
               </h3>
-              <p className="text-gray-600">
+              <p className="text-slate-600">
                 All translations are certified by licensed professionals and authenticated 
                 with official seals and signatures. 99.9% USCIS acceptance rate.
               </p>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="w-16 h-16 bg-gradient-to-br from-tfe-red-500 to-tfe-red-600 rounded-2xl flex items-center justify-center mb-6">
+            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow border border-slate-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-600 to-red-700 rounded-2xl flex items-center justify-center mb-6">
                 <Clock className="w-8 h-8 text-white" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              <h3 className="text-xl font-semibold text-slate-800 mb-4">
                 Fast Turnaround
               </h3>
-              <p className="text-gray-600">
+              <p className="text-slate-600">
                 Standard translations completed in 24-48 hours. Express service available 
                 for urgent documents (4-8 hours) with rush processing.
               </p>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="w-16 h-16 bg-gradient-to-br from-tfe-blue-500 to-tfe-red-500 rounded-2xl flex items-center justify-center mb-6">
+            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow border border-slate-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-red-600 rounded-2xl flex items-center justify-center mb-6">
                 <FileText className="w-8 h-8 text-white" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              <h3 className="text-xl font-semibold text-slate-800 mb-4">
                 USCIS Compliant
               </h3>
-              <p className="text-gray-600">
+              <p className="text-slate-600">
                 All translations meet USCIS requirements and are accepted by immigration 
                 offices, embassies, and consulates worldwide.
               </p>
@@ -370,41 +374,41 @@ export function Translations() {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="text-center group">
-              <div className="w-20 h-20 bg-tfe-blue-950 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
+              <div className="w-20 h-20 bg-slate-800 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
                 <Upload className="w-10 h-10" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Upload Document</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-slate-800 mb-3">Upload Document</h3>
+              <p className="text-slate-600">
                 Upload your document securely to our platform. We support PDF, JPG, PNG, and other common formats.
               </p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-tfe-blue-950 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
+              <div className="w-20 h-20 bg-red-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
                 <CurrencyDollar className="w-10 h-10" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Get Quote</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-slate-800 mb-3">Get Quote</h3>
+              <p className="text-slate-600">
                 Automatic calculation based on page count and document type. Transparent pricing with no hidden fees.
               </p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-tfe-blue-950 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
+              <div className="w-20 h-20 bg-slate-800 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
                 <Lock className="w-10 h-10" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Secure Payment</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-slate-800 mb-3">Secure Payment</h3>
+              <p className="text-slate-600">
                 Secure payment processing with instant confirmation. We accept all major credit cards and PayPal.
               </p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-tfe-blue-950 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
+              <div className="w-20 h-20 bg-red-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
                 <Download className="w-10 h-10" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Receive Translation</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-slate-800 mb-3">Receive Translation</h3>
+              <p className="text-slate-600">
                 Get your certified translation with verification code. Email delivery or physical copy available.
               </p>
             </div>
@@ -427,62 +431,62 @@ export function Translations() {
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
              {/* Common Documents */}
              <div className="bg-white p-8 rounded-2xl shadow-lg">
-               <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+               <h3 className="text-xl font-semibold text-slate-800 mb-6 text-center">
                  Most Common Documents
                </h3>
-               <div className="space-y-4">
+                               <div className="space-y-4">
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Birth Certificates</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Birth Certificates</span>
                  </div>
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Marriage Certificates</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Marriage Certificates</span>
                  </div>
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Academic Transcripts</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Academic Transcripts</span>
                  </div>
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Bank Statements</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Bank Statements</span>
                  </div>
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Medical Records</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Medical Records</span>
                  </div>
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Legal Documents</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Legal Documents</span>
                  </div>
                </div>
              </div>
 
              {/* Everything Else */}
              <div className="bg-white p-8 rounded-2xl shadow-lg">
-               <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+               <h3 className="text-xl font-semibold text-slate-800 mb-6 text-center">
                  And Much More
                </h3>
                <div className="space-y-4">
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Any Official Document</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Any Official Document</span>
                  </div>
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Business Contracts</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Business Contracts</span>
                  </div>
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Technical Manuals</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Technical Manuals</span>
                  </div>
                  <div className="flex items-center space-x-3">
-                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                   <span className="text-gray-700">Website Content</span>
+                   <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                   <span className="text-slate-700">Website Content</span>
                  </div>
                                    <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">Marketing Materials</span>
+                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <span className="text-slate-700">Marketing Materials</span>
                   </div>
                </div>
              </div>
@@ -491,41 +495,41 @@ export function Translations() {
                        {/* Supported Languages */}
             <div className="mt-12">
               <div className="bg-white p-8 rounded-2xl shadow-lg">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+                <h3 className="text-xl font-semibold text-slate-800 mb-6 text-center">
                   Supported Languages
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">Portuguese</span>
+                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <span className="text-slate-700">Portuguese</span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">Portuguese (Portugal)</span>
+                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <span className="text-slate-700">Portuguese (Portugal)</span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">Spanish</span>
+                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <span className="text-slate-700">Spanish</span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">German</span>
+                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <span className="text-slate-700">German</span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">Arabic</span>
+                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <span className="text-slate-700">Arabic</span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">Hebrew</span>
+                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <span className="text-slate-700">Hebrew</span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">Japanese</span>
+                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <span className="text-slate-700">Japanese</span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">Korean</span>
+                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                    <span className="text-slate-700">Korean</span>
                   </div>
                 </div>
                 <p className="text-sm text-gray-500 mt-4 text-center">
@@ -552,7 +556,7 @@ export function Translations() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-gray-50 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+              <div key={index} className="bg-slate-50 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow border border-slate-100">
                 <div className="flex items-center mb-6">
                   <img 
                     src={testimonial.image} 
@@ -560,8 +564,8 @@ export function Translations() {
                     className="w-16 h-16 rounded-full object-cover mr-4"
                   />
                   <div>
-                    <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
-                    <p className="text-sm text-gray-600">{testimonial.location}</p>
+                    <h4 className="font-semibold text-slate-800">{testimonial.name}</h4>
+                    <p className="text-sm text-slate-600">{testimonial.location}</p>
                     <div className="flex items-center mt-1">
                       {[...Array(testimonial.rating)].map((_, i) => (
                         <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
@@ -569,8 +573,8 @@ export function Translations() {
                     </div>
                   </div>
                 </div>
-                <p className="text-gray-700 mb-4 italic">"{testimonial.text}"</p>
-                <div className="inline-block bg-tfe-blue-100 text-tfe-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                <p className="text-slate-700 mb-4 italic">"{testimonial.text}"</p>
+                <div className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
                   {testimonial.document}
                 </div>
               </div>
@@ -580,7 +584,7 @@ export function Translations() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-slate-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -593,21 +597,21 @@ export function Translations() {
 
           <div className="space-y-4">
             {faqs.map((faq, index) => (
-              <div key={index} className="bg-white rounded-2xl overflow-hidden shadow-lg">
+              <div key={index} className="bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-100">
                 <button
                   onClick={() => setActiveFAQ(activeFAQ === index ? null : index)}
-                  className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-slate-50 transition-colors"
                 >
-                  <h3 className="text-lg font-semibold text-gray-900">{faq.question}</h3>
+                  <h3 className="text-lg font-semibold text-slate-800">{faq.question}</h3>
                   {activeFAQ === index ? (
-                    <CaretUp className="w-6 h-6 text-gray-500" weight="fill" />
+                    <CaretUp className="w-6 h-6 text-slate-500" weight="fill" />
                   ) : (
-                    <CaretDown className="w-6 h-6 text-gray-500" weight="fill" />
+                    <CaretDown className="w-6 h-6 text-slate-500" weight="fill" />
                   )}
                 </button>
                 {activeFAQ === index && (
                   <div className="px-8 pb-6">
-                    <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
+                    <p className="text-slate-600 leading-relaxed">{faq.answer}</p>
                   </div>
                 )}
               </div>
@@ -630,40 +634,42 @@ export function Translations() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div 
-              className="bg-gray-50 p-8 rounded-2xl shadow-lg text-center cursor-pointer hover:bg-gray-100 transition-all duration-300"
+              className="bg-slate-50 p-8 rounded-2xl shadow-lg text-center cursor-pointer hover:bg-slate-100 transition-all duration-300 border border-slate-100"
               onClick={() => window.location.href = 'tel:+13237883117'}
             >
-              <div className="w-16 h-16 bg-tfe-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Phone className="w-8 h-8 text-tfe-blue-600" weight="fill" />
+              <div className="w-16 h-16 bg-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Phone className="w-8 h-8 text-slate-700" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Phone</h3>
-              <p className="text-gray-600">(323) 788-3117</p>
-              <p className="text-sm text-gray-500 mt-2">Mon-Fri: 9AM-6PM EST</p>
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">Phone</h3>
+              <p className="text-slate-600">(000) 000-0000</p>
+              <p className="text-sm text-slate-500 mt-2">Mon-Fri: 9AM-6PM EST</p>
             </div>
             
-            <div className="bg-gray-50 p-8 rounded-2xl shadow-lg text-center">
-              <div className="w-16 h-16 bg-tfe-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Envelope className="w-8 h-8 text-tfe-red-600" weight="fill" />
+            <div className="bg-slate-50 p-8 rounded-2xl shadow-lg text-center border border-slate-100">
+              <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Envelope className="w-8 h-8 text-red-600" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Email</h3>
-              <p className="text-gray-600">translations@thefutureofenglish.com</p>
-              <p className="text-sm text-gray-500 mt-2">24/7 support</p>
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">Email</h3>
+              <p className="text-slate-600">lushamericaapps@gmail.com</p>
+              <p className="text-sm text-slate-500 mt-2">24/7 support</p>
             </div>
             
             <div 
-              className="bg-gray-50 p-8 rounded-2xl shadow-lg text-center cursor-pointer hover:bg-gray-100 transition-all duration-300"
+              className="bg-slate-50 p-8 rounded-2xl shadow-lg text-center cursor-pointer hover:bg-slate-100 transition-all duration-300 border border-slate-100"
               onClick={() => window.open('https://wa.me/13237883117?text=Hello%20The%20Future%20of%20English,%20I%20would%20like%20to%20know%20more%20about%20the%20visa%20consulting%20service.', '_blank')}
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-tfe-blue-100 to-tfe-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <ChatCircle className="w-8 h-8 text-tfe-blue-600" weight="fill" />
+              <div className="w-16 h-16 bg-gradient-to-br from-slate-200 to-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <ChatCircle className="w-8 h-8 text-slate-700" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">WhatsApp</h3>
-              <p className="text-gray-600">(323) 788-3117</p>
-              <p className="text-sm text-gray-500 mt-2">Instant messaging</p>
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">WhatsApp</h3>
+              <p className="text-slate-600">(000) 000-0000</p>
+              <p className="text-sm text-slate-500 mt-2">Instant messaging</p>
             </div>
           </div>
         </div>
       </section>
+      
+      <Footer />
     </div>
   );
 }

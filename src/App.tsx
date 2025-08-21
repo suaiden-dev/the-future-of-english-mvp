@@ -238,10 +238,15 @@ function App() {
               className="flex items-center space-x-2 min-w-0 text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors p-1 rounded-lg hover:bg-gray-50"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-xs sm:text-sm">TFE</span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold truncate">Lush America Translations</h3>
+                <img 
+                  src="/logo.png" 
+                  alt="Lush America Translations" 
+                  className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 object-contain"
+                />
+                <h3 className="text-lg sm:text-xl font-bold truncate">
+                  <span className="text-tfe-blue-950">LUSH</span>
+                  <span className="text-tfe-red-950"> AMERICA TRANSLATIONS</span>
+                </h3>
               </div>
             </button>
             <button

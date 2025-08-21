@@ -1,4 +1,3 @@
-import React from 'react';
 import { FacebookLogo, InstagramLogo, LinkedinLogo, TwitterLogo, Envelope, Phone, MapPin, WhatsappLogo } from '@phosphor-icons/react';
 
 export function Footer() {
@@ -6,17 +5,22 @@ export function Footer() {
     <footer className="bg-tfe-blue-950 text-white">
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           
           {/* Company Information */}
           <div className="lg:col-span-1">
             <div className="mb-4">
               <div className="flex items-center space-x-3">
                                  <div className="flex items-center gap-2">
-                   <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                     <span className="text-white font-bold text-sm">TFE</span>
-                   </div>
-                   <h3 className="text-xl font-bold text-white">Lush America Translations</h3>
+                   <img 
+                     src="/logo.png" 
+                     alt="Lush America Translations" 
+                     className="w-12 h-12 flex-shrink-0 object-contain"
+                   />
+                   <h3 className="text-xl font-bold text-white">
+                     <span className="text-white">LUSH</span>
+                     <span className="text-white"> AMERICA TRANSLATIONS</span>
+                   </h3>
                  </div>
               </div>
             </div>
@@ -45,66 +49,21 @@ export function Footer() {
           {/* Our Services */}
           <div>
             <h4 className="text-lg font-semibold mb-6">Our Services</h4>
-                         <ul className="space-y-3">
-               <li>
-                 <a href="/" className="text-gray-300 hover:text-white transition-colors">
-                   Scholarship Mentorship
-                 </a>
-               </li>
-               <li>
-                 <a href="/translations" className="text-gray-300 hover:text-white transition-colors">
-                   Document Translation
-                 </a>
-               </li>
-               <li>
-                 <a href="/verify" className="text-gray-300 hover:text-white transition-colors">
-                   Document Verification
-                 </a>
-               </li>
-               <li>
-                 <a href="/" className="text-gray-300 hover:text-white transition-colors">
-                   Selection Process
-                 </a>
-               </li>
-               <li>
-                 <a href="/" className="text-gray-300 hover:text-white transition-colors">
-                   Academic Guidance
-                 </a>
-               </li>
-             </ul>
+                                                  <ul className="space-y-3">
+              <li>
+                <a href="/translations" className="text-gray-300 hover:text-white transition-colors">
+                  Document Translation
+                </a>
+              </li>
+              <li>
+                <a href="/verify" className="text-gray-300 hover:text-white transition-colors">
+                  Document Verification
+                </a>
+              </li>
+            </ul>
           </div>
 
-          {/* Profile Types */}
-          <div>
-            <h4 className="text-lg font-semibold mb-6">Profile Types</h4>
-                         <ul className="space-y-3">
-               <li>
-                 <a href="/" className="text-gray-300 hover:text-white transition-colors">
-                   Initial - Outside USA
-                 </a>
-               </li>
-               <li>
-                 <a href="/" className="text-gray-300 hover:text-white transition-colors">
-                   COS - Change of Status
-                 </a>
-               </li>
-               <li>
-                 <a href="/" className="text-gray-300 hover:text-white transition-colors">
-                   Transfer - School Change
-                 </a>
-               </li>
-               <li>
-                 <a href="/" className="text-gray-300 hover:text-white transition-colors">
-                   Student Visa
-                 </a>
-               </li>
-               <li>
-                 <a href="/" className="text-gray-300 hover:text-white transition-colors">
-                   Academic Scholarships
-                 </a>
-               </li>
-             </ul>
-          </div>
+          
 
           {/* Contact */}
           <div>
@@ -112,15 +71,15 @@ export function Footer() {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Envelope className="w-5 h-5 text-tfe-red-400" weight="fill" />
-                <a href="mailto:info@thefutureofenglish.com" className="text-gray-300 hover:text-white transition-colors">
-                  info@thefutureofenglish.com
+                <a href="mailto:info@lushamericaapps.com" className="text-gray-300 hover:text-white transition-colors">
+                  info@lushamericaapps.com
                 </a>
               </div>
               
               <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-tfe-red-400" weight="fill" />
                 <a href="tel:+13237883117" className="text-gray-300 hover:text-white transition-colors">
-                  (323) 788-3117
+                  (000) 000-0000
                 </a>
               </div>
               

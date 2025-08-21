@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Document } from '../../App';
 import { supabase } from '../../lib/supabase';
-import { Eye, Download, Filter } from 'lucide-react';
+import { Eye, Download, Filter, Calendar } from 'lucide-react';
+import { DateRange } from '../../components/DateRangeFilter';
 
 interface PaymentsTableProps {
   documents?: Document[];
   onStatusUpdate?: (documentId: string, status: Document['status']) => void;
   onViewDocument?: (document: Document) => void;
+  dateRange?: DateRange;
 }
 
 interface Payment {
@@ -25,31 +27,99 @@ interface Payment {
   document_filename?: string;
 }
 
-export function PaymentsTable({ }: PaymentsTableProps) {
+export function PaymentsTable({ dateRange }: PaymentsTableProps) {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [localDateRange, setLocalDateRange] = useState<DateRange>(dateRange || {
+    startDate: null,
+    endDate: null,
+    preset: 'all'
+  });
 
   useEffect(() => {
     loadPayments();
-  }, []);
+  }, [localDateRange]);
+
+  const handleDateRangeChange = (preset: string) => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    let newDateRange: DateRange;
+    
+    switch (preset) {
+      case '7d':
+        newDateRange = {
+          startDate: new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000),
+          endDate: now,
+          preset
+        };
+        break;
+      case '30d':
+        newDateRange = {
+          startDate: new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000),
+          endDate: now,
+          preset
+        };
+        break;
+      case '3m':
+        newDateRange = {
+          startDate: new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()),
+          endDate: now,
+          preset
+        };
+        break;
+      case '6m':
+        newDateRange = {
+          startDate: new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()),
+          endDate: now,
+          preset
+        };
+        break;
+      case 'year':
+        newDateRange = {
+          startDate: new Date(now.getFullYear(), 0, 1),
+          endDate: now,
+          preset
+        };
+        break;
+      case 'all':
+      default:
+        newDateRange = {
+          startDate: null,
+          endDate: null,
+          preset: 'all'
+        };
+    }
+    
+    setLocalDateRange(newDateRange);
+  };
 
   const loadPayments = async () => {
     try {
       setLoading(true);
       
-      console.log('🔍 Carregando pagamentos...');
+      console.log('🔍 Carregando pagamentos...', { localDateRange });
       
       // Buscar pagamentos com informações do usuário e documento
-      const { data, error } = await supabase
+      let query = supabase
         .from('payments')
         .select(`
           *,
           profiles!payments_user_id_fkey(email, name),
           documents!payments_document_id_fkey(filename)
-        `)
-        .order('created_at', { ascending: false });
+        `);
+
+      // Aplicar filtros de data se existirem
+      if (localDateRange?.startDate) {
+        query = query.gte('created_at', localDateRange.startDate.toISOString());
+      }
+      if (localDateRange?.endDate) {
+        query = query.lte('created_at', localDateRange.endDate.toISOString());
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) {
         console.error('❌ Erro ao carregar pagamentos:', error);
@@ -171,9 +241,10 @@ export function PaymentsTable({ }: PaymentsTableProps) {
       </div>
 
       {/* Filters */}
-      <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
+      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {/* Search */}
+          <div className="lg:col-span-2">
             <input
               type="text"
               placeholder="Search by name, email, filename, or session ID..."
@@ -182,18 +253,37 @@ export function PaymentsTable({ }: PaymentsTableProps) {
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
             />
           </div>
+          
+          {/* Status Filter */}
           <div className="flex items-center space-x-2">
             <Filter className="w-4 h-4 text-gray-400" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
             >
               <option value="all">All Status</option>
               <option value="completed">Completed</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
               <option value="refunded">Refunded</option>
+            </select>
+          </div>
+
+          {/* Period Filter */}
+          <div className="flex items-center space-x-2">
+            <Calendar className="w-4 h-4 text-gray-400" />
+            <select
+              value={localDateRange?.preset || 'all'}
+              onChange={(e) => handleDateRangeChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
+            >
+              <option value="all">All Time</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="3m">Last 3 months</option>
+              <option value="6m">Last 6 months</option>
+              <option value="year">This year</option>
             </select>
           </div>
         </div>

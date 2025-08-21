@@ -1,5 +1,4 @@
-import React from 'react';
-import { User, LogOut, Shield, Home, FileText, Search, Menu } from 'lucide-react';
+import { User, LogOut, Shield, FileText, Search, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 type Page = 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register';
@@ -24,10 +23,15 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
               className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-3 text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors"
             >
               <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2">
-                <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-xs sm:text-sm">TFE</span>
-                </div>
-                <h3 className="text-sm sm:text-base lg:text-xl font-bold truncate max-w-[120px] sm:max-w-[200px] lg:max-w-none">Lush America Translations</h3>
+                <img 
+                  src="/logo.png" 
+                  alt="Lush America Translations" 
+                  className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 flex-shrink-0 object-contain"
+                />
+                <h3 className="text-sm sm:text-base lg:text-xl font-bold truncate max-w-[120px] sm:max-w-[200px] lg:max-w-none">
+                  <span className="text-tfe-blue-950">LUSH</span>
+                  <span className="text-tfe-red-950"> AMERICA TRANSLATIONS</span>
+                </h3>
               </div>
             </button>
           </div>

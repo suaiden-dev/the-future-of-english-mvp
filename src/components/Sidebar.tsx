@@ -52,10 +52,15 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
               >
                 <div className="text-center">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">TFE</span>
-                    </div>
-                    <h3 className="text-xl font-bold">Lush America Translations</h3>
+                    <img 
+                      src="/logo.png" 
+                      alt="Lush America Translations" 
+                      className="w-10 h-10 flex-shrink-0 object-contain"
+                    />
+                    <h3 className="text-xl font-bold">
+                      <span className="text-tfe-blue-950">LUSH</span>
+                      <span className="text-tfe-red-950"> AMERICA</span>
+                    </h3>
                   </div>
                 </div>
               </button>

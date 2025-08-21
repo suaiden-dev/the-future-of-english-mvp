@@ -23,7 +23,7 @@ export function ContactSection() {
               <Phone className="w-8 h-8 text-tfe-blue-600" weight="fill" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Phone</h3>
-            <p className="text-gray-600">(323) 788-3117</p>
+            <p className="text-gray-600">(000) 000-0000</p>
             <p className="text-sm text-gray-500 mt-2">Mon-Fri: 9AM-6PM EST</p>
           </div>
           
@@ -32,7 +32,7 @@ export function ContactSection() {
               <Envelope className="w-8 h-8 text-tfe-red-600" weight="fill" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Email</h3>
-            <p className="text-gray-600">info@thefutureofenglish.com</p>
+            <p className="text-gray-600">info@lushamericaapps.com</p>
             <p className="text-sm text-gray-500 mt-2">24/7 support</p>
           </div>
           
@@ -44,7 +44,7 @@ export function ContactSection() {
               <WhatsappLogo className="w-8 h-8 text-tfe-blue-600" weight="fill" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">WhatsApp</h3>
-            <p className="text-gray-600">(323) 788-3117</p>
+            <p className="text-gray-600">(000) 000-0000</p>
             <p className="text-sm text-gray-500 mt-2">Instant messaging</p>
           </div>
         </div>

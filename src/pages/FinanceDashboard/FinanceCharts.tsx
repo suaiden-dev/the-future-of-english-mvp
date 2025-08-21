@@ -1,0 +1,262 @@
+import { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
+import { supabase } from '../../lib/supabase';
+import { DateRange } from '../../components/DateRangeFilter';
+import { TrendingUp, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
+
+interface FinanceChartsProps {
+  dateRange?: DateRange;
+}
+
+interface PaymentTrendData {
+  date: string;
+  payments: number;
+  revenue: number;
+}
+
+interface PaymentStatusData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface RevenueByUserTypeData {
+  userType: string;
+  revenue: number;
+  color: string;
+}
+
+export function FinanceCharts({ dateRange }: FinanceChartsProps) {
+  const [paymentTrendData, setPaymentTrendData] = useState<PaymentTrendData[]>([]);
+  const [paymentStatusData, setPaymentStatusData] = useState<PaymentStatusData[]>([]);
+  const [revenueByUserTypeData, setRevenueByUserTypeData] = useState<RevenueByUserTypeData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadChartsData();
+  }, [dateRange]);
+
+  const loadChartsData = async () => {
+    try {
+      setLoading(true);
+      console.log('📊 Carregando dados para gráficos...', { dateRange });
+
+      // 1. Dados para gráfico de evolução de pagamentos (últimos 30 dias)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: paymentsData } = await supabase
+        .from('payments')
+        .select('created_at, amount, status')
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .order('created_at', { ascending: true });
+
+      // Agrupar pagamentos por dia
+      const dailyPayments: { [key: string]: { date: string; payments: number; revenue: number } } = {};
+      
+      paymentsData?.forEach(payment => {
+        const date = new Date(payment.created_at).toLocaleDateString('pt-BR');
+        if (!dailyPayments[date]) {
+          dailyPayments[date] = { date, payments: 0, revenue: 0 };
+        }
+        dailyPayments[date].payments += 1;
+        if (payment.status === 'completed') {
+          dailyPayments[date].revenue += payment.amount || 0;
+        }
+      });
+
+      const trendData = Object.values(dailyPayments).slice(-14); // Últimos 14 dias
+      setPaymentTrendData(trendData);
+
+      // 2. Dados para gráfico de status de pagamentos
+      let statusQuery = supabase.from('payments').select('status');
+      
+      if (dateRange?.startDate) {
+        statusQuery = statusQuery.gte('created_at', dateRange.startDate.toISOString());
+      }
+      if (dateRange?.endDate) {
+        statusQuery = statusQuery.lte('created_at', dateRange.endDate.toISOString());
+      }
+
+      const { data: statusData } = await statusQuery;
+
+      const statusCount: { [key: string]: number } = {};
+      statusData?.forEach(payment => {
+        const status = payment.status || 'unknown';
+        statusCount[status] = (statusCount[status] || 0) + 1;
+      });
+
+      const pieData = Object.entries(statusCount).map(([status, count]) => ({
+        name: status === 'completed' ? 'Completed' : 
+              status === 'pending' ? 'Pending' : 
+              status === 'failed' ? 'Failed' : 'Other',
+        value: count,
+        color: status === 'completed' ? '#10b981' : 
+               status === 'pending' ? '#f59e0b' : 
+               status === 'failed' ? '#ef4444' : '#6b7280'
+      }));
+
+      setPaymentStatusData(pieData);
+
+      // 3. Dados para receita por tipo de usuário
+      let documentsQuery = supabase
+        .from('documents')
+        .select('total_cost, uploaded_by, status');
+      
+      if (dateRange?.startDate) {
+        documentsQuery = documentsQuery.gte('created_at', dateRange.startDate.toISOString());
+      }
+      if (dateRange?.endDate) {
+        documentsQuery = documentsQuery.lte('created_at', dateRange.endDate.toISOString());
+      }
+
+      const { data: documentsData } = await documentsQuery;
+
+      const userTypeRevenue = {
+        'Regular Users': 0,
+        'Authenticators': 0
+      };
+
+      documentsData?.forEach(doc => {
+        if (doc.status === 'completed') {
+          const userType = doc.uploaded_by === 'authenticator' ? 'Authenticators' : 'Regular Users';
+          userTypeRevenue[userType] += doc.total_cost || 0;
+        }
+      });
+
+      const revenueData = Object.entries(userTypeRevenue).map(([userType, revenue]) => ({
+        userType,
+        revenue,
+        color: userType === 'Regular Users' ? '#8b5cf6' : '#f97316'
+      }));
+
+      setRevenueByUserTypeData(revenueData);
+
+    } catch (error) {
+      console.error('💥 Erro ao carregar dados dos gráficos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-48 mb-4"></div>
+              <div className="h-64 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 mt-8">
+      <div className="flex items-center gap-2 mb-6">
+        <TrendingUp className="w-5 h-5 text-gray-600" />
+        <h3 className="text-lg font-semibold text-gray-900">Analytics Overview</h3>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gráfico de Evolução de Pagamentos */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-blue-600" />
+            <h4 className="text-md font-medium text-gray-900">Payment Trends (Last 14 Days)</h4>
+          </div>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={paymentTrendData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fill: '#6b7280', fontSize: 12 }}
+              />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#f9fafb', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px'
+                }}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="payments" 
+                stroke="#3b82f6" 
+                strokeWidth={2}
+                name="Payments"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="revenue" 
+                stroke="#10b981" 
+                strokeWidth={2}
+                name="Revenue ($)"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Gráfico de Status de Pagamentos */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <PieChartIcon className="w-4 h-4 text-green-600" />
+            <h4 className="text-md font-medium text-gray-900">Payment Status Distribution</h4>
+          </div>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={paymentStatusData}
+                cx="50%"
+                cy="50%"
+                innerRadius={40}
+                outerRadius={80}
+                dataKey="value"
+                label={true}
+              >
+                {paymentStatusData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Gráfico de Receita por Tipo de Usuário */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 lg:col-span-2">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-purple-600" />
+            <h4 className="text-md font-medium text-gray-900">Revenue by User Type</h4>
+          </div>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={revenueByUserTypeData} layout="horizontal">
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 12 }} />
+              <YAxis 
+                type="category" 
+                dataKey="userType" 
+                tick={{ fill: '#6b7280', fontSize: 12 }}
+                width={120}
+              />
+              <Tooltip 
+                formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
+                contentStyle={{ 
+                  backgroundColor: '#f9fafb', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px'
+                }}
+              />
+              <Bar dataKey="revenue" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}

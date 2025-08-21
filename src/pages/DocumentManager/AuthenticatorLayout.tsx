@@ -62,10 +62,15 @@ export default function AuthenticatorLayout() {
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TFE</span>
-              </div>
-              <h3 className="text-xl font-bold">The Future of English</h3>
+              <img 
+                src="/logo.png" 
+                alt="Lush America Translations" 
+                className="w-8 h-8 flex-shrink-0 object-contain"
+              />
+              <h3 className="text-xl font-bold">
+                <span className="text-tfe-blue-950">LUSH</span>
+                <span className="text-tfe-red-950"> AMERICA</span>
+              </h3>
             </div>
           </div>
           <button
@@ -154,7 +159,7 @@ export default function AuthenticatorLayout() {
                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
              >
                <HomeIcon className="w-5 h-5 text-gray-400" />
-               <span className="font-medium">Back to Mentorship</span>
+               <span className="font-medium">Back to Home</span>
              </button>
            )}
 
@@ -183,10 +188,15 @@ export default function AuthenticatorLayout() {
         <div className="flex flex-col flex-grow bg-white shadow-sm border-r border-gray-200">
           <div className="flex items-center justify-center p-6 border-b border-gray-200">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TFE</span>
-              </div>
-              <h3 className="text-xl font-bold">The Future of English</h3>
+              <img 
+                src="/logo.png" 
+                alt="Lush America Translations" 
+                className="w-8 h-8 flex-shrink-0 object-contain"
+              />
+              <h3 className="text-xl font-bold">
+                <span className="text-tfe-blue-950">LUSH</span>
+                <span className="text-tfe-red-950"> AMERICA</span>
+              </h3>
             </div>
           </div>
 
@@ -265,7 +275,7 @@ export default function AuthenticatorLayout() {
                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                  >
                    <HomeIcon className="w-5 h-5 text-gray-400" />
-                   <span className="font-medium">Back to Mentorship</span>
+                   <span className="font-medium">Back to Home</span>
                  </button>
                )}
 
@@ -298,10 +308,15 @@ export default function AuthenticatorLayout() {
                 <Menu className="w-6 h-6" />
               </button>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">TFE</span>
-                </div>
-                <h3 className="text-xl font-bold">The Future of English</h3>
+                <img 
+                  src="/logo.png" 
+                  alt="Lush America Translations" 
+                  className="w-10 h-10 flex-shrink-0 object-contain"
+                />
+                <h3 className="text-xl font-bold">
+                  <span className="text-tfe-blue-950">LUSH</span>
+                  <span className="text-tfe-red-950"> AMERICA</span>
+                </h3>
               </div>
             </div>
             <div className="flex items-center space-x-3">
