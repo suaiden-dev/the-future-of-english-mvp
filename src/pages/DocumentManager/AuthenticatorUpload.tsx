@@ -44,12 +44,12 @@ export default function AuthenticatorUpload() {
   ];
   
   const paymentMethods = [
-    { value: 'card', label: 'Cartão de Crédito/Débito' },
-    { value: 'cash', label: 'Dinheiro' },
-    { value: 'transfer', label: 'Transferência Bancária' },
+    { value: 'card', label: 'Credit/Debit Card' },
+    { value: 'cash', label: 'Cash' },
+    { value: 'transfer', label: 'Bank Transfer' },
     { value: 'zelle', label: 'Zelle' },
     { value: 'stripe', label: 'Stripe' },
-    { value: 'other', label: 'Outros' },
+    { value: 'other', label: 'Other' },
   ];
 
   function calcularValor(pages: number, tipo: 'Certificado' | 'Notorizado', extrato: boolean) {
@@ -152,7 +152,7 @@ export default function AuthenticatorUpload() {
       console.log('DEBUG: Custom payload:', customPayload);
       
       if (!selectedFile) {
-        throw new Error('Nenhum arquivo selecionado');
+        throw new Error('No file selected');
       }
 
       if (!clientName.trim()) {
@@ -237,7 +237,7 @@ export default function AuthenticatorUpload() {
 
         if (createError) {
           console.error('ERROR: Erro ao criar documento na tabela documents:', createError);
-          throw new Error('Erro ao salvar documento no banco de dados');
+          throw new Error('Error saving document to database');
         }
 
         console.log('DEBUG: Documento criado na tabela documents:', createdDoc);
@@ -290,10 +290,10 @@ export default function AuthenticatorUpload() {
         try {
           errorData = JSON.parse(responseText);
         } catch (e) {
-          errorData = { error: 'Resposta não é JSON', raw: responseText };
+          errorData = { error: 'Response is not JSON', raw: responseText };
         }
         console.error('Erro detalhado do webhook:', errorData);
-        throw new Error(errorData.error || 'Erro ao enviar documento para tradução');
+        throw new Error(errorData.error || 'Error sending document for translation');
       }
 
       console.log('DEBUG: === HANDLE DIRECT UPLOAD SUCCESS ===');
@@ -304,7 +304,7 @@ export default function AuthenticatorUpload() {
       console.error('ERROR: === HANDLE DIRECT UPLOAD ERROR ===');
       console.error('ERROR: Timestamp:', new Date().toISOString());
       console.error('ERROR: Erro no upload:', err);
-      setError(err.message || 'Erro ao processar upload');
+      setError(err.message || 'Error processing upload');
     }
   };
 
@@ -407,7 +407,7 @@ export default function AuthenticatorUpload() {
       console.error('ERROR: === HANDLE UPLOAD ERROR ===');
       console.error('ERROR: Timestamp:', new Date().toISOString());
       console.error('ERROR: Erro no upload:', err);
-      setError(err.message || 'Erro ao processar upload');
+      setError(err.message || 'Error processing upload');
     } finally {
       setIsUploading(false);
     }
