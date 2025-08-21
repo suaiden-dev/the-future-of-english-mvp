@@ -305,18 +305,18 @@ export default function AuthenticatorDocumentsTable({ dateRange }: Authenticator
 
   return (
     <div className="bg-white rounded-lg shadow w-full">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Authenticator Documents</h3>
+            <h3 className="text-base sm:text-lg font-medium text-gray-900">Authenticator Documents</h3>
             <p className="text-sm text-gray-500">Track documents uploaded directly by authenticators (not client documents approved by them)</p>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* Search */}
           <div>
             <input
@@ -324,17 +324,17 @@ export default function AuthenticatorDocumentsTable({ dateRange }: Authenticator
               placeholder="Search by client name, filename, or authenticator..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
             />
           </div>
 
           {/* Period Filter */}
           <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-gray-400" />
+            <Calendar className="w-4 h-4 text-gray-400 hidden sm:block" />
             <select
               value={localDateRange?.preset || 'all'}
               onChange={(e) => handleDateRangeChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
             >
               <option value="all">All Time</option>
               <option value="7d">Last 7 days</option>
@@ -347,7 +347,134 @@ export default function AuthenticatorDocumentsTable({ dateRange }: Authenticator
         </div>
       </div>
 
-      <div className="overflow-x-auto w-full">
+      {/* Mobile: Cards View */}
+      <div className="block sm:hidden">
+        {filteredDocuments.length === 0 ? (
+          <div className="px-4 py-12 text-center text-gray-500">
+            {loading ? 'Loading documents...' : 'No documents found'}
+          </div>
+        ) : (
+          <div className="space-y-3 p-4">
+            {filteredDocuments.map((doc) => (
+              <div key={doc.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {doc.client_name}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {doc.filename}
+                    </div>
+                  </div>
+                  <div className="ml-2">
+                    <span className="text-xs text-tfe-blue-600 bg-tfe-blue-50 px-2 py-1 rounded-full">
+                      ✓ Authenticated
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-xs mb-3">
+                  <div>
+                    <span className="text-gray-500">Authenticator:</span>
+                    <div className="font-medium text-gray-900 truncate">{doc.authenticator_name}</div>
+                    <div className="text-gray-500 truncate">{doc.authenticator_email}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Amount:</span>
+                    <div className="font-medium text-gray-900">${doc.total_cost.toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Translation:</span>
+                    <div className="font-medium text-gray-900">{doc.source_language} → {doc.target_language}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Date:</span>
+                    <div className="font-medium text-gray-900">
+                      {new Date(doc.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <span className="text-xs text-gray-500">Payment Method:</span>
+                  <div>
+                    {doc.original_doc?.payment_method ? (
+                      <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                        {doc.original_doc.payment_method === 'card' ? '💳 Card' : 
+                         doc.original_doc.payment_method === 'bank_transfer' ? '🏦 Bank' :
+                         doc.original_doc.payment_method === 'paypal' ? '📱 PayPal' :
+                         doc.original_doc.payment_method}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">N/A</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="pt-3 border-t border-gray-300 flex items-center justify-center space-x-4">
+                  {doc.translated_file_url && (
+                    <>
+                      <button
+                        onClick={() => {
+                          const fileUrl = doc.translated_file_url.startsWith('http') 
+                            ? doc.translated_file_url 
+                            : supabase.storage
+                                .from('translated_documents')
+                                .getPublicUrl(doc.translated_file_url)
+                                .data.publicUrl;
+                          downloadDocument(fileUrl, doc.filename);
+                        }}
+                        className="flex items-center text-tfe-blue-600 hover:text-tfe-blue-900"
+                        title="Download document"
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        Download
+                      </button>
+                      <button
+                        onClick={() => {
+                          const fileUrl = doc.translated_file_url.startsWith('http') 
+                            ? doc.translated_file_url 
+                            : supabase.storage
+                                .from('translated_documents')
+                                .getPublicUrl(doc.translated_file_url)
+                                .data.publicUrl;
+                          window.open(fileUrl, '_blank');
+                        }}
+                        className="flex items-center text-tfe-blue-600 hover:text-tfe-blue-900"
+                        title="View document"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        View
+                      </button>
+                    </>
+                  )}
+                  {doc.original_doc?.receipt_url && (
+                    <button
+                      onClick={() => {
+                        const receiptUrl = doc.original_doc?.receipt_url?.startsWith('http') 
+                          ? doc.original_doc.receipt_url 
+                          : supabase.storage
+                              .from('documents')
+                              .getPublicUrl(doc.original_doc?.receipt_url || '')
+                              .data.publicUrl;
+                        window.open(receiptUrl, '_blank');
+                      }}
+                      className="flex items-center text-green-600 hover:text-green-900"
+                      title="View receipt"
+                    >
+                      <Receipt className="w-4 h-4 mr-1" />
+                      Receipt
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Table View */}
+      <div className="hidden sm:block overflow-x-auto w-full">
         <table className="w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -377,7 +504,7 @@ export default function AuthenticatorDocumentsTable({ dateRange }: Authenticator
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredDocuments.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                   {loading ? 'Loading documents...' : 'No documents found'}
                 </td>
               </tr>
@@ -499,10 +626,10 @@ export default function AuthenticatorDocumentsTable({ dateRange }: Authenticator
       </div>
 
       {filteredDocuments.length > 0 && (
-        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between text-sm text-gray-500">
+        <div className="px-4 sm:px-6 py-3 border-t border-gray-200 bg-gray-50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-500">
             <span>Showing {filteredDocuments.length} of {documents.length} documents</span>
-            <span>Total: ${filteredDocuments.reduce((sum, doc) => sum + doc.total_cost, 0).toFixed(2)}</span>
+            <span className="font-medium">Total: ${filteredDocuments.reduce((sum, doc) => sum + doc.total_cost, 0).toFixed(2)}</span>
           </div>
         </div>
       )}

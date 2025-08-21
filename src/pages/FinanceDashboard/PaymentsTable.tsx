@@ -222,45 +222,46 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
 
   return (
     <div className="bg-white rounded-lg shadow w-full">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Payments</h3>
+            <h3 className="text-base sm:text-lg font-medium text-gray-900">Payments</h3>
             <p className="text-sm text-gray-500">Track all payment transactions</p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center">
             <button
               onClick={downloadPaymentsReport}
               className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tfe-blue-500"
             >
               <Download className="w-4 h-4 mr-2" />
-              Export CSV
+              <span className="hidden sm:inline">Export CSV</span>
+              <span className="sm:hidden">Export</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Search */}
-          <div className="lg:col-span-2">
+          <div className="sm:col-span-2 lg:col-span-2">
             <input
               type="text"
-              placeholder="Search by name, email, filename, or session ID..."
+              placeholder="Search by name, email, filename..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
             />
           </div>
           
           {/* Status Filter */}
           <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+            <Filter className="w-4 h-4 text-gray-400 hidden sm:block" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
             >
               <option value="all">All Status</option>
               <option value="completed">Completed</option>
@@ -272,11 +273,11 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
 
           {/* Period Filter */}
           <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-gray-400" />
+            <Calendar className="w-4 h-4 text-gray-400 hidden sm:block" />
             <select
               value={localDateRange?.preset || 'all'}
               onChange={(e) => handleDateRangeChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
             >
               <option value="all">All Time</option>
               <option value="7d">Last 7 days</option>
@@ -289,32 +290,106 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
         </div>
       </div>
 
-      <div className="overflow-x-auto w-full">
+      {/* Mobile: Cards View */}
+      <div className="block sm:hidden">
+        {filteredPayments.length === 0 ? (
+          <div className="px-4 py-12 text-center text-gray-500">
+            {loading ? 'Loading payments...' : 'No payments found'}
+          </div>
+        ) : (
+          <div className="space-y-3 p-4">
+            {filteredPayments.map((payment) => (
+              <div key={payment.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {payment.user_name || 'Unknown'}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {payment.user_email || 'No email'}
+                    </div>
+                  </div>
+                  <div className="ml-2">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
+                      {payment.status}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-gray-500">Amount:</span>
+                    <div className="font-medium text-gray-900">${payment.amount.toFixed(2)} {payment.currency}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Document:</span>
+                    <div className="font-medium text-gray-900 truncate">{payment.document_filename || 'Unknown'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Payment Method:</span>
+                    <div className="font-medium text-gray-900">
+                      {payment.payment_method ? (
+                        payment.payment_method === 'card' ? '💳 Card' : 
+                        payment.payment_method === 'bank_transfer' ? '🏦 Bank' :
+                        payment.payment_method === 'paypal' ? '📱 PayPal' :
+                        payment.payment_method
+                      ) : 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Date:</span>
+                    <div className="font-medium text-gray-900">
+                      {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-3 pt-3 border-t border-gray-300 flex items-center justify-between">
+                  <div className="text-xs text-gray-500">
+                    ID: {payment.id.substring(0, 8)}...
+                  </div>
+                  <button
+                    onClick={() => {
+                      console.log('View payment details:', payment.id);
+                    }}
+                    className="text-tfe-blue-600 hover:text-tfe-blue-900"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Table View */}
+      <div className="hidden sm:block overflow-x-auto w-full">
         <table className="w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 User
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Document
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Amount
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Payment Method
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Payment ID & Session
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -386,7 +461,6 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => {
-                        // Aqui você pode implementar a lógica para ver detalhes do pagamento
                         console.log('View payment details:', payment.id);
                       }}
                       className="text-tfe-blue-600 hover:text-tfe-blue-900"
@@ -402,10 +476,10 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
       </div>
 
       {filteredPayments.length > 0 && (
-        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between text-sm text-gray-500">
+        <div className="px-4 sm:px-6 py-3 border-t border-gray-200 bg-gray-50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-500">
             <span>Showing {filteredPayments.length} of {payments.length} payments</span>
-            <span>Total: ${filteredPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+            <span className="font-medium">Total: ${filteredPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
           </div>
         </div>
       )}

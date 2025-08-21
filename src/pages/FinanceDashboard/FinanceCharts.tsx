@@ -141,12 +141,12 @@ export function FinanceCharts({ dateRange }: FinanceChartsProps) {
 
   if (loading) {
     return (
-      <div className="space-y-6 mt-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-4 sm:space-y-6 mt-6 sm:mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
-              <div className="h-6 bg-gray-200 rounded w-48 mb-4"></div>
-              <div className="h-64 bg-gray-200 rounded"></div>
+            <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 animate-pulse">
+              <div className="h-5 sm:h-6 bg-gray-200 rounded w-36 sm:w-48 mb-3 sm:mb-4"></div>
+              <div className="h-48 sm:h-64 bg-gray-200 rounded"></div>
             </div>
           ))}
         </div>
@@ -155,41 +155,44 @@ export function FinanceCharts({ dateRange }: FinanceChartsProps) {
   }
 
   return (
-    <div className="space-y-6 mt-8">
-      <div className="flex items-center gap-2 mb-6">
-        <TrendingUp className="w-5 h-5 text-gray-600" />
-        <h3 className="text-lg font-semibold text-gray-900">Analytics Overview</h3>
+    <div className="space-y-4 sm:space-y-6 mt-6 sm:mt-8">
+      <div className="flex items-center gap-2 mb-4 sm:mb-6">
+        <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Analytics Overview</h3>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Gráfico de Evolução de Pagamentos */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-4 h-4 text-blue-600" />
-            <h4 className="text-md font-medium text-gray-900">Payment Trends (Last 14 Days)</h4>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
+            <h4 className="text-sm sm:text-md font-medium text-gray-900">Payment Trends (Last 14 Days)</h4>
           </div>
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={200}>
             <LineChart data={paymentTrendData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
-                tick={{ fill: '#6b7280', fontSize: 12 }}
+                tick={{ fill: '#6b7280', fontSize: 10 }}
+                interval="preserveStartEnd"
               />
-              <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#f9fafb', 
                   border: '1px solid #e5e7eb',
-                  borderRadius: '6px'
+                  borderRadius: '6px',
+                  fontSize: '12px'
                 }}
               />
-              <Legend />
+              <Legend fontSize={11} />
               <Line 
                 type="monotone" 
                 dataKey="payments" 
                 stroke="#3b82f6" 
                 strokeWidth={2}
                 name="Payments"
+                dot={{ r: 3 }}
               />
               <Line 
                 type="monotone" 
@@ -197,59 +200,69 @@ export function FinanceCharts({ dateRange }: FinanceChartsProps) {
                 stroke="#10b981" 
                 strokeWidth={2}
                 name="Revenue ($)"
+                dot={{ r: 3 }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Gráfico de Status de Pagamentos */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <PieChartIcon className="w-4 h-4 text-green-600" />
-            <h4 className="text-md font-medium text-gray-900">Payment Status Distribution</h4>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <PieChartIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600" />
+            <h4 className="text-sm sm:text-md font-medium text-gray-900">Payment Status Distribution</h4>
           </div>
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
                 data={paymentStatusData}
                 cx="50%"
                 cy="50%"
-                innerRadius={40}
-                outerRadius={80}
+                innerRadius={30}
+                outerRadius={60}
                 dataKey="value"
-                label={true}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                labelStyle={{ fontSize: '10px' }}
               >
                 {paymentStatusData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#f9fafb', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '12px'
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
         {/* Gráfico de Receita por Tipo de Usuário */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 lg:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-4 h-4 text-purple-600" />
-            <h4 className="text-md font-medium text-gray-900">Revenue by User Type</h4>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 lg:col-span-2">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
+            <h4 className="text-sm sm:text-md font-medium text-gray-900">Revenue by User Type</h4>
           </div>
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={200}>
             <BarChart data={revenueByUserTypeData} layout="horizontal">
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 12 }} />
+              <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 10 }} />
               <YAxis 
                 type="category" 
                 dataKey="userType" 
-                tick={{ fill: '#6b7280', fontSize: 12 }}
-                width={120}
+                tick={{ fill: '#6b7280', fontSize: 10 }}
+                width={100}
               />
               <Tooltip 
                 formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
                 contentStyle={{ 
                   backgroundColor: '#f9fafb', 
                   border: '1px solid #e5e7eb',
-                  borderRadius: '6px'
+                  borderRadius: '6px',
+                  fontSize: '12px'
                 }}
               />
               <Bar dataKey="revenue" fill="#8b5cf6" radius={[0, 4, 4, 0]} />

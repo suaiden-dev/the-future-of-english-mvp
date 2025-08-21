@@ -139,16 +139,16 @@ export function PaymentStatsCards({ dateRange }: PaymentStatsCardsProps) {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-white rounded-lg shadow p-6 animate-pulse">
+          <div key={i} className="bg-white rounded-lg shadow p-4 sm:p-6 animate-pulse">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-16 mb-1"></div>
-                <div className="h-3 bg-gray-200 rounded w-20"></div>
+                <div className="h-3 sm:h-4 bg-gray-200 rounded w-20 sm:w-24 mb-2"></div>
+                <div className="h-6 sm:h-8 bg-gray-200 rounded w-12 sm:w-16 mb-1"></div>
+                <div className="h-2 sm:h-3 bg-gray-200 rounded w-16 sm:w-20"></div>
               </div>
-              <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-lg"></div>
             </div>
           </div>
         ))}
@@ -157,33 +157,33 @@ export function PaymentStatsCards({ dateRange }: PaymentStatsCardsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
       {paymentStatsCards.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <div key={index} className="bg-white rounded-lg shadow border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
+          <div key={index} className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow duration-200">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">
                   {stat.title}
                 </div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 break-words">
                   {stat.loading ? (
-                    <div className="h-8 bg-gray-200 rounded w-16 animate-pulse"></div>
+                    <div className="h-6 sm:h-8 bg-gray-200 rounded w-12 sm:w-16 animate-pulse"></div>
                   ) : (
                     stat.value
                   )}
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-xs sm:text-sm text-gray-500 break-words">
                   {stat.loading ? (
-                    <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                    <div className="h-3 sm:h-4 bg-gray-200 rounded w-16 sm:w-20 animate-pulse"></div>
                   ) : (
                     stat.subtitle
                   )}
                 </div>
               </div>
-              <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                <Icon className={`w-6 h-6 ${stat.iconColor}`} />
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 ${stat.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.iconColor}`} />
               </div>
             </div>
           </div>
