@@ -301,7 +301,20 @@ export default function AuthenticatorDashboard() {
       if (uploadError) {
         console.error('❌ [AuthenticatorDashboard] Erro no upload para storage:', uploadError);
         console.error('❌ [AuthenticatorDashboard] Mensagem do erro:', uploadError.message);
-        throw new Error(`Erro no upload: ${uploadError.message}`);
+        
+        // ✅ Mensagem de erro amigável para o usuário em inglês
+        let userFriendlyMessage = 'An error occurred while uploading the file.';
+        
+        // ✅ Detectar erros específicos e dar mensagens mais claras
+        if (uploadError.message.includes('invalid key') || uploadError.message.includes('400')) {
+          userFriendlyMessage = 'File upload failed. Please contact support for assistance.';
+        } else if (uploadError.message.includes('permission') || uploadError.message.includes('403')) {
+          userFriendlyMessage = 'Permission denied. Please contact support to verify your access.';
+        } else if (uploadError.message.includes('storage') || uploadError.message.includes('bucket')) {
+          userFriendlyMessage = 'Storage service error. Please contact support.';
+        }
+        
+        throw new Error(userFriendlyMessage);
       }
       
       const filePath = uploadData?.path;
@@ -369,7 +382,22 @@ export default function AuthenticatorDashboard() {
         console.error('❌ [AuthenticatorDashboard] Código do erro:', insertError.code);
         console.error('❌ [AuthenticatorDashboard] Mensagem do erro:', insertError.message);
         console.error('❌ [AuthenticatorDashboard] Detalhes do erro:', insertError.details);
-        throw new Error(`Erro ao inserir correção: ${insertError.message}`);
+        
+        // ✅ Mensagem de erro amigável para o usuário em inglês
+        let userFriendlyMessage = 'Failed to save correction. Please contact support for assistance.';
+        
+        // ✅ Detectar erros específicos do banco de dados
+        if (insertError.code === '23505') { // Unique violation
+          userFriendlyMessage = 'Document already exists. Please contact support for assistance.';
+        } else if (insertError.code === '23503') { // Foreign key violation
+          userFriendlyMessage = 'Invalid document reference. Please contact support for assistance.';
+        } else if (insertError.code === '23514') { // Check violation
+          userFriendlyMessage = 'Invalid document data. Please contact support for assistance.';
+        } else if (insertError.message.includes('permission') || insertError.message.includes('403')) {
+          userFriendlyMessage = 'Permission denied. Please contact support to verify your access.';
+        }
+        
+        throw new Error(userFriendlyMessage);
       }
       
       console.log('✅ [AuthenticatorDashboard] Correção inserida com sucesso em translated_documents:', insertResult);
@@ -385,7 +413,20 @@ export default function AuthenticatorDashboard() {
       
       if (updateError) {
         console.error('❌ [AuthenticatorDashboard] Erro ao atualizar documento original:', updateError);
-        throw new Error(`Erro ao atualizar documento original: ${updateError.message}`);
+        console.error('❌ [AuthenticatorDashboard] Código do erro:', updateError.code);
+        console.error('❌ [AuthenticatorDashboard] Mensagem do erro:', updateError.message);
+        
+        // ✅ Mensagem de erro amigável para o usuário em inglês
+        let userFriendlyMessage = 'Failed to update original document. Please contact support for assistance.';
+        
+        // ✅ Detectar erros específicos
+        if (updateError.code === '23503') { // Foreign key violation
+          userFriendlyMessage = 'Invalid document reference. Please contact support for assistance.';
+        } else if (updateError.message.includes('permission') || updateError.message.includes('403')) {
+          userFriendlyMessage = 'Permission denied. Please contact support to verify your access.';
+        }
+        
+        throw new Error(userFriendlyMessage);
       }
       
       console.log('✅ [AuthenticatorDashboard] Documento original atualizado para rejected');
@@ -411,13 +452,28 @@ export default function AuthenticatorDashboard() {
       console.error('💥 [AuthenticatorDashboard] Tipo do erro:', typeof err);
       console.error('💥 [AuthenticatorDashboard] Mensagem do erro:', err.message);
       
+      // ✅ Mensagem de erro amigável para o usuário
+      let userFriendlyError = 'An error occurred during the correction process.';
+      
+      // ✅ Detectar erros específicos e dar mensagens mais claras
+      if (err.message.includes('contact support')) {
+        // ✅ Se já é uma mensagem amigável, usar ela
+        userFriendlyError = err.message;
+      } else if (err.message.includes('permission') || err.message.includes('403')) {
+        userFriendlyError = 'Permission denied. Please contact support to verify your access.';
+      } else if (err.message.includes('database') || err.message.includes('insert')) {
+        userFriendlyError = 'Database error. Please contact support for assistance.';
+      } else if (err.message.includes('network') || err.message.includes('fetch')) {
+        userFriendlyError = 'Network error. Please check your connection and try again.';
+      }
+      
       setUploadStates(prev => ({ 
         ...prev, 
         [doc.id]: { 
           ...state, 
           uploading: false, 
           success: false, 
-          error: err.message || 'Upload failed' 
+          error: userFriendlyError
         } 
       }));
     }
