@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { FileText, Check, X, Clock, ShieldCheck, Download, User, Mail, Calendar, DollarSign, AlertCircle, CheckCircle, XCircle, Eye, Trash2, Upload, RefreshCw, Upload as UploadIcon, Phone } from 'lucide-react';
-import { getValidFileUrl } from '../../utils/fileUtils';
+import { getValidFileUrl, normalizeFileName, generateCorrectionFileName } from '../../utils/fileUtils';
 
 interface Document {
   id: string;
@@ -284,11 +284,25 @@ export default function AuthenticatorDashboard() {
       console.log('📄 [AuthenticatorDashboard] Arquivo selecionado:', state.file.name, 'Tamanho:', state.file.size);
       console.log('👤 [AuthenticatorDashboard] Usuário atual:', currentUser?.id, currentUser?.email);
       
-      // Upload para Supabase Storage
+      // ✅ Usar função de normalização robusta para aceitar qualquer caractere especial
+      const normalizedFileName = normalizeFileName(state.file.name);
+      const uploadPath = generateCorrectionFileName(state.file.name, doc.id);
+      
+      console.log('🔧 [AuthenticatorDashboard] Nome do arquivo normalizado:', normalizedFileName);
+      console.log('📁 [AuthenticatorDashboard] Tentando upload para:', uploadPath);
+      
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
-        .upload(`corrections/${doc.id}_${Date.now()}_${state.file.name}`, state.file, { upsert: true });
-      if (uploadError) throw uploadError;
+        .upload(uploadPath, state.file, { 
+          upsert: true,
+          cacheControl: '3600'
+        });
+      
+      if (uploadError) {
+        console.error('❌ [AuthenticatorDashboard] Erro no upload para storage:', uploadError);
+        console.error('❌ [AuthenticatorDashboard] Mensagem do erro:', uploadError.message);
+        throw new Error(`Erro no upload: ${uploadError.message}`);
+      }
       
       const filePath = uploadData?.path;
       const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath);
@@ -324,7 +338,7 @@ export default function AuthenticatorDashboard() {
       const insertData = {
         original_document_id: doc.id,
         user_id: doc.user_id,
-        filename: state.file.name,
+        filename: normalizedFileName, // ✅ Usar nome normalizado
         translated_file_url: publicUrl,
         source_language: doc.source_language || 'Portuguese',
         target_language: doc.target_language || 'English',
@@ -394,6 +408,9 @@ export default function AuthenticatorDashboard() {
     } catch (err: any) {
       console.error('💥 [AuthenticatorDashboard] Erro no processo de correção:', err);
       console.error('💥 [AuthenticatorDashboard] Stack trace:', err.stack);
+      console.error('💥 [AuthenticatorDashboard] Tipo do erro:', typeof err);
+      console.error('💥 [AuthenticatorDashboard] Mensagem do erro:', err.message);
+      
       setUploadStates(prev => ({ 
         ...prev, 
         [doc.id]: { 

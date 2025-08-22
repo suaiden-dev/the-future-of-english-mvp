@@ -3,7 +3,7 @@ import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Clock, Dollar
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { fileStorage } from '../../utils/fileStorage';
-import { generateUniqueFileName } from '../../utils/fileUtils';
+import { generateUniqueFileName, generateUploadFileName } from '../../utils/fileUtils';
 
 export default function UploadDocument() {
   const { user } = useAuth();
@@ -232,7 +232,7 @@ export default function UploadDocument() {
           console.log('DEBUG: Mobile - IndexedDB falhou, usando upload direto:', indexedDBError);
           
           // Fallback: Upload direto para Supabase Storage
-          const filePath = generateUniqueFileName(selectedFile.name, user.id);
+          const filePath = generateUploadFileName(selectedFile.name, user.id);
           console.log('DEBUG: Mobile - Upload path sanitizado:', filePath);
           const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
           if (uploadError) throw uploadError;

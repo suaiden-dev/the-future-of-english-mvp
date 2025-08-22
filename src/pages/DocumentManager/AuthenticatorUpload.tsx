@@ -1,9 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Clock, DollarSign, Globe, Award } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Globe, Award } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { fileStorage } from '../../utils/fileStorage';
-import { generateUniqueFileName } from '../../utils/fileUtils';
+import { generateUploadFileName } from '../../utils/fileUtils';
 
 export default function AuthenticatorUpload() {
   const { user } = useAuth();
@@ -72,9 +71,9 @@ export default function AuthenticatorUpload() {
     // Reset upload state
     setIsUploading(false);
     
-    // Validate file type
-    if (!file.type.includes('pdf')) {
-      setError('Please select a PDF file.');
+    // ✅ Validate file type - aceitar PDF, PNG e JPG como no upload do cliente
+    if (!file.type.includes('pdf') && !file.type.startsWith('image/')) {
+      setError('Please select a PDF file or image (PNG, JPG).');
       return;
     }
     
@@ -85,26 +84,36 @@ export default function AuthenticatorUpload() {
     }
     
     try {
-      // Load PDF.js for page counting
-      if (!pdfjsLib) {
-        await loadPdfJs();
+      if (file.type.includes('pdf')) {
+        // ✅ Processar PDF com PDF.js
+        if (!pdfjsLib) {
+          await loadPdfJs();
+        }
+        
+        // Contar páginas do PDF
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pageCount = pdf.numPages;
+        setPages(pageCount);
+        
+        console.log('DEBUG: PDF loaded, pages:', pageCount);
+      } else if (file.type.startsWith('image/')) {
+        // ✅ Imagem = 1 página (igual ao upload do cliente)
+        setPages(1);
+        console.log('DEBUG: Image file, setting pages to 1');
       }
       
-      // Count pages
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const pageCount = pdf.numPages;
-      setPages(pageCount);
-      
-      console.log('DEBUG: PDF loaded, pages:', pageCount);
-      
-      // Generate preview URL
+      // ✅ Gerar preview URL para PDF e imagem
       const url = URL.createObjectURL(file);
       setFileUrl(url);
       
     } catch (error) {
-      console.error('Error processing PDF:', error);
-      setError('Error processing PDF file. Please try again.');
+      console.error('Error processing file:', error);
+      if (file.type.includes('pdf')) {
+        setError('Error processing PDF file. Please try again.');
+      } else {
+        setError('Error processing image file. Please try again.');
+      }
     }
   };
 
@@ -308,7 +317,7 @@ export default function AuthenticatorUpload() {
       
       // Upload direto para Supabase Storage
       console.log('DEBUG: Fazendo upload para Supabase Storage');
-      const filePath = generateUniqueFileName(selectedFile.name, user.id);
+      const filePath = generateUploadFileName(selectedFile.name, user.id);
       console.log('DEBUG: Tentando upload para Supabase Storage:', filePath);
       
       const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
