@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, User, Home } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import type { CustomUser } from '../hooks/useAuth';
 import { FileText as FileTextIcon } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -110,18 +110,7 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
             );
           })}
 
-          {/* Botão Back to Home após os outros itens */}
-          {user && (
-            <button
-              onClick={() => {
-                navigate('/');
-              }}
-              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            >
-              <Home className="w-5 h-5 text-gray-400" />
-              <span className="font-medium">Back to Home</span>
-            </button>
-          )}
+
 
           {/* Seção de logout */}
           {user && (

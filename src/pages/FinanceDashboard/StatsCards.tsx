@@ -188,22 +188,22 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 mb-6 sm:mb-8 w-full">
+    <div className="space-y-3 sm:space-y-4 lg:space-y-6 mb-4 sm:mb-6 lg:mb-8 w-full">
       {/* Main Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 w-full">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-            <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-7 h-7 sm:w-8 sm:h-8 ${stat.bgColor} rounded-lg flex items-center justify-center`}>
-                  <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${stat.iconColor}`} />
+            <div key={index} className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 lg:p-5 hover:shadow-md transition-shadow duration-200">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className={`w-8 h-8 sm:w-9 sm:h-9 ${stat.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <Icon className={`w-4 h-4 sm:w-4.5 sm:h-4.5 ${stat.iconColor}`} />
                 </div>
               </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">{stat.title}</div>
-              <div className="text-xl sm:text-2xl font-semibold text-gray-900 mb-1 break-words">{stat.value}</div>
+              <div className="text-xs sm:text-xs text-gray-500 uppercase tracking-wider mb-1 sm:mb-2">{stat.title}</div>
+              <div className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 mb-1 break-words leading-tight">{stat.value}</div>
               {stat.subtitle && (
-                <div className="text-xs text-gray-500 break-words">{stat.subtitle}</div>
+                <div className="text-xs text-gray-500 break-words leading-relaxed">{stat.subtitle}</div>
               )}
             </div>
           );
@@ -212,12 +212,12 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
 
       {/* User Type Breakdown */}
       {userTypeBreakdown.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 w-full">
-          <div className="flex items-center gap-2 mb-4 sm:mb-6">
-            <Users className="w-4 h-4 text-gray-600" />
-            <h3 className="text-sm font-semibold text-gray-900">User Performance</h3>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 lg:p-6 w-full">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4 lg:mb-6">
+            <Users className="w-4 h-4 text-gray-600 flex-shrink-0" />
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900">User Performance</h3>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 w-full">
             {userTypeBreakdown.map((breakdown, index) => (
               <div key={index} className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">

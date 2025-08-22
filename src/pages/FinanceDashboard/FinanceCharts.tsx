@@ -161,14 +161,14 @@ export function FinanceCharts({ dateRange }: FinanceChartsProps) {
         <h3 className="text-base sm:text-lg font-semibold text-gray-900">Analytics Overview</h3>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
         {/* Gráfico de Evolução de Pagamentos */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 lg:p-6">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
-            <h4 className="text-sm sm:text-md font-medium text-gray-900">Payment Trends (Last 14 Days)</h4>
+            <BarChart3 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <h4 className="text-sm sm:text-base font-medium text-gray-900">Payment Trends (Last 14 Days)</h4>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={180}>
             <LineChart data={paymentTrendData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
@@ -207,12 +207,12 @@ export function FinanceCharts({ dateRange }: FinanceChartsProps) {
         </div>
 
         {/* Gráfico de Status de Pagamentos */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 lg:p-6">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <PieChartIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600" />
-            <h4 className="text-sm sm:text-md font-medium text-gray-900">Payment Status Distribution</h4>
+            <PieChartIcon className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <h4 className="text-sm sm:text-base font-medium text-gray-900">Payment Status Distribution</h4>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie
                 data={paymentStatusData}
@@ -241,12 +241,12 @@ export function FinanceCharts({ dateRange }: FinanceChartsProps) {
         </div>
 
         {/* Gráfico de Receita por Tipo de Usuário */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 lg:col-span-2">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 lg:p-6 lg:col-span-2">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
-            <h4 className="text-sm sm:text-md font-medium text-gray-900">Revenue by User Type</h4>
+            <BarChart3 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+            <h4 className="text-sm sm:text-base font-medium text-gray-900">Revenue by User Type</h4>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={180}>
             <BarChart data={revenueByUserTypeData} layout="horizontal">
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 10 }} />

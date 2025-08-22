@@ -4,7 +4,7 @@ import AuthenticatorDashboard from './AuthenticatorDashboard';
 import TranslatedDocuments from './TranslatedDocuments';
 import AuthenticatorOverview from './AuthenticatorOverview';
 import AuthenticatorUpload from './AuthenticatorUpload';
-import { FileText, CheckCircle, LogOut, Home as HomeIcon, Menu, X, User, Upload } from 'lucide-react';
+import { FileText, CheckCircle, LogOut, Menu, X, User, Upload, Home as HomeIcon } from 'lucide-react';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OverviewProvider } from '../../contexts/OverviewContext';
@@ -149,19 +149,7 @@ export default function AuthenticatorLayout() {
             </button>
           </nav>
 
-                     {/* Back to Mentorship Button */}
-           {user && (
-             <button
-               onClick={() => {
-                 navigate('/');
-                 setIsMobileMenuOpen(false);
-               }}
-               className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-             >
-               <HomeIcon className="w-5 h-5 text-gray-400" />
-               <span className="font-medium">Back to Home</span>
-             </button>
-           )}
+          
 
           {/* Logout */}
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -268,16 +256,7 @@ export default function AuthenticatorLayout() {
                 </button>
               </nav>
 
-                             {/* Back to Mentorship Button */}
-               {user && (
-                 <button
-                                    onClick={() => navigate('/')}
-                   className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                 >
-                   <HomeIcon className="w-5 h-5 text-gray-400" />
-                   <span className="font-medium">Back to Home</span>
-                 </button>
-               )}
+
 
               {/* Logout */}
               <div className="mt-4 pt-4 border-t border-gray-200">
@@ -297,7 +276,7 @@ export default function AuthenticatorLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:ml-64">
         {/* Mobile Header */}
-        <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 p-4">
+        <div className="lg:hidden sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <button

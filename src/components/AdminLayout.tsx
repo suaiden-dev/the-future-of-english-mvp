@@ -36,13 +36,15 @@ export function AdminLayout({
       {/* Main content area - com margem para a sidebar fixa */}
       <div className="flex-1 lg:ml-64 min-h-screen">
         {/* Mobile header */}
-        <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
+        <div className="lg:hidden sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">TFE</span>
-                </div>
+                <img 
+                  src="/logo.png" 
+                  alt="Lush America Translations" 
+                  className="w-8 h-8 flex-shrink-0 object-contain"
+                />
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">{title}</h3>
                   {subtitle && (

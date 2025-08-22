@@ -127,10 +127,15 @@ function App() {
         <div className="text-center">
           <div className="flex flex-col items-center space-y-3">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TFE</span>
-              </div>
-              <h3 className="text-xl font-bold">Lush America Translations</h3>
+              <img 
+                src="/logo.png" 
+                alt="Lush America Translations" 
+                className="w-8 h-8 flex-shrink-0 object-contain"
+              />
+              <h3 className="text-xl font-bold">
+                <span className="text-tfe-blue-950">LUSH</span>
+                <span className="text-tfe-red-950"> AMERICA TRANSLATIONS</span>
+              </h3>
             </div>
           </div>
           <p className="text-gray-600 mt-4">Loading...</p>
@@ -325,14 +330,19 @@ function App() {
           <Route path="/dashboard/*" element={user && user.role === 'user' ? (
             <div className="flex flex-col lg:flex-row">
               {/* Mobile header */}
-              <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
+              <div className="lg:hidden sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">TFE</span>
-                      </div>
-                      <h3 className="text-xl font-bold">Lush America Translations</h3>
+                      <img 
+                        src="/logo.png" 
+                        alt="Lush America Translations" 
+                        className="w-8 h-8 flex-shrink-0 object-contain"
+                      />
+                      <h3 className="text-xl font-bold">
+                        <span className="text-tfe-blue-950">LUSH</span>
+                        <span className="text-tfe-red-950"> AMERICA TRANSLATIONS</span>
+                      </h3>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
@@ -453,17 +463,20 @@ function App() {
           <Route path="/dashboard/progress" element={user && user.role === 'user' ? (
             <div className="flex flex-col lg:flex-row">
               {/* Mobile header */}
-              <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
+              <div className="lg:hidden sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-r from-tfe-red-950 to-tfe-blue-950 rounded-lg flex items-center justify-center text-white font-bold text-xs">
-                        TFE
-                      </div>
+                      <img 
+                        src="/logo.png" 
+                        alt="Lush America Translations" 
+                        className="w-8 h-8 flex-shrink-0 object-contain"
+                      />
                     </div>
                     <div>
                       <div className="font-bold text-sm text-gray-900">
-                        Lush America Translations
+                        <span className="text-tfe-blue-950">LUSH</span>
+                        <span className="text-tfe-red-950"> AMERICA TRANSLATIONS</span>
                       </div>
                       <div className="text-xs text-gray-600">
                         Professional Translation

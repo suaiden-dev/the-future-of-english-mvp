@@ -242,8 +242,8 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
       </div>
 
       {/* Filters */}
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
           {/* Search */}
           <div className="sm:col-span-2 lg:col-span-2">
             <input
@@ -251,7 +251,7 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
               placeholder="Search by name, email, filename..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm bg-white"
             />
           </div>
           
@@ -297,11 +297,11 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
             {loading ? 'Loading payments...' : 'No payments found'}
           </div>
         ) : (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3 p-3 sm:p-4">
             {filteredPayments.map((payment) => (
-              <div key={payment.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div key={payment.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 truncate">
                       {payment.user_name || 'Unknown'}
                     </div>
@@ -309,7 +309,7 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
                       {payment.user_email || 'No email'}
                     </div>
                   </div>
-                  <div className="ml-2">
+                  <div className="ml-2 flex-shrink-0">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
                       {payment.status}
                     </span>
@@ -476,10 +476,10 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
       </div>
 
       {filteredPayments.length > 0 && (
-        <div className="px-4 sm:px-6 py-3 border-t border-gray-200 bg-gray-50">
+        <div className="px-3 sm:px-4 lg:px-6 py-3 border-t border-gray-200 bg-gray-50">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-500">
             <span>Showing {filteredPayments.length} of {payments.length} payments</span>
-            <span className="font-medium">Total: ${filteredPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+            <span className="font-medium text-green-600">Total: ${filteredPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
           </div>
         </div>
       )}

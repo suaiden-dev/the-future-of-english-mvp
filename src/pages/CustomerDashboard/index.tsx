@@ -126,7 +126,7 @@ export function CustomerDashboard({
           </button>
         </div>
       )}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
         {/* Dashboard principal - sempre renderiza o overview */}
         <WelcomeSection user={user} onUploadClick={handleUploadClick} />
         <CustomerStatsCards documents={documents} />
