@@ -158,7 +158,17 @@ export function PaymentSuccess() {
             },
             metadata: {
               pageCount: parseInt(sessionData.metadata.pages),
-              documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado'
+              documentType: (() => {
+                // Lógica correta para determinar o tipo de tradução
+                if (sessionData.metadata.isCertified === 'true') {
+                  return 'Certificado';
+                } else if (sessionData.metadata.isNotarized === 'true') {
+                  return 'Notorizado';
+                } else {
+                  // Fallback: se nenhum dos dois estiver marcado, usar Certificado como padrão
+                  return 'Certificado';
+                }
+              })()
             }
           };
         
@@ -375,13 +385,22 @@ export function PaymentSuccess() {
         mimetype: 'application/pdf',
         size: storedFile?.file?.size || 0,
         user_id: userId,
-        pages: parseInt(sessionData.metadata.pages),
-        document_type: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado',
-        total_cost: sessionData.metadata.totalPrice,
-        source_language: 'Portuguese',
-        target_language: 'English',
+        paginas: parseInt(sessionData.metadata.pages),
+        tipo_trad: (() => {
+          // Lógica correta para determinar o tipo de tradução
+          if (sessionData.metadata.isCertified === 'true') {
+            return 'Certificado';
+          } else if (sessionData.metadata.isNotarized === 'true') {
+            return 'Notorizado';
+          } else {
+            // Fallback: se nenhum dos dois estiver marcado, usar Certificado como padrão
+            return 'Certificado';
+          }
+        })(),
+        valor: sessionData.metadata.totalPrice,
+        idioma_raiz: 'Portuguese',
         is_bank_statement: sessionData.metadata.isBankStatement === 'true',
-        document_id: finalDocumentId,
+        client_name: null,
         // Campos padronizados para compatibilidade com n8n
         isPdf: true,
         fileExtension: 'pdf',

@@ -142,24 +142,21 @@ Deno.serve(async (req: Request) => {
       
       console.log("Generated public URL:", publicUrl);
       
+      // Estrutura exata do payload conforme especificado
       payload = {
         filename: path,
         url: publicUrl,
         mimetype: record.mimetype || record.metadata?.mimetype || "application/octet-stream",
         size: record.size || record.metadata?.size || null,
         user_id: record.user_id || record.metadata?.user_id || null,
-        // Sempre usar campos padronizados
-        pages: record.pages || pages || paginas || 1,
-        document_type: record.document_type || document_type || record.tipo_trad || tipo_trad || 'Certificado',
-        total_cost: record.total_cost || total_cost || record.valor || valor || '0',
-        source_language: record.source_language || source_language || record.idioma_raiz || idioma_raiz || 'Portuguese',
-        target_language: record.target_language || target_language || 'English',
+        paginas: record.pages || pages || paginas || 1,
+        tipo_trad: record.document_type || document_type || record.tipo_trad || tipo_trad || 'Certificado',
+        valor: record.total_cost || total_cost || record.valor || valor || 0,
+        idioma_raiz: record.source_language || source_language || record.idioma_raiz || idioma_raiz || 'Portuguese',
         is_bank_statement: record.is_bank_statement || is_bank_statement || false,
         client_name: record.client_name || client_name || null,
-        // Adicionar informações sobre o tipo de arquivo
         isPdf: (record.mimetype || record.metadata?.mimetype || "application/octet-stream") === 'application/pdf',
         fileExtension: path.split('.').pop()?.toLowerCase(),
-        // Informar ao n8n que deve usar a tabela 'profiles' em vez de 'users'
         tableName: 'profiles',
         schema: 'public'
       };
@@ -196,24 +193,21 @@ Deno.serve(async (req: Request) => {
         }
       }
       
+      // Estrutura exata do payload conforme especificado
       payload = { 
         filename: filename, 
         url: finalUrl, 
         mimetype, 
         size, 
         user_id: user_id || null, 
-        // Sempre usar campos padronizados
-        pages: pages || paginas || 1,
-        document_type: document_type || tipo_trad || 'Certificado',
-        total_cost: total_cost || valor || '0',
-        source_language: source_language || idioma_raiz || 'Portuguese',
-        target_language: target_language || 'English',
+        paginas: pages || paginas || 1,
+        tipo_trad: document_type || tipo_trad || 'Certificado',
+        valor: total_cost || valor || 0,
+        idioma_raiz: source_language || idioma_raiz || 'Portuguese',
         is_bank_statement: is_bank_statement || false,
         client_name: client_name || null,
-        // Adicionar informações sobre o tipo de arquivo
         isPdf: mimetype === 'application/pdf',
         fileExtension: filename.split('.').pop()?.toLowerCase(),
-        // Informar ao n8n que deve usar a tabela 'profiles' em vez de 'users'
         tableName: 'profiles',
         schema: 'public'
       };
@@ -527,7 +521,7 @@ Deno.serve(async (req: Request) => {
               filename: filename,
               pages: docData.pages || pages || paginas || 1,
               status: 'pending',
-              total_cost: docData.total_cost || total_cost || parseFloat(valor) || 0,
+              total_cost: docData.total_cost || total_cost || valor || 0,
               // Usar o valor validado pelo N8N se disponível, senão usar o valor do cliente
               is_bank_statement: (() => {
                 const finalValue = is_bank_statement !== undefined ? is_bank_statement : (docData.is_bank_statement || false);
@@ -535,7 +529,7 @@ Deno.serve(async (req: Request) => {
                 return finalValue;
               })(),
               source_language: docData.source_language || source_language || docData.idioma_raiz?.toLowerCase() || 'portuguese',
-              target_language: target_language || 'english',
+              target_language: 'english',
               translation_status: 'pending',
               file_id: docData.id,
               verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`,

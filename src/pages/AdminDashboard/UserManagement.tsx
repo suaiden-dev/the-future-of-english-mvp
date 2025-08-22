@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Shield, UserCheck, Search, Filter, ChevronDown, ChevronUp, Crown, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 interface User {
   id: string;
@@ -12,6 +13,7 @@ interface User {
 }
 
 export function UserManagement() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +21,21 @@ export function UserManagement() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [updatingUser, setUpdatingUser] = useState<string | null>(null);
+
+  // Verificar se o usuário tem permissões de admin
+  if (!currentUser || currentUser.role !== 'admin') {
+    return (
+      <div className="py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="text-center py-12">
+            <Shield className="w-16 h-16 mx-auto mb-4 text-red-500" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600">You don't have permission to access this area.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Buscar todos os usuários
   const fetchUsers = async () => {

@@ -27,6 +27,12 @@ interface Document {
   // Dados do usuário
   user_name?: string | null;
   user_email?: string | null;
+  // ✅ NOVO CAMPO para rastrear correções
+  client_name?: string | null;
+  is_correction?: boolean;
+  parent_document_id?: string | null;
+  original_document_id?: string | null;
+  correction_reason?: string | null;
 }
 
 interface UserProfile {
@@ -49,11 +55,12 @@ export default function AuthenticatorDashboard() {
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
   
-  // Estatísticas separadas
+  // ✅ Estatísticas separadas (incluindo correções)
   const [stats, setStats] = useState({
     pending: 0,
     approved: 0,
-    rejected: 0
+    rejected: 0,
+    corrections: 0 // ✅ Nova métrica para correções
   });
   
   // Paginação
@@ -89,6 +96,9 @@ export default function AuthenticatorDashboard() {
           console.error('[AuthenticatorDashboard] Error fetching all documents:', statsError);
           if (statsError.code === '42501' || statsError.code === 'PGRST301') {
             setError('You do not have permission to access this area.');
+          } else if (statsError.code === '409') {
+            setError('Conflict detected. Please refresh the page or contact support.');
+            console.error('[AuthenticatorDashboard] Conflict error details:', statsError);
           } else {
             setError(statsError.message);
           }
@@ -108,18 +118,36 @@ export default function AuthenticatorDashboard() {
           console.log(`  ${index + 1}. ${doc.filename}: is_bank_statement = ${doc.is_bank_statement}`);
         });
         
-        const pendingCount = allDocuments.filter(doc => doc.status === 'pending').length;
-        const approvedCount = allDocuments.filter(doc => doc.status === 'completed').length;
-        const rejectedCount = allDocuments.filter(doc => doc.status === 'rejected').length;
+        // ✅ Calcular estatísticas diferenciadas (documentos vs correções)
+        // Tratar valores null como false para documentos existentes
+        const pendingCount = allDocuments.filter(doc => 
+          doc.status === 'pending' && (doc.is_correction !== true)
+        ).length;
+        
+        const approvedCount = allDocuments.filter(doc => 
+          doc.status === 'completed' && (doc.is_correction !== true)
+        ).length;
+        
+        const rejectedCount = allDocuments.filter(doc => 
+          doc.status === 'rejected' && (doc.is_correction !== true)
+        ).length;
+        
+        // ✅ Métrica para correções (agora funcional após migração)
+        const correctionsCount = allDocuments.filter(doc => 
+          doc.is_correction === true
+        ).length;
         
         setStats({
           pending: pendingCount,
           approved: approvedCount,
-          rejected: rejectedCount
+          rejected: rejectedCount,
+          corrections: correctionsCount // ✅ Incluir correções
         });
 
-        // Filtrar apenas documentos pendentes para a lista
-        const pendingDocs = allDocuments.filter(doc => doc.status === 'pending');
+        // Filtrar apenas documentos pendentes para a lista (excluir correções)
+        const pendingDocs = allDocuments.filter(doc => 
+          doc.status === 'pending' && (doc.is_correction !== true)
+        );
         setDocuments(pendingDocs);
         
         console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount, rejectedCount });
@@ -252,21 +280,32 @@ export default function AuthenticatorDashboard() {
     if (!state || !state.file) return;
     setUploadStates(prev => ({ ...prev, [doc.id]: { ...state, uploading: true, error: null, success: false } }));
     try {
+      console.log('🔍 [AuthenticatorDashboard] Iniciando upload de correção para documento:', doc.id);
+      console.log('📄 [AuthenticatorDashboard] Arquivo selecionado:', state.file.name, 'Tamanho:', state.file.size);
+      console.log('👤 [AuthenticatorDashboard] Usuário atual:', currentUser?.id, currentUser?.email);
+      
       // Upload para Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
         .upload(`corrections/${doc.id}_${Date.now()}_${state.file.name}`, state.file, { upsert: true });
       if (uploadError) throw uploadError;
+      
       const filePath = uploadData?.path;
       const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath);
       const publicUrl = publicUrlData.publicUrl;
-      // Buscar verification_code do documento original
+      
+      console.log('📁 [AuthenticatorDashboard] Arquivo enviado para storage:', filePath);
+      console.log('🔗 [AuthenticatorDashboard] URL pública gerada:', publicUrl);
+      
+      // Buscar dados do documento original
       const { data: originalDoc, error: fetchError } = await supabase
         .from('documents_to_be_verified')
-        .select('verification_code')
+        .select('*')
         .eq('id', doc.id)
         .single();
-      if (fetchError || !originalDoc) throw new Error('Não foi possível obter o verification_code do documento original.');
+      if (fetchError || !originalDoc) throw new Error('Não foi possível obter os dados do documento original.');
+      
+      console.log('📋 [AuthenticatorDashboard] Dados do documento original:', originalDoc);
       
       // Dados do autenticador
       const authData = {
@@ -276,38 +315,94 @@ export default function AuthenticatorDashboard() {
         authentication_date: new Date().toISOString()
       };
       
-      // Inserir na tabela translated_documents com dados do autenticador
-      const { error: insertError } = await supabase.from('translated_documents').insert({
+      console.log('🔐 [AuthenticatorDashboard] Dados do autenticador:', authData);
+      
+      // Inserir correção diretamente na tabela translated_documents
+      // ✅ Usar o verification_code original do documento, não gerar um novo
+      const verificationCode = originalDoc.verification_code || 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase();
+      
+      const insertData = {
         original_document_id: doc.id,
         user_id: doc.user_id,
         filename: state.file.name,
         translated_file_url: publicUrl,
-        source_language: doc.source_language,
-        target_language: doc.target_language,
-        pages: doc.pages,
+        source_language: doc.source_language || 'Portuguese',
+        target_language: doc.target_language || 'English',
+        pages: doc.pages || 1,
         status: 'completed',
-        total_cost: doc.total_cost,
+        total_cost: doc.total_cost || 0,
+        verification_code: verificationCode, // ✅ Usar o código original
         is_authenticated: true,
-        verification_code: originalDoc.verification_code,
-        ...authData
-      } as any);
-      if (insertError) throw insertError;
+        upload_date: new Date().toISOString(),
+        authenticated_by: currentUser?.id,
+        authenticated_by_name: currentUser?.user_metadata?.name || currentUser?.email,
+        authenticated_by_email: currentUser?.email,
+        authentication_date: new Date().toISOString()
+      };
       
-      // Atualizar status do documento original para 'completed' com dados do autenticador
-      await supabase
+      console.log('📤 [AuthenticatorDashboard] Tentando inserir em translated_documents:', insertData);
+      console.log('🔑 [AuthenticatorDashboard] Verification code usado:', verificationCode);
+      console.log('🔑 [AuthenticatorDashboard] Verification code original:', originalDoc.verification_code);
+      
+      const { data: insertResult, error: insertError } = await supabase
+        .from('translated_documents')
+        .insert(insertData)
+        .select()
+        .single();
+      
+      if (insertError) {
+        console.error('❌ [AuthenticatorDashboard] Erro ao inserir correção:', insertError);
+        console.error('❌ [AuthenticatorDashboard] Código do erro:', insertError.code);
+        console.error('❌ [AuthenticatorDashboard] Mensagem do erro:', insertError.message);
+        console.error('❌ [AuthenticatorDashboard] Detalhes do erro:', insertError.details);
+        throw new Error(`Erro ao inserir correção: ${insertError.message}`);
+      }
+      
+      console.log('✅ [AuthenticatorDashboard] Correção inserida com sucesso em translated_documents:', insertResult);
+      
+      // Atualizar documento original para 'rejected' (não completed)
+      const { error: updateError } = await supabase
         .from('documents_to_be_verified')
         .update({ 
-          status: 'completed',
+          status: 'rejected',
           ...authData
         })
         .eq('id', doc.id);
+      
+      if (updateError) {
+        console.error('❌ [AuthenticatorDashboard] Erro ao atualizar documento original:', updateError);
+        throw new Error(`Erro ao atualizar documento original: ${updateError.message}`);
+      }
+      
+      console.log('✅ [AuthenticatorDashboard] Documento original atualizado para rejected');
+      
+      // ✅ Atualizar estatísticas corretamente
+      setStats(prev => ({
+        ...prev,
+        pending: prev.pending - 1, // ✅ -1 para documento removido da lista
+        rejected: prev.rejected + 1, // ✅ +1 para o original rejeitado
+        corrections: prev.corrections + 1 // ✅ +1 para total de correções
+      }));
       
       // Remover o documento da lista após sucesso
       setDocuments(docs => docs.filter(d => d.id !== doc.id));
       setUploadStates(prev => ({ ...prev, [doc.id]: { file: null, uploading: false, success: false, error: null } }));
       setRejectedRows(prev => ({ ...prev, [doc.id]: false }));
+      
+      console.log('🎉 [AuthenticatorDashboard] Processo de correção concluído com sucesso - documento enviado para translated_documents');
+      
     } catch (err: any) {
-      setUploadStates(prev => ({ ...prev, [doc.id]: { ...state, uploading: false, success: false, error: err.message || 'Upload failed' } }));
+      console.error('💥 [AuthenticatorDashboard] Erro no processo de correção:', err);
+      console.error('💥 [AuthenticatorDashboard] Stack trace:', err.stack);
+      setUploadStates(prev => ({ 
+        ...prev, 
+        [doc.id]: { 
+          ...state, 
+          uploading: false, 
+          success: false, 
+          error: err.message || 'Upload failed' 
+        } 
+      }));
     }
   }
 
@@ -359,10 +454,10 @@ export default function AuthenticatorDashboard() {
         </div>
 
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-10">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-900" />
+              <Clock className="w-6 h-6 sm:w-7 sm:w-7 text-yellow-900" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.pending}</div>
@@ -385,6 +480,17 @@ export default function AuthenticatorDashboard() {
             <div className="min-w-0 flex-1">
               <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.rejected}</div>
               <div className="text-sm sm:text-base text-gray-600 font-medium">Rejected</div>
+            </div>
+          </div>
+          
+          {/* ✅ NOVO CARD: Correções */}
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Upload className="w-6 h-6 sm:w-7 sm:h-7 text-blue-900" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.corrections}</div>
+              <div className="text-sm sm:text-base text-gray-600 font-medium">Corrections</div>
             </div>
           </div>
         </div>
@@ -825,26 +931,26 @@ export default function AuthenticatorDashboard() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700">Name:</span>
-                  <span className="text-gray-900">{selectedUser.name}</span>
+                  <span className="text-gray-900">{selectedUser?.name || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700">Email:</span>
-                  <span className="text-gray-900">{selectedUser.email}</span>
+                  <span className="text-gray-900">{selectedUser?.email || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700 flex items-center gap-2">
                     <Phone className="w-4 h-4" />
                     Phone:
                   </span>
-                  <span className="text-gray-900">{selectedUser.phone || 'Not provided'}</span>
+                  <span className="text-gray-900">{selectedUser?.phone || 'Not provided'}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700">Role:</span>
-                  <span className="text-gray-900">{selectedUser.role}</span>
+                  <span className="text-gray-900">{selectedUser?.role || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="font-medium text-gray-700">ID:</span>
-                  <span className="text-gray-900 font-mono text-sm">{selectedUser.id}</span>
+                  <span className="text-gray-900 font-mono text-sm">{selectedUser?.id || 'N/A'}</span>
                 </div>
               </div>
             )}
