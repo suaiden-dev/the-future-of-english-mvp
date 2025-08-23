@@ -157,7 +157,7 @@ export function AuthenticatorControl() {
         authenticator_email: doc.authenticated_by_email || 'Unknown',
         document_id: doc.id,
         document_name: doc.filename,
-        action: 'Translation Authentication',
+        action: 'Translation Notarization',
         status: doc.is_authenticated ? 'completed' : 'pending',
         created_at: doc.created_at,
         updated_at: doc.updated_at,

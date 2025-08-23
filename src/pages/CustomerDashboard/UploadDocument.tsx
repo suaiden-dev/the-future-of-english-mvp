@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { fileStorage } from '../../utils/fileStorage';
 import { generateUniqueFileName, generateUploadFileName } from '../../utils/fileUtils';
+import { config, getEdgeFunctionAuthHeader } from '../../lib/config';
 
 export default function UploadDocument() {
   const { user } = useAuth();
@@ -145,12 +146,9 @@ export default function UploadDocument() {
 
       console.log('Payload enviado para checkout:', payload);
 
-      const response = await fetch('https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/create-checkout-session', {
+      const response = await fetch(config.edgeFunctions.createCheckoutSession, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cG9ncXdod3NjYmRobm9xc212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTYxMzksImV4cCI6MjA2ODE3MjEzOX0.CsbI1OiT2i3EL31kvexrstIsaC48MD4fEHg6BSE6LZ4'
-        },
+        headers: getEdgeFunctionAuthHeader(),
         body: JSON.stringify(payload)
       });
 
@@ -551,7 +549,7 @@ export default function UploadDocument() {
                           <span className="text-sm font-bold text-tfe-blue-600">$20/page</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Official notarized translation with additional legal authentication for court documents and legal proceedings.
+                          Official notarized translation with additional legal notarization for court documents and legal proceedings.
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
                           <li>• Notary public certification</li>

@@ -13,7 +13,7 @@ export function Translations() {
     },
     {
       question: "Are your translations accepted by USCIS?",
-      answer: "Yes, all our translations are certified and authenticated, meeting USCIS requirements. They include official certification statements and are accepted by all US immigration authorities."
+      answer: "Yes, all our translations are certified and notarized, meeting USCIS requirements. They include official certification statements and are accepted by all US immigration authorities."
     },
     {
       question: "What documents can you translate?",
@@ -87,11 +87,11 @@ export function Translations() {
       name: "Notarized Translation",
       price: "$20.00",
       period: "per page",
-      description: "Official notarized translation with legal authentication",
+      description: "Official notarized translation with legal notarization",
       features: [
         "24-48 hour turnaround",
         "Official notarization",
-        "Legal authentication",
+        "Legal notarization",
         "USCIS accepted",
         "Digital verification code",
         "Email delivery",
@@ -319,10 +319,10 @@ export function Translations() {
                 <Shield className="w-8 h-8 text-white" weight="fill" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Certified & Authenticated
+                Certified & Notarized
               </h3>
               <p className="text-gray-600">
-                All translations are certified by licensed professionals and authenticated 
+                All translations are certified by licensed professionals and notarized 
                 with official seals and signatures. 99.9% USCIS acceptance rate.
               </p>
             </div>

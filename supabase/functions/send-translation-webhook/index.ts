@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Cache para evitar processamento duplicado
+// Cache para evitar processamento duplicado (backup)
 const processedRequests = new Map<string, number>();
 
 Deno.serve(async (req: Request) => {
@@ -63,20 +63,65 @@ Deno.serve(async (req: Request) => {
     console.log("Origin:", origin);
     console.log("User-Agent:", req.headers.get('user-agent') || 'unknown');
 
-    // Gerar um ID único para esta requisição baseado no conteúdo
-    const requestId = `${parsedBody.user_id || 'unknown'}_${parsedBody.filename || 'unknown'}_${Date.now()}`;
+    // Gerar um ID único para esta requisição baseado no conteúdo (SEM timestamp para detectar duplicatas reais)
+    const requestId = `${parsedBody.user_id || 'unknown'}_${parsedBody.filename || 'unknown'}`;
     console.log("Request ID:", requestId);
     
-    // Verificar se esta requisição já foi processada recentemente (últimos 30 segundos)
+    // 🔍 VERIFICAÇÃO ROBUSTA ANTI-DUPLICATA USANDO BANCO DE DADOS
+    // Esta é a solução principal - verificar no banco se já existe documento recente
+    if (parsedBody.user_id && parsedBody.filename) {
+      console.log("🔍 VERIFICAÇÃO ANTI-DUPLICATA: Checando banco de dados...");
+      
+      const cutoffTime = new Date(Date.now() - 2 * 60 * 1000).toISOString(); // 2 minutos atrás
+      
+      const { data: recentDocs, error: recentError } = await supabase
+        .from('documents_to_be_verified')
+        .select('id, filename, created_at')
+        .eq('user_id', parsedBody.user_id)
+        .eq('filename', parsedBody.filename)
+        .gte('created_at', cutoffTime)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (recentError) {
+        console.log("⚠️ Erro ao verificar duplicatas:", recentError);
+      } else if (recentDocs && recentDocs.length > 0) {
+        console.log("🚨 DUPLICATA DETECTADA! Documento já processado recentemente:");
+        console.log("Documento existente:", recentDocs[0]);
+        console.log("⏱️ Criado em:", recentDocs[0].created_at);
+        console.log("✅ IGNORANDO upload duplicado para prevenir múltiplos documentos");
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            status: 200,
+            message: "Document already processed recently - duplicate prevented",
+            existing_document: recentDocs[0],
+            timestamp: new Date().toISOString()
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          }
+        );
+      } else {
+        console.log("✅ Nenhuma duplicata encontrada, prosseguindo com o upload");
+      }
+    }
+    
+    // Cache em memória como backup (pode não funcionar com múltiplas instâncias)
     const now = Date.now();
     const lastProcessed = processedRequests.get(requestId);
-    if (lastProcessed && (now - lastProcessed) < 30000) {
-      console.log("Request already processed recently, skipping duplicate processing");
+    if (lastProcessed && (now - lastProcessed) < 120000) {
+      console.log("🔄 Cache em memória detectou duplicata");
       return new Response(
         JSON.stringify({
           success: true,
           status: 200,
-          message: "Request already processed",
+          message: "Request already processed (memory cache)",
           timestamp: new Date().toISOString()
         }),
         {
@@ -94,7 +139,7 @@ Deno.serve(async (req: Request) => {
     
     // Limpar cache antigo (mais de 5 minutos)
     for (const [key, timestamp] of processedRequests.entries()) {
-      if (now - timestamp > 300000) {
+      if (now - timestamp > 300000) { // 5 minutos
         processedRequests.delete(key);
       }
     }
@@ -142,21 +187,23 @@ Deno.serve(async (req: Request) => {
       
       console.log("Generated public URL:", publicUrl);
       
-      // Estrutura exata do payload conforme especificado
       payload = {
         filename: path,
         url: publicUrl,
         mimetype: record.mimetype || record.metadata?.mimetype || "application/octet-stream",
         size: record.size || record.metadata?.size || null,
         user_id: record.user_id || record.metadata?.user_id || null,
-        paginas: record.pages || pages || paginas || 1,
-        tipo_trad: record.document_type || document_type || record.tipo_trad || tipo_trad || 'Certificado',
-        valor: record.total_cost || total_cost || record.valor || valor || 0,
-        idioma_raiz: record.source_language || source_language || record.idioma_raiz || idioma_raiz || 'Portuguese',
+        // 🎯 USAR CAMPOS EXATOS QUE O N8N ESPERA (como funcionava antes)
+        paginas: record.pages || pages || paginas || 1,                                              // "paginas" ✅
+        tipo_trad: record.document_type || document_type || record.tipo_trad || tipo_trad || 'Certificado',  // "tipo_trad" ✅  
+        valor: record.total_cost || total_cost || record.valor || valor || 0,                                 // "valor" ✅
+        idioma_raiz: record.source_language || source_language || record.idioma_raiz || idioma_raiz || 'Portuguese',  // "idioma_raiz" ✅
         is_bank_statement: record.is_bank_statement || is_bank_statement || false,
         client_name: record.client_name || client_name || null,
+        // Adicionar informações sobre o tipo de arquivo
         isPdf: (record.mimetype || record.metadata?.mimetype || "application/octet-stream") === 'application/pdf',
         fileExtension: path.split('.').pop()?.toLowerCase(),
+        // Informar ao n8n que deve usar a tabela 'profiles' em vez de 'users'
         tableName: 'profiles',
         schema: 'public'
       };
@@ -193,21 +240,23 @@ Deno.serve(async (req: Request) => {
         }
       }
       
-      // Estrutura exata do payload conforme especificado
       payload = { 
         filename: filename, 
         url: finalUrl, 
         mimetype, 
         size, 
         user_id: user_id || null, 
-        paginas: pages || paginas || 1,
-        tipo_trad: document_type || tipo_trad || 'Certificado',
-        valor: total_cost || valor || 0,
-        idioma_raiz: source_language || idioma_raiz || 'Portuguese',
+        // 🎯 USAR CAMPOS EXATOS QUE O N8N ESPERA (como funcionava antes)
+        paginas: pages || paginas || 1,                              // "paginas" ✅
+        tipo_trad: document_type || tipo_trad || 'Certificado',      // "tipo_trad" ✅
+        valor: total_cost || valor || 0,                             // "valor" ✅
+        idioma_raiz: source_language || idioma_raiz || 'Portuguese', // "idioma_raiz" ✅
         is_bank_statement: is_bank_statement || false,
         client_name: client_name || null,
+        // Adicionar informações sobre o tipo de arquivo
         isPdf: mimetype === 'application/pdf',
         fileExtension: filename.split('.').pop()?.toLowerCase(),
+        // Informar ao n8n que deve usar a tabela 'profiles' em vez de 'users'
         tableName: 'profiles',
         schema: 'public'
       };
@@ -265,275 +314,67 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Also update documents_to_be_verified table if needed (instead of creating duplicate)
+    // 📋 FLUXO HÍBRIDO: Enviar para n8n E inserir na tabela documents_to_be_verified
+    // Isso garante que o valor seja registrado mesmo para traduções gratuitas
     if (webhookResponse.ok && user_id && url) {
       try {
-        console.log("=== CHECKING FOR DUPLICATES ===");
+        console.log("=== INSERÇÃO EM DOCUMENTS_TO_BE_VERIFIED ===");
         console.log("user_id:", user_id);
         console.log("filename:", filename);
-        console.log("Checking for existing document in documents_to_be_verified...");
         
-        // First, find the document ID
+        // Buscar dados do documento para pegar informações completas
         const { data: docData, error: docError } = await supabase
           .from('documents')
-          .select('id, total_cost, tipo_trad, idioma_raiz, is_bank_statement, pages, client_name')
+          .select('id, total_cost, document_type, source_language, is_bank_statement, pages, client_name')
           .eq('user_id', user_id)
           .eq('filename', filename)
           .single();
 
         if (docData && !docError) {
           console.log("Found document data:", docData);
-          console.log("N8N validated is_bank_statement:", is_bank_statement);
-          console.log("Client marked is_bank_statement:", docData.is_bank_statement);
           
-          // Check if document already exists in documents_to_be_verified
-          console.log("=== CHECKING FOR EXISTING DOCUMENTS ===");
-          
-          // Verificação mais robusta: verificar por múltiplos critérios
-          const { data: existingDocsByFileId, error: checkErrorByFileId } = await supabase
+          // Verificação final contra duplicatas ANTES da inserção
+          const { data: finalCheck, error: finalCheckError } = await supabase
             .from('documents_to_be_verified')
-            .select('id, translated_file_url, created_at, status, file_id, user_id, filename')
-            .eq('file_id', docData.id)
-            .order('created_at', { ascending: false });
-
-          console.log("Check by file_id error:", checkErrorByFileId);
-          console.log("Existing docs by file_id found:", existingDocsByFileId?.length || 0);
-
-          // Verificação adicional por user_id e filename
-          const { data: existingDocsByUserAndFilename, error: checkErrorByUserAndFilename } = await supabase
-            .from('documents_to_be_verified')
-            .select('id, translated_file_url, created_at, status, file_id, user_id, filename')
+            .select('id, filename, status, created_at')
             .eq('user_id', user_id)
-            .ilike('filename', filename) // Usar ilike para case-insensitive comparison
-            .order('created_at', { ascending: false });
+            .eq('filename', filename)
+            .limit(1);
 
-          console.log("Check by user_id and filename error:", checkErrorByUserAndFilename);
-          console.log("Existing docs by user_id and filename found:", existingDocsByUserAndFilename?.length || 0);
-
-          // Verificar se há documentos recentes (últimos 5 minutos) para evitar duplicatas por timing
-          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-          const { data: recentDocs, error: checkRecentError } = await supabase
-            .from('documents_to_be_verified')
-            .select('id, translated_file_url, created_at, status, file_id, user_id, filename')
-            .eq('user_id', user_id)
-            .ilike('filename', filename)
-            .gte('created_at', fiveMinutesAgo)
-            .order('created_at', { ascending: false });
-
-          console.log("Recent docs (last 5 minutes) found:", recentDocs?.length || 0);
-
-          // Verificação adicional: verificar se há documentos com status 'pending' ou 'processing'
-          const { data: pendingDocs, error: checkPendingError } = await supabase
-            .from('documents_to_be_verified')
-            .select('id, translated_file_url, created_at, status, file_id, user_id, filename')
-            .eq('user_id', user_id)
-            .ilike('filename', filename)
-            .in('status', ['pending', 'processing'])
-            .order('created_at', { ascending: false });
-
-          console.log("Pending docs found:", pendingDocs?.length || 0);
-
-          // Verificação adicional: verificar se há documentos com a mesma URL (caso a URL seja única)
-          let urlDocs = [];
-          let checkUrlError = null;
-          if (url && url.startsWith('http')) {
-            const { data: urlDocsData, error: urlError } = await supabase
-              .from('documents_to_be_verified')
-              .select('id, translated_file_url, created_at, status, file_id, user_id, filename')
-              .eq('user_id', user_id)
-              .ilike('translated_file_url', `%${url.split('/').pop()}%`)
-              .order('created_at', { ascending: false });
-            
-            urlDocs = urlDocsData || [];
-            checkUrlError = urlError;
-            console.log("URL docs found:", urlDocs.length);
-          }
-
-          // Verificação adicional: verificar se há documentos criados nos últimos 10 minutos
-          const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-          const { data: veryRecentDocs, error: checkVeryRecentError } = await supabase
-            .from('documents_to_be_verified')
-            .select('id, translated_file_url, created_at, status, file_id, user_id, filename')
-            .eq('user_id', user_id)
-            .ilike('filename', filename)
-            .gte('created_at', tenMinutesAgo)
-            .order('created_at', { ascending: false });
-
-          console.log("Very recent docs (last 10 minutes) found:", veryRecentDocs?.length || 0);
-
-          // Verificação adicional: verificar se há documentos com o mesmo file_id
-          let fileIdDocs = [];
-          let checkFileIdError = null;
-          if (docData && docData.id) {
-            const { data: fileIdDocsData, error: fileIdError } = await supabase
-              .from('documents_to_be_verified')
-              .select('id, translated_file_url, created_at, status, file_id, user_id, filename')
-              .eq('file_id', docData.id)
-              .order('created_at', { ascending: false });
-            
-            fileIdDocs = fileIdDocsData || [];
-            checkFileIdError = fileIdError;
-            console.log("File ID docs found:", fileIdDocs.length);
-          }
-
-          // Se encontrou documentos existentes por qualquer critério, não criar duplicata
-          const hasExistingDocs = (existingDocsByFileId && existingDocsByFileId.length > 0 && !checkErrorByFileId) ||
-                                 (existingDocsByUserAndFilename && existingDocsByUserAndFilename.length > 0 && !checkErrorByUserAndFilename) ||
-                                 (recentDocs && recentDocs.length > 0 && !checkRecentError) ||
-                                 (pendingDocs && pendingDocs.length > 0 && !checkPendingError) ||
-                                 (urlDocs && urlDocs.length > 0 && !checkUrlError) ||
-                                 (veryRecentDocs && veryRecentDocs.length > 0 && !checkVeryRecentError) ||
-                                 (fileIdDocs && fileIdDocs.length > 0 && !checkFileIdError);
-
-          if (hasExistingDocs) {
-            console.log("Document already exists in documents_to_be_verified, skipping duplicate creation");
-            
-            if (existingDocsByFileId && existingDocsByFileId.length > 0) {
-              console.log("Found existing documents by file_id:", existingDocsByFileId.length);
-              existingDocsByFileId.forEach((doc, index) => {
-                console.log(`Document ${index + 1}:`, doc.id, "translated_file_url:", doc.translated_file_url, "status:", doc.status, "file_id:", doc.file_id);
-              });
-            }
-            
-            if (existingDocsByUserAndFilename && existingDocsByUserAndFilename.length > 0) {
-              console.log("Found existing documents by user_id and filename:", existingDocsByUserAndFilename.length);
-              existingDocsByUserAndFilename.forEach((doc, index) => {
-                console.log(`Document ${index + 1}:`, doc.id, "translated_file_url:", doc.translated_file_url, "status:", doc.status, "file_id:", doc.file_id);
-              });
-            }
-            
-            if (recentDocs && recentDocs.length > 0) {
-              console.log("Found recent documents:", recentDocs.length);
-              recentDocs.forEach((doc, index) => {
-                console.log(`Recent Document ${index + 1}:`, doc.id, "created_at:", doc.created_at, "status:", doc.status);
-              });
-            }
-
-            if (pendingDocs && pendingDocs.length > 0) {
-              console.log("Found pending documents:", pendingDocs.length);
-              pendingDocs.forEach((doc, index) => {
-                console.log(`Pending Document ${index + 1}:`, doc.id, "created_at:", doc.created_at, "status:", doc.status);
-              });
-            }
-
-            if (urlDocs && urlDocs.length > 0) {
-              console.log("Found URL documents:", urlDocs.length);
-              urlDocs.forEach((doc, index) => {
-                console.log(`URL Document ${index + 1}:`, doc.id, "translated_file_url:", doc.translated_file_url, "status:", doc.status);
-              });
-            }
-
-            if (veryRecentDocs && veryRecentDocs.length > 0) {
-              console.log("Found very recent documents:", veryRecentDocs.length);
-              veryRecentDocs.forEach((doc, index) => {
-                console.log(`Very Recent Document ${index + 1}:`, doc.id, "created_at:", doc.created_at, "status:", doc.status);
-              });
-            }
-
-            if (fileIdDocs && fileIdDocs.length > 0) {
-              console.log("Found file_id documents:", fileIdDocs.length);
-              fileIdDocs.forEach((doc, index) => {
-                console.log(`File ID Document ${index + 1}:`, doc.id, "file_id:", doc.file_id, "status:", doc.status);
-              });
-            }
-            
-            console.log("=== SKIPPING DUPLICATE CREATION ===");
+          if (finalCheckError) {
+            console.error("Error in final duplicate check:", finalCheckError);
+          } else if (finalCheck && finalCheck.length > 0) {
+            console.log("🚨 FINAL DUPLICATE CHECK: Document already exists in documents_to_be_verified");
+            console.log("Existing document:", finalCheck[0]);
+            console.log("⏭️ SKIPPING insertion to prevent duplicate");
           } else {
-            console.log("Document not found in documents_to_be_verified, creating new entry...");
+            console.log("✅ Final duplicate check passed - proceeding with insertion");
             
-            // Verificação final mais robusta antes da inserção para evitar race conditions
-            console.log("=== FINAL CHECK BEFORE INSERTION ===");
-            const { data: finalCheck, error: finalCheckError } = await supabase
-              .from('documents_to_be_verified')
-              .select('id, filename, status, created_at')
-              .eq('user_id', user_id)
-              .ilike('filename', filename)
-              .in('status', ['pending', 'processing'])
-              .limit(1);
-
-            if (finalCheckError) {
-              console.error("Error in final check:", finalCheckError);
-            } else if (finalCheck && finalCheck.length > 0) {
-              console.log("🚨 DUPLICATE DETECTED in final check!");
-              console.log("Final check found documents:", finalCheck.length);
-              finalCheck.forEach((doc, index) => {
-                console.log(`Final Check Document ${index + 1}:`, doc.id, "filename:", doc.filename, "status:", doc.status, "created_at:", doc.created_at);
-              });
-              console.log("=== SKIPPING INSERTION - DUPLICATE FOUND ===");
-              return new Response(
-                JSON.stringify({
-                  success: true,
-                  status: 200,
-                  message: "Document already exists, skipping duplicate creation",
-                  timestamp: new Date().toISOString()
-                }),
-                {
-                  status: 200,
-                  headers: {
-                    "Content-Type": "application/json",
-                    ...corsHeaders,
-                  },
-                }
-              );
-            } else {
-              console.log("✅ Final check passed - no duplicates found");
-            }
-
-            // Verificação adicional: verificar se há documentos com o mesmo file_id (caso edge)
-            if (docData && docData.id) {
-              const { data: finalFileIdCheck, error: finalFileIdError } = await supabase
-                .from('documents_to_be_verified')
-                .select('id, filename, status, created_at, file_id')
-                .eq('file_id', docData.id)
-                .limit(1);
-
-              if (finalFileIdError) {
-                console.error("Error in final file_id check:", finalFileIdError);
-              } else if (finalFileIdCheck && finalFileIdCheck.length > 0) {
-                console.log("🚨 DUPLICATE DETECTED by file_id in final check!");
-                console.log("Final file_id check found documents:", finalFileIdCheck.length);
-                finalFileIdCheck.forEach((doc, index) => {
-                  console.log(`Final File ID Check Document ${index + 1}:`, doc.id, "filename:", doc.filename, "status:", doc.status, "file_id:", doc.file_id);
-                });
-                console.log("=== SKIPPING INSERTION - DUPLICATE FOUND BY FILE_ID ===");
-                return new Response(
-                  JSON.stringify({
-                    success: true,
-                    status: 200,
-                    message: "Document already exists (file_id duplicate), skipping duplicate creation",
-                    timestamp: new Date().toISOString()
-                  }),
-                  {
-                    status: 200,
-                    headers: {
-                      "Content-Type": "application/json",
-                      ...corsHeaders,
-                    },
-                  }
-                );
-              } else {
-                console.log("✅ Final file_id check passed - no duplicates found");
-              }
-            }
+            // 🎯 USAR A LÓGICA DA EDGE FUNCTION ANTIGA (que funcionava!)
+            // Pegar o valor original do documento, não calcular baseado em páginas
+            const pages = docData.pages || payload.pages || 1;
+            const originalValue = docData.total_cost || payload.total_cost || 0;
+            
+            console.log("📊 VALOR ORIGINAL DO DOCUMENTO (como na Edge Function antiga):");
+            console.log("  - Páginas:", pages);
+            console.log("  - Valor original do documento:", originalValue);
+            console.log("  - Valor pago pelo authenticator:", docData.total_cost || payload.total_cost || 0);
+            console.log("  - Usando valor original (não calculado) ✅");
             
             const insertData = {
               user_id: user_id,
               filename: filename,
-              pages: docData.pages || pages || paginas || 1,
+              pages: pages,
               status: 'pending',
-              total_cost: docData.total_cost || total_cost || valor || 0,
-              // Usar o valor validado pelo N8N se disponível, senão usar o valor do cliente
-              is_bank_statement: (() => {
-                const finalValue = is_bank_statement !== undefined ? is_bank_statement : (docData.is_bank_statement || false);
-                console.log("Final is_bank_statement value being used:", finalValue);
-                return finalValue;
-              })(),
-              source_language: docData.source_language || source_language || docData.idioma_raiz?.toLowerCase() || 'portuguese',
+              total_cost: originalValue, // 🎯 VALOR ORIGINAL (como funcionava antes)
+              is_bank_statement: docData.is_bank_statement || payload.is_bank_statement || false,
+              source_language: docData.source_language || payload.source_language || 'portuguese',
               target_language: 'english',
               translation_status: 'pending',
               file_id: docData.id,
               verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-              client_name: docData.client_name || client_name || null
+              client_name: docData.client_name || payload.client_name || null,
+              translated_file_url: payload.url
             };
             
             console.log("Attempting to insert data:", JSON.stringify(insertData, null, 2));
@@ -545,30 +386,14 @@ Deno.serve(async (req: Request) => {
 
             if (verifyError) {
               console.error("Error inserting into documents_to_be_verified:", verifyError);
-              console.error("Error details:", JSON.stringify(verifyError, null, 2));
               
               // Se o erro for de duplicata, não falhar completamente
               if (verifyError.code === '23505') {
-                console.log("🚨 DUPLICATE KEY ERROR - Document already exists");
-                return new Response(
-                  JSON.stringify({
-                    success: true,
-                    status: 200,
-                    message: "Document already exists (duplicate key)",
-                    timestamp: new Date().toISOString()
-                  }),
-                  {
-                    status: 200,
-                    headers: {
-                      "Content-Type": "application/json",
-                      ...corsHeaders,
-                    },
-                  }
-                );
+                console.log("🚨 DUPLICATE KEY ERROR - Document already exists (this is expected behavior)");
               }
             } else {
               console.log("✅ Inserted into documents_to_be_verified successfully:", verifyData);
-              console.log("Notifications will be created automatically by database trigger");
+              console.log("💰 Valor registrado:", insertData.total_cost);
             }
           }
         } else {
@@ -577,6 +402,12 @@ Deno.serve(async (req: Request) => {
       } catch (verifyError) {
         console.error("Exception inserting into documents_to_be_verified:", verifyError);
       }
+    }
+
+    // ✅ Webhook enviado para n8n com sucesso
+    if (webhookResponse.ok) {
+      console.log("✅ Webhook enviado para n8n com sucesso");
+      console.log("📋 Valor da tradução registrado em documents_to_be_verified");
     }
 
     const responseData = {

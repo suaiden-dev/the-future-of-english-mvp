@@ -22,4 +22,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files
 .env
+.env.local
+.env.production
+.env.development
+.env.*.local
+
+# Test configuration files (may contain sensitive data)
+test-config.js
+email-templates/email-config.js
+
+# Supabase
+supabase/.env
+supabase/.env.local
+supabase/.env.*.local

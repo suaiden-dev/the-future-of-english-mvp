@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { fileStorage } from '../utils/fileStorage';
 import { generateUniqueFileName, generateUploadFileName } from '../utils/fileUtils';
+import { config, getEdgeFunctionAuthHeader } from '../lib/config';
 
 export function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -37,12 +38,9 @@ export function PaymentSuccess() {
       console.log('DEBUG: Processando sucesso do pagamento para session:', sessionId);
       
       // Buscar informações da sessão do Stripe
-      const response = await fetch('https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/get-session-info', {
+      const response = await fetch(config.edgeFunctions.getSessionInfo, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cG9ncXdod3NjYmRobm9xc212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTYxMzksImV4cCI6MjA2ODE3MjEzOX0.CsbI1OiT2i3EL31kvexrstIsaC48MD4fEHg6BSE6LZ4'
-        },
+        headers: getEdgeFunctionAuthHeader(),
         body: JSON.stringify({ sessionId })
       });
 
@@ -341,12 +339,9 @@ export function PaymentSuccess() {
       // Usar Edge Function para atualizar documento com service role
       console.log('DEBUG: Chamando Edge Function para atualizar documento');
       
-      const updateResponse = await fetch('https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/update-document', {
+      const updateResponse = await fetch(config.edgeFunctions.updateDocument, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cG9ncXdod3NjYmRobm9xc212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTYxMzksImV4cCI6MjA2ODE3MjEzOX0.CsbI1OiT2i3EL31kvexrstIsaC48MD4fEHg6BSE6LZ4'
-        },
+        headers: getEdgeFunctionAuthHeader(),
         body: JSON.stringify({
           documentId: finalDocumentId,
           fileUrl: publicUrl,
@@ -410,12 +405,9 @@ export function PaymentSuccess() {
 
       console.log('DEBUG: Payload para send-translation-webhook:', webhookPayload);
 
-      const webhookResponse = await fetch('https://ywpogqwhwscbdhnoqsmv.supabase.co/functions/v1/send-translation-webhook', {
+      const webhookResponse = await fetch(config.edgeFunctions.sendTranslationWebhook, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cG9ncXdod3NjYmRobm9xc212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTYxMzksImV4cCI6MjA2ODE3MjEzOX0.CsbI1OiT2i3EL31kvexrstIsaC48MD4fEHg6BSE6LZ4'
-        },
+        headers: getEdgeFunctionAuthHeader(),
         body: JSON.stringify(webhookPayload)
       });
 

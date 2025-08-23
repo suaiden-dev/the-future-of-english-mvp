@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, CreditCard, DollarSign } from 'lucide-react';
+import { getEdgeFunctionAuthHeader } from '../lib/config';
 
 interface PaymentCalculatorProps {
   pages: number;
@@ -94,10 +95,7 @@ export function PaymentCalculator({
 
       const response = await fetch('/functions/v1/create-checkout-session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NODE_ENV === 'development' ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cG9ncXdoc2NiZGhub3FzbXYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczNDE5NzI5NywiZXhwIjoyMDUwNTU3Mjk3fQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8' : ''}`
-        },
+        headers: getEdgeFunctionAuthHeader(),
         body: JSON.stringify({
           pages,
           isCertified: services.find(s => s.id === 'certified')?.checked || false,

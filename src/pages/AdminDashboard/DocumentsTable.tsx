@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Eye, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Eye, Search, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
 import { Document } from '../../App';
 
@@ -13,6 +13,8 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   // Filtrar documentos
   const filteredDocuments = documents.filter(doc => {
@@ -21,6 +23,33 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
     const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Calcular paginação
+  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentDocuments = filteredDocuments.slice(startIndex, endIndex);
+
+  // Reset para primeira página quando filtros mudarem
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   if (documents.length === 0) {
     return (
@@ -93,7 +122,8 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
       {/* Results Count */}
       <div className="px-4 sm:px-6 py-3 bg-gray-50 border-b border-gray-200">
         <p className="text-sm text-gray-600">
-          Showing {filteredDocuments.length} of {documents.length} documents
+          Showing {startIndex + 1}-{Math.min(endIndex, filteredDocuments.length)} of {filteredDocuments.length} documents
+          {filteredDocuments.length !== documents.length && ` (filtered from ${documents.length} total)`}
         </p>
       </div>
       
@@ -126,7 +156,7 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredDocuments.map((doc) => (
+            {currentDocuments.map((doc) => (
               <tr key={doc.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -184,7 +214,7 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
       {/* Mobile Cards */}
       <div className="lg:hidden">
         <div className="divide-y divide-gray-200">
-          {filteredDocuments.map((doc) => (
+          {currentDocuments.map((doc) => (
             <div key={doc.id} className="p-4 hover:bg-gray-50">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
@@ -244,6 +274,79 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
           ))}
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center text-sm text-gray-700">
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {/* Previous Page Button */}
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg border ${
+                  currentPage === 1
+                    ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
+                    : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Previous
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg border ${
+                        currentPage === pageNum
+                          ? 'text-tfe-blue-600 bg-tfe-blue-50 border-tfe-blue-200'
+                          : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Next Page Button */}
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg border ${
+                  currentPage === totalPages
+                    ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
+                    : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Empty State for Filtered Results */}
       {filteredDocuments.length === 0 && documents.length > 0 && (

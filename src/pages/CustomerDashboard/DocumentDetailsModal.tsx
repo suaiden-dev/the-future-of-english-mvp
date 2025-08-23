@@ -253,7 +253,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
                 <span className="font-medium text-gray-950">Processing Status</span>
               </div>
               <p className="text-sm text-gray-700">
-                Your document is still being processed by our system. The verification code will be available once the translation is completed and authenticated.
+                Your document is still being processed by our system. The verification code will be available once the translation is completed and notarized.
               </p>
             </div>
           )}

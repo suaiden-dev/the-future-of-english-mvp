@@ -7,7 +7,7 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { AdminLayout } from './components/AdminLayout';
 import { NotificationBell } from './components/NotificationBell';
-import { Footer } from './components/Footer';
+// Footer removido dos dashboards
 import { Mentorship } from './pages/Home';
 import { Translations } from './pages/Translations';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -475,8 +475,7 @@ function App() {
         </Routes>
       </AuthRedirect>
       
-      {/* Footer - Show on all pages */}
-      <Footer />
+      {/* Footer removido dos dashboards */}
     </div>
     </ToastProvider>
   );
