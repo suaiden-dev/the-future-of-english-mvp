@@ -121,13 +121,21 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
 
       // CRIAR DOCUMENTO NO BANCO ANTES DO PAGAMENTO
       console.log('DEBUG: Criando documento no banco antes do pagamento');
+      console.log('DEBUG: Dados do documento a ser criado:', {
+        userId,
+        filename: selectedFile.name,
+        pages,
+        status: 'draft',
+        total_cost: calculateValue(pages, tipoTrad, isExtrato)
+      });
+
       const { data: newDocument, error: createError } = await supabase
         .from('documents')
         .insert({
           user_id: userId,
           filename: selectedFile.name,
           pages: pages,
-          status: 'pending',
+          status: 'draft', // Criar como draft até o pagamento ser confirmado
           total_cost: calculateValue(pages, tipoTrad, isExtrato),
           verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
           is_authenticated: true,
@@ -140,10 +148,24 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
 
       if (createError) {
         console.error('ERROR: Erro ao criar documento no banco:', createError);
+        console.error('ERROR: Detalhes do erro:', {
+          code: createError.code,
+          message: createError.message,
+          details: createError.details
+        });
         throw new Error('Erro ao criar documento no banco de dados');
       }
 
-      console.log('DEBUG: Documento criado no banco:', newDocument.id);
+      if (!newDocument) {
+        console.error('ERROR: Documento não foi criado (sem erro, mas sem retorno)');
+        throw new Error('Erro ao criar documento no banco de dados');
+      }
+
+      console.log('DEBUG: Documento criado no banco:', {
+        id: newDocument.id,
+        status: newDocument.status,
+        filename: newDocument.filename
+      });
 
       // Adicionar o documentId ao payload
       const payloadWithDocumentId = {
@@ -151,10 +173,18 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
         documentId: newDocument.id
       };
 
-      console.log('Payload com documentId enviado para checkout:', payloadWithDocumentId);
+      console.log('DEBUG: Criando sessão do Stripe com payload:', payloadWithDocumentId);
+      console.log('DEBUG: URL de cancelamento esperada:', `${window.location.origin}/payment-cancelled?document_id=${newDocument.id}`);
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        console.error('ERROR: Usuário não está autenticado');
+        throw new Error('Usuário não está autenticado');
+      }
+
+      console.log('DEBUG: Chamando create-checkout-session com token válido');
       const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
         method: 'POST',
         headers: {

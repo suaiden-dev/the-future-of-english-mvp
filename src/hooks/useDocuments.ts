@@ -23,6 +23,7 @@ export function useDocuments(userId?: string) {
         .from('documents')
         .select('*')
         .eq('user_id', userId)
+        .neq('status', 'draft')  // não incluir documentos com status draft
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -191,6 +192,7 @@ export function useTranslatedDocuments(userId?: string) {
         .from('translated_documents')
         .select('*')
         .eq('user_id', userId)
+        .neq('status', 'draft') // Exclui documentos com status 'draft'
         .order('created_at', { ascending: false });
       
       if (error) throw error;

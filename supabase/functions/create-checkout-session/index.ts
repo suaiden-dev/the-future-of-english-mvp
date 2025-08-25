@@ -154,7 +154,7 @@ Deno.serve(async (req: Request) => {
       ],
       mode: 'payment',
       success_url: `${req.headers.get('origin')}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get('origin')}/payment-cancelled`,
+      cancel_url: `${req.headers.get('origin')}/payment-cancelled?document_id=${documentId || ''}`, // Adiciona validação para documentId
       locale: 'en', // Force English language
       billing_address_collection: 'auto',
       currency: 'usd', // Force USD currency

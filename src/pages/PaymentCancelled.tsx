@@ -1,65 +1,143 @@
-import React from 'react';
-import { XCircle, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { XCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export function PaymentCancelled() {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false); // Começa como false pois agora limpamos ao clicar no botão
+  const [error, setError] = useState<string | null>(null);
+  const [cleanupComplete, setCleanupComplete] = useState(false);
+
+  useEffect(() => {
+    // Chamar a função de limpeza assim que a página carregar
+    cleanupDraftDocuments();
+  }, []);
+
+  // Função para chamar a Edge Function que limpa o documento
+  const cleanupDraftDocuments = async () => {
+    setIsLoading(true);
+    setError(null);
+    setCleanupComplete(false);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error('Usuário não autenticado. Faça login para continuar.');
+      }
+
+      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cleanup-draft-documents`;
+
+      console.log('DEBUG: Chamando edge function para limpar documentos do usuário:', {
+        userId: session.user.id
+      });
+
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          userId: session.user.id
+        }),
+      });
+
+      const result = await response.json();
+      console.log('DEBUG: Resposta da edge function:', {
+        status: response.status,
+        ok: response.ok,
+        result
+      });
+
+      if (!response.ok) {
+        console.error('ERROR: Falha ao chamar edge function:', {
+          status: response.status,
+          statusText: response.statusText,
+          result
+        });
+        throw new Error(result.error || 'Falha ao chamar a função de limpeza.');
+      }
+
+      console.log('Documento de rascunho limpo com sucesso:', result);
+      setCleanupComplete(true);
+
+    } catch (err: any) {
+      console.error('Erro detalhado ao limpar documento:', err);
+      setError(err.message || 'Ocorreu um erro ao limpar o documento. Por favor, contate o suporte.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getStatusMessage = () => {
+    if (isLoading) {
+      return "Cleaning up your temporary document...";
+    }
+    if (error) {
+      return "An error occurred while cleaning up your document.";
+    }
+    if (cleanupComplete) {
+      return "The payment was cancelled and your document has been removed.";
+    }
+    return "The payment was cancelled.";
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-        {/* Cancellation Icon */}
-        <div className="mb-8">
-          <div className="w-20 h-20 bg-tfe-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <XCircle className="w-12 h-12 text-tfe-red-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Payment Cancelled
-          </h1>
-          <p className="text-gray-600">
-            The payment was cancelled. Your document was not processed.
-          </p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 max-w-md w-full text-center">
+        {/* Icone e Título */}
+        <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+          <XCircle className="w-10 h-10 text-red-600" />
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+          Payment Cancelled
+        </h1>
+        <p className="text-gray-500 mt-2">
+          {getStatusMessage()}
+        </p>
+        {error && !isLoading && (
+          <p className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded-md">{error}</p>
+        )}
+
+        {/* O que aconteceu */}
+        <div className="bg-gray-50/70 rounded-lg p-4 my-6 text-left">
+          <h2 className="font-semibold text-gray-800 mb-3">What happened?</h2>
+          <ul className="space-y-2 text-sm text-gray-600">
+            <li className="flex items-start"><span className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>You cancelled the payment process.</li>
+            <li className="flex items-start"><span className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>Your document was not sent for translation.</li>
+            <li className="flex items-start"><span className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>No charge was made to your account.</li>
+          </ul>
         </div>
 
-        {/* What happened */}
-        <div className="bg-gray-50 rounded-lg p-6 mb-8">
-          <h2 className="font-semibold text-gray-900 mb-4">What happened?</h2>
-          <div className="space-y-3 text-sm text-gray-700">
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-tfe-red-500 rounded-full mt-2 flex-shrink-0"></div>
-              <p>You cancelled the payment process on Stripe</p>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-tfe-red-500 rounded-full mt-2 flex-shrink-0"></div>
-              <p>Your document was not sent for translation</p>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-tfe-red-500 rounded-full mt-2 flex-shrink-0"></div>
-              <p>No charge was made to your account</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Button */}
-        <div className="mb-8">
-          <Link
-            to="/customer-dashboard"
-            className="inline-flex items-center px-8 py-3 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors font-semibold"
+        {/* Botão de Ação */}
+        <div className="mb-6">
+          <button
+            onClick={async () => {
+              await cleanupDraftDocuments();
+              navigate('/customer-dashboard');
+            }}
+            disabled={isLoading}
+            className="w-full inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Dashboard
-          </Link>
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            ) : (
+              <ArrowLeft className="w-5 h-5 mr-2" />
+            )}
+            <span>
+              {isLoading ? 'Cleaning...' : 'Back to Dashboard'}
+            </span>
+          </button>
         </div>
 
-        {/* Contact Information */}
+        {/* Informações de Contato */}
         <div className="pt-6 border-t border-gray-200">
-          <p className="text-sm text-gray-600 mb-2">
-            Need help? Contact us:
+          <p className="text-sm text-gray-500">
+            Need help? Contact us at <a href="mailto:support@lushamerica.com" className="font-medium text-blue-600 hover:underline">support@lushamerica.com</a>
           </p>
-          <div className="text-sm text-gray-600">
-            <p>Email: support@thefutureofenglish.com</p>
-            <p>WhatsApp: (323) 788-3117</p>
-          </div>
         </div>
       </div>
     </div>
   );
-} 
+}

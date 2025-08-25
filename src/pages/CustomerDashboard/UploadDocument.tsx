@@ -196,7 +196,7 @@ export default function UploadDocument() {
           user_id: user.id,
           filename: selectedFile.name,
           pages: pages,
-          status: 'pending',
+          status: 'draft', // Começa como draft até o pagamento ser confirmado
           total_cost: calcularValor(pages, tipoTrad, isExtrato),
           verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
           is_authenticated: true,
