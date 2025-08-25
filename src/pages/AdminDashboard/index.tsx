@@ -57,17 +57,17 @@ export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProp
   ];
 
   return (
-    <div className="py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2 text-sm sm:text-base">Manage translation projects and monitor business metrics</p>
+    <div className="py-4 sm:py-6 overflow-x-hidden w-full">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 w-full">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-sm">Manage translation projects and monitor business metrics</p>
         </div>
 
         {/* Tabs */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -75,13 +75,13 @@ export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProp
                   <button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id as any)}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                    className={`py-2 px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex items-center space-x-1.5 sm:space-x-2 ${
                       isActive
                         ? 'border-tfe-blue-500 text-tfe-blue-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                     <span>{tab.label}</span>
                   </button>
                 );
