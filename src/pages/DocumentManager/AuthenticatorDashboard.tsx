@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { FileText, Check, Clock, ShieldCheck, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone } from 'lucide-react';
 import { getValidFileUrl } from '../../utils/fileUtils';
+import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
 
 interface Document {
   id: string;
@@ -191,7 +192,15 @@ export default function AuthenticatorDashboard() {
     if (insertError) {
       console.error('[AuthenticatorDashboard] Erro ao inserir em translated_documents:', insertError);
     }
-    
+
+    // Notificar que a tradução foi completada
+    try {
+      await notifyTranslationCompleted(doc.user_id, doc.filename, doc.id);
+    } catch (error) {
+      console.error('[AuthenticatorDashboard] Erro ao enviar notificação de tradução completada:', error);
+      // Não interrompemos o processo mesmo se a notificação falhar
+    }
+
     // Atualizar estatísticas
     setStats(prev => ({
       ...prev,

@@ -4,7 +4,7 @@ import { PaymentsTable } from './PaymentsTable';
 import { PaymentStatsCards } from './PaymentStatsCards';
 import { FinanceCharts } from './FinanceCharts';
 import AuthenticatorDocumentsTable from './AuthenticatorDocumentsTable';
-import { ReportsTable } from './ReportsTable';
+import ReportsTable from './ReportsTable';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
 import { DateRangeFilter, DateRange } from '../../components/DateRangeFilter';
 import { Document } from '../../App';
@@ -150,7 +150,7 @@ export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboard
 
           {activeTab === 'reports' && (
             <div className="space-y-4 sm:space-y-6 w-full">
-              <ReportsTable documents={documents} />
+              <ReportsTable />
             </div>
           )}
         </div>

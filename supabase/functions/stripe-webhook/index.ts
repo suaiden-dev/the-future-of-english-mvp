@@ -206,6 +206,48 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
       } else {
         console.log('DEBUG: Registro criado na tabela payments com sucesso:', paymentRecord.id);
       }
+      
+      // Enviar notificação de pagamento
+      try {
+        console.log('DEBUG: Enviando notificação de pagamento');
+        
+        // Buscar dados do usuário
+        const { data: user, error: userError } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', userId)
+          .single();
+        
+        if (!userError && user) {
+          const notificationPayload = {
+            user_name: user.name || 'User',
+            user_email: user.email || '',
+            notification_type: 'Payment Notification',
+            timestamp: new Date().toISOString(),
+            amount: parseFloat(totalPrice || '0'),
+            currency: 'USD',
+            payment_id: session.id,
+            document_id: documentId,
+            filename: filename
+          };
+          
+          const webhookResponse = await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(notificationPayload)
+          });
+          
+          if (webhookResponse.ok) {
+            console.log('SUCCESS: Notificação de pagamento enviada');
+          } else {
+            console.error('WARNING: Falha ao enviar notificação de pagamento:', webhookResponse.status);
+          }
+        }
+      } catch (notificationError) {
+        console.error('WARNING: Erro ao enviar notificação de pagamento:', notificationError);
+        // Não falhar o processo por causa da notificação
+      }
+      
     } catch (paymentError) {
       console.error('ERROR: Erro ao criar registro na tabela payments:', paymentError);
       throw paymentError;

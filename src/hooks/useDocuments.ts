@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../lib/database.types';
+import { notifyDocumentUpload, notifyTranslationStarted } from '../utils/webhookNotifications';
 
 type Document = Database['public']['Tables']['documents']['Row'];
 type DocumentInsert = Database['public']['Tables']['documents']['Insert'] & { file_url?: string };
@@ -65,6 +66,10 @@ export function useDocuments(userId?: string) {
       
       if (error) throw error;
       setDocuments(prev => [newDocument, ...prev]);
+      
+      // Enviar notificação de upload
+      notifyDocumentUpload(userId, newDocument.filename, newDocument.id);
+      
       return newDocument;
     } catch (err) {
       console.error('DEBUG: [useDocuments] Erro ao criar documento:', err, JSON.stringify(err, null, 2));
@@ -82,6 +87,17 @@ export function useDocuments(userId?: string) {
         .single();
       
       if (error) throw error;
+
+      // Notificar quando o documento inicia processamento
+      if (status === 'processing') {
+        try {
+          await notifyTranslationStarted(updatedDocument.user_id, updatedDocument.filename, updatedDocument.id);
+        } catch (error) {
+          console.error('Erro ao enviar notificação de tradução iniciada:', error);
+          // Não interrompemos o processo mesmo se a notificação falhar
+        }
+      }
+
       setDocuments(prev => 
         prev.map(doc => 
           doc.id === documentId ? updatedDocument : doc
@@ -153,6 +169,17 @@ export function useAllDocuments() {
         .single();
       
       if (error) throw error;
+
+      // Notificar quando o documento inicia processamento
+      if (status === 'processing') {
+        try {
+          await notifyTranslationStarted(updatedDocument.user_id, updatedDocument.filename, updatedDocument.id);
+        } catch (error) {
+          console.error('Erro ao enviar notificação de tradução iniciada:', error);
+          // Não interrompemos o processo mesmo se a notificação falhar
+        }
+      }
+
       setDocuments(prev => 
         prev.map(doc => 
           doc.id === documentId ? updatedDocument : doc
@@ -174,7 +201,7 @@ export function useAllDocuments() {
   };
 }
 
-// Novo hook para buscar apenas documentos traduzidos do usuário logado
+// Novo hook para buscar documentos do usuário (pending da tabela documents + processed da translated_documents)
 export function useTranslatedDocuments(userId?: string) {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,19 +215,38 @@ export function useTranslatedDocuments(userId?: string) {
     }
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Buscar documentos pending/processing da tabela documents
+      const { data: pendingDocs, error: pendingError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', userId)
+        .in('status', ['pending', 'processing'])
+        .order('created_at', { ascending: false });
+      
+      if (pendingError) throw pendingError;
+      
+      // Buscar documentos já processados da tabela translated_documents
+      const { data: translatedDocs, error: translatedError } = await supabase
         .from('translated_documents')
         .select('*')
         .eq('user_id', userId)
-        .neq('status', 'draft') // Exclui documentos com status 'draft'
+        .in('status', ['completed', 'finished'])
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      setDocuments(data);
+      if (translatedError) throw translatedError;
+      
+      // Combinar e ordenar por data de criação
+      const allDocs = [
+        ...(pendingDocs || []).map(doc => ({ ...doc, source: 'documents' })),
+        ...(translatedDocs || []).map(doc => ({ ...doc, source: 'translated_documents' }))
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      setDocuments(allDocs);
       setError(null);
     } catch (err) {
-      console.error('[useTranslatedDocuments] Erro ao buscar documentos traduzidos:', err);
-      setError('Failed to fetch translated documents');
+      console.error('[useTranslatedDocuments] Erro ao buscar documentos:', err);
+      setError('Failed to fetch documents');
     } finally {
       setLoading(false);
     }
