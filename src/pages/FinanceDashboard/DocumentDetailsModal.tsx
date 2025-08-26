@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XCircle, FileText, User, Calendar, Hash, Eye, Download, AlertCircle } from 'lucide-react';
 import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
 import { Document } from '../../App';
+import { supabase } from '../../lib/supabase';
 
 interface DocumentDetailsModalProps {
   document: Document | null;
@@ -11,13 +12,53 @@ interface DocumentDetailsModalProps {
 export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModalProps) {
   // Remover estados relacionados ao perfil do usuário para evitar erros
   const [showAdvancedUserInfo, setShowAdvancedUserInfo] = useState(false);
+  const [translatedDoc, setTranslatedDoc] = useState<any>(null);
+  const [loadingTranslated, setLoadingTranslated] = useState(false);
+
+  // Buscar documento traduzido quando o documento mudar
+  useEffect(() => {
+    if (document) {
+      fetchTranslatedDocument();
+    }
+  }, [document]);
+
+  const fetchTranslatedDocument = async () => {
+    if (!document) return;
+    
+    setLoadingTranslated(true);
+    try {
+      console.log('🔍 Buscando documento traduzido para user_id:', document.user_id);
+      
+      const { data: translatedDocs, error } = await supabase
+        .from('translated_documents')
+        .select('translated_file_url, filename')
+        .eq('user_id', document.user_id);
+
+      console.log('🎯 Documentos traduzidos encontrados:', translatedDocs);
+      
+      // Procurar o documento traduzido que corresponde ao filename atual
+      const matchingTranslatedDoc = translatedDocs?.find(td => td.filename === document.filename);
+      console.log('🎯 Documento traduzido correspondente:', matchingTranslatedDoc);
+      
+      if (matchingTranslatedDoc && !error) {
+        setTranslatedDoc(matchingTranslatedDoc);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar documento traduzido:', error);
+    } finally {
+      setLoadingTranslated(false);
+    }
+  };
 
   if (!document) return null;
 
   const handleDownload = async () => {
-    if (document.file_url) {
+    // Prioriza translated_file_url se encontrou documento traduzido, senão usa file_url original
+    const fileUrl = translatedDoc?.translated_file_url || document.file_url;
+    
+    if (fileUrl) {
       try {
-        const response = await fetch(document.file_url);
+        const response = await fetch(fileUrl);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const link = window.document.createElement('a');
@@ -35,8 +76,20 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
   };
 
   const handleViewFile = () => {
-    if (document.file_url) {
-      window.open(document.file_url, '_blank', 'noopener,noreferrer');
+    console.log('👁️ handleViewFile chamado');
+    console.log('📄 document:', document);
+    console.log('📑 translatedDoc:', translatedDoc);
+    
+    // Prioriza translated_file_url se encontrou documento traduzido, senão usa file_url original
+    const url = translatedDoc?.translated_file_url || document.file_url;
+    
+    console.log('🔗 URL do arquivo:', url);
+    
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      console.log('❌ Nenhuma URL encontrada para abrir');
+      alert('No file available to view');
     }
   };
 
@@ -188,20 +241,33 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
           </div>
 
           {/* Actions */}
-          {document.file_url && (
+          {(document.file_url || translatedDoc?.translated_file_url) && (
             <div className="bg-tfe-blue-50 rounded-lg p-4">
-              <h4 className="text-lg font-semibold text-tfe-blue-950 mb-3">File Actions</h4>
+              <div className="flex items-center gap-3 mb-3">
+                <Eye className="w-6 h-6 text-tfe-blue-600" />
+                <h4 className="text-lg font-semibold text-tfe-blue-950">File Actions</h4>
+                {loadingTranslated && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-tfe-blue-600"></div>
+                )}
+                {translatedDoc?.translated_file_url && (
+                  <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
+                    Translated Available
+                  </span>
+                )}
+              </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handleViewFile}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors"
+                  disabled={loadingTranslated}
                 >
                   <Eye className="w-4 h-4" />
-                  View File
+                  {translatedDoc?.translated_file_url ? 'View Translated File' : 'View File'}
                 </button>
                 <button
                   onClick={handleDownload}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  disabled={loadingTranslated}
                 >
                   <Download className="w-4 h-4" />
                   Download

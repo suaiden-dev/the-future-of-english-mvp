@@ -3,6 +3,7 @@ import { Document } from '../../App';
 import { supabase } from '../../lib/supabase';
 import { Eye, Download, Filter, Calendar } from 'lucide-react';
 import { DateRange } from '../../components/DateRangeFilter';
+import { DocumentDetailsModal } from './DocumentDetailsModal';
 
 interface PaymentsTableProps {
   documents?: Document[];
@@ -37,6 +38,8 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
     endDate: null,
     preset: 'all'
   });
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     loadPayments();
@@ -144,6 +147,30 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
       console.error('💥 Erro ao carregar pagamentos:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewDocument = async (payment: Payment) => {
+    try {
+      console.log('🔍 Buscando documento para payment:', payment);
+      
+      // Buscar o documento completo pelo ID
+      const { data: document, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('id', payment.document_id)
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao buscar documento:', error);
+        return;
+      }
+
+      console.log('📄 Documento encontrado:', document);
+      setSelectedDocument(document);
+      setShowModal(true);
+    } catch (error) {
+      console.error('💥 Erro ao abrir documento:', error);
     }
   };
 
@@ -460,12 +487,12 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                     <button
-                      onClick={() => {
-                        console.log('View payment details:', payment.id);
-                      }}
-                      className="text-tfe-blue-600 hover:text-tfe-blue-900"
+                      onClick={() => handleViewDocument(payment)}
+                      className="text-tfe-blue-600 hover:text-tfe-blue-900 flex items-center gap-1"
+                      title="View document details"
                     >
                       <Eye className="w-4 h-4" />
+                      <span className="hidden sm:inline">View</span>
                     </button>
                   </td>
                 </tr>
@@ -482,6 +509,17 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
             <span className="font-medium text-green-600">Total: ${filteredPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
           </div>
         </div>
+      )}
+
+      {/* Modal de Detalhes do Documento */}
+      {showModal && selectedDocument && (
+        <DocumentDetailsModal 
+          document={selectedDocument}
+          onClose={() => {
+            setShowModal(false);
+            setSelectedDocument(null);
+          }}
+        />
       )}
     </div>
   );

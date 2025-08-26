@@ -202,7 +202,9 @@ export default function UploadDocument() {
           is_authenticated: true,
           upload_date: new Date().toISOString(),
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          tipo_trad: tipoTrad,
+          idioma_raiz: idiomaRaiz
         })
         .select()
         .single();

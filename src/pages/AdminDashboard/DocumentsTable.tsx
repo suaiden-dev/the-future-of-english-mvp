@@ -162,16 +162,6 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <select
-                          value={doc.status || ''}
-                          onChange={(e) => onStatusUpdate(doc.id, e.target.value as Document['status'])}
-                          className="text-xs border border-gray-300 rounded px-2 py-1 max-w-[100px]"
-                          aria-label="Update document status"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="completed">Completed</option>
-                        </select>
                       </div>
                     </td>
                   </tr>
@@ -229,16 +219,6 @@ export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: Do
                   >
                     <Eye className="w-3.5 h-3.5" />
                   </button>
-                  <select
-                    value={doc.status || ''}
-                    onChange={(e) => onStatusUpdate(doc.id, e.target.value as Document['status'])}
-                    className="text-[10px] sm:text-xs border border-gray-300 rounded px-1 py-0.5 max-w-[80px] sm:max-w-[90px] truncate"
-                    aria-label="Update document status"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="completed">Completed</option>
-                  </select>
                 </div>
               </div>
             </div>
