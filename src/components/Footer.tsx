@@ -71,8 +71,8 @@ export function Footer() {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Envelope className="w-5 h-5 text-tfe-red-400" weight="fill" />
-                <a href="mailto:info@lushamericaapps.com" className="text-gray-300 hover:text-white transition-colors">
-                  info@lushamericaapps.com
+                <a href="mailto:contato@lushamerica.com" className="text-gray-300 hover:text-white transition-colors">
+                  contato@lushamerica.com
                 </a>
               </div>
               

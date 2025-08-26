@@ -12,21 +12,11 @@ const corsHeaders = {
 function calculatePrice(pages: number, isCertified: boolean, isNotarized: boolean, isBankStatement: boolean): number {
   let pricePerPage = 0;
   
-  // Calcular preço baseado no tipo de tradução e se é extrato bancário
+  // Novo modelo de preços: apenas "Certified / Notarized" a $20 por página
   if (isBankStatement) {
-    // Preços para extratos bancários
-    if (isCertified) {
-      pricePerPage = 25; // Certificado + extrato bancário
-    } else if (isNotarized) {
-      pricePerPage = 35; // Notorizado + extrato bancário
-    }
+    pricePerPage = 25; // $20 base + $5 bank statement fee
   } else {
-    // Preços normais
-    if (isCertified) {
-      pricePerPage = 15; // Certificado normal
-    } else if (isNotarized) {
-      pricePerPage = 20; // Notorizado normal
-    }
+    pricePerPage = 20; // $20 per page para Certified / Notarized
   }
   
   return pricePerPage * pages;
@@ -34,13 +24,11 @@ function calculatePrice(pages: number, isCertified: boolean, isNotarized: boolea
 
 // Function to generate service description
 function generateServiceDescription(pages: number, isCertified: boolean, isNotarized: boolean, isBankStatement: boolean): string {
-  const services = [];
+  const services = ['Certified / Notarized'];
   
-  if (isCertified) services.push('Certified');
-  if (isNotarized) services.push('Notarized');
   if (isBankStatement) services.push('Bank Statement');
   
-  const serviceText = services.length > 0 ? ` (${services.join(', ')})` : '';
+  const serviceText = ` (${services.join(', ')})`;
   return `Document Translation - ${pages} page${pages > 1 ? 's' : ''}${serviceText}`;
 }
 

@@ -70,25 +70,10 @@ export function Translations() {
 
   const pricingPlans = [
     {
-      name: "Certified Translation",
-      price: "$15.00",
-      period: "per page",
-      description: "Standard translation with official certification",
-      features: [
-        "24-48 hour turnaround",
-        "Official certification stamp",
-        "USCIS accepted",
-        "Digital verification code",
-        "Email delivery",
-        "Standard support"
-      ],
-      popular: false
-    },
-    {
-      name: "Notarized Translation",
+      name: "Certified & Notarized Translation",
       price: "$20.00",
       period: "per page",
-      description: "Official notarized translation with legal authentication",
+      description: "Official certified and notarized translation with legal authentication",
       features: [
         "24-48 hour turnaround",
         "Official notarization",
@@ -100,22 +85,7 @@ export function Translations() {
       ],
       popular: true
     },
-    {
-      name: "Bank Statement",
-      price: "$25.00",
-      period: "per page",
-      description: "Special handling for financial documents",
-      features: [
-        "24-48 hour turnaround",
-        "Enhanced verification process",
-        "Financial document formatting",
-        "Additional security measures",
-        "USCIS accepted",
-        "Digital verification code",
-        "Email delivery"
-      ],
-      popular: false
-    }
+    
   ];
 
   const documentTypes = [
@@ -224,11 +194,12 @@ export function Translations() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {pricingPlans.map((plan, index) => (
-              <div key={index} className={`relative bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 ${
-                plan.popular ? 'ring-2 ring-red-500 scale-105' : 'border border-gray-200'
-              }`}>
+          <div className="flex justify-center">
+            <div className="max-w-md">
+              {pricingPlans.map((plan, index) => (
+                <div key={index} className={`relative bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 ${
+                  plan.popular ? 'ring-2 ring-red-500 scale-105' : 'border border-gray-200'
+                }`}>
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <span className="bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
@@ -262,11 +233,12 @@ export function Translations() {
                         : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
                     }`}
                   >
-                    Choose {plan.name}
+                    Get Started Now
                   </button>
                 </div>
               </div>
             ))}
+            </div>
           </div>
 
           <div className="text-center mt-12">
@@ -285,7 +257,7 @@ export function Translations() {
                   </p>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Standard rate</span>
-                    <span className="text-sm font-medium text-gray-800">$15-20/page</span>
+                    <span className="text-sm font-medium text-gray-800">$20/page</span>
                   </div>
                 </div>
                 
@@ -296,7 +268,7 @@ export function Translations() {
                   </p>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Additional fee</span>
-                    <span className="text-sm font-bold text-orange-600">+$10/page</span>
+                    <span className="text-sm font-bold text-orange-600">+$5/page</span>
                   </div>
                 </div>
               </div>
@@ -650,7 +622,7 @@ export function Translations() {
                 <Envelope className="w-8 h-8 text-red-600" weight="fill" />
               </div>
               <h3 className="text-xl font-semibold text-slate-800 mb-2">Email</h3>
-              <p className="text-slate-600">lushamericaapps@gmail.com</p>
+              <p className="text-slate-600">contato@lushamerica.com</p>
               <p className="text-sm text-slate-500 mt-2">24/7 support</p>
             </div>
             

@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Clock, DollarSign, Globe, Award, CreditCard, Receipt } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Globe, Award, Receipt } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { fileStorage } from '../../utils/fileStorage';
 import { generateUniqueFileName } from '../../utils/fileUtils';
 
 export default function AuthenticatorUpload() {
@@ -15,7 +14,7 @@ export default function AuthenticatorUpload() {
   const [dragActive, setDragActive] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [tipoTrad, setTipoTrad] = useState<'Certificado' | 'Notorizado'>('Certificado');
+  const [tipoTrad, setTipoTrad] = useState<'Notorizado'>('Notorizado');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
   const [clientName, setClientName] = useState('');
@@ -28,8 +27,7 @@ export default function AuthenticatorUpload() {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
   const translationTypes = [
-    { value: 'Certificado', label: 'Certified Translation' },
-    { value: 'Notorizado', label: 'Notarized Translation' },
+    { value: 'Notorizado', label: 'Certified / Notarized' },
   ];
   
   const languages = [
@@ -52,14 +50,10 @@ export default function AuthenticatorUpload() {
     { value: 'other', label: 'Other' },
   ];
 
-  function calcularValor(pages: number, tipo: 'Certificado' | 'Notorizado', extrato: boolean) {
-    if (extrato) {
-      return tipo === 'Certificado' ? pages * 25 : pages * 35;
-    } else {
-      return tipo === 'Certificado' ? pages * 15 : pages * 20;
-    }
+  function calcularValor(pages: number) {
+    return pages * 20;
   }
-  const valor = calcularValor(pages, tipoTrad, isExtrato);
+  const valor = calcularValor(pages);
 
   // PDF page count
   let pdfjsLib: any = null;
@@ -161,7 +155,7 @@ export default function AuthenticatorUpload() {
 
       const metadata = {
         documentType: tipoTrad,
-        certification: tipoTrad === 'Certificado',
+        certification: false,
         notarization: tipoTrad === 'Notorizado',
         pageCount: pages,
         isBankStatement: isExtrato,
@@ -176,7 +170,7 @@ export default function AuthenticatorUpload() {
       // Usar payload customizado se fornecido, senão criar padrão
       const payload = customPayload || {
         pages,
-        isCertified: tipoTrad === 'Certificado',
+        isCertified: false,
         isNotarized: tipoTrad === 'Notorizado',
         isBankStatement: isExtrato,
         filePath: customPayload?.filePath || fileId, // filePath sempre que possível
@@ -386,7 +380,7 @@ export default function AuthenticatorUpload() {
       // Payload para webhook
       const payload = {
         pages,
-        isCertified: tipoTrad === 'Certificado',
+        isCertified: false,
         isNotarized: tipoTrad === 'Notorizado',
         isBankStatement: isExtrato,
         filePath: filePath,
@@ -569,7 +563,7 @@ export default function AuthenticatorUpload() {
                     <select
                       id="translation-type"
                       value={tipoTrad}
-                      onChange={e => setTipoTrad(e.target.value as 'Certificado' | 'Notorizado')}
+                      onChange={e => setTipoTrad(e.target.value as 'Notorizado')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Translation type"
                     >
@@ -744,7 +738,7 @@ export default function AuthenticatorUpload() {
                   <span className="text-2xl font-bold text-green-600">FREE</span>
                 </div>
                 <p className="text-xs text-tfe-blue-950/80 mb-2">
-                  {translationTypes.find(t => t.value === tipoTrad)?.label} {isExtrato ? (tipoTrad === 'Certificado' ? '$25' : '$35') : (tipoTrad === 'Certificado' ? '$15' : '$20')} per page × {pages} page{pages !== 1 ? 's' : ''}
+                                    {translationTypes.find(t => t.value === tipoTrad)?.label} $20 per page × {pages} pages = ${(pages * 20).toFixed(2)}
                 </p>
                 <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
                   <li>USCIS accepted translations</li>
@@ -771,33 +765,21 @@ export default function AuthenticatorUpload() {
                     <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Certified Translation</span>
-                          <span className="text-sm font-bold text-tfe-blue-600">$15/page</span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          Standard translation with official certification for general use, immigration, and legal purposes.
-                        </p>
-                        <ul className="text-xs text-gray-500 space-y-1">
-                          <li>• Official certification stamp</li>
-                          <li>• USCIS accepted</li>
-                          <li>• Digital verification code</li>
-                          <li>• 24-48 hour turnaround</li>
-                        </ul>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Notarized Translation</span>
+                          <span className="font-medium text-gray-800">Certified & Notarized Translation</span>
                           <span className="text-sm font-bold text-tfe-blue-600">$20/page</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Official notarized translation with additional legal authentication for court documents and legal proceedings.
+                          Official certified and notarized translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
+                          <li>• Official certification stamp</li>
                           <li>• Notary public certification</li>
                           <li>• Legal document authentication</li>
+                          <li>• USCIS accepted</li>
+                          <li>• Digital verification code</li>
                           <li>• Court-accepted format</li>
                           <li>• Enhanced verification</li>
+                          <li>• 24-48 hour turnaround</li>
                         </ul>
                       </div>
                     </div>
@@ -823,7 +805,7 @@ export default function AuthenticatorUpload() {
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium text-gray-800">Bank Statements</span>
-                          <span className="text-sm font-bold text-orange-600">+$10/page</span>
+                          <span className="text-sm font-bold text-orange-600">+$5/page</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
                           Additional verification and formatting required for financial documents.

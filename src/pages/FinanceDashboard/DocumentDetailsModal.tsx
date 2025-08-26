@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { XCircle, FileText, User, Calendar, Hash, Eye, Download, AlertCircle } from 'lucide-react';
+import { XCircle, FileText, User, Calendar, Hash, Eye, Download, AlertCircle, Phone } from 'lucide-react';
 import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
 import { Document } from '../../App';
 import { supabase } from '../../lib/supabase';
@@ -10,17 +10,47 @@ interface DocumentDetailsModalProps {
 }
 
 export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModalProps) {
-  // Remover estados relacionados ao perfil do usuário para evitar erros
-  const [showAdvancedUserInfo, setShowAdvancedUserInfo] = useState(false);
+  // Estados para informações do usuário
+  const [userProfile, setUserProfile] = useState<{ name: string; email: string; phone: string | null } | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [translatedDoc, setTranslatedDoc] = useState<any>(null);
   const [loadingTranslated, setLoadingTranslated] = useState(false);
 
-  // Buscar documento traduzido quando o documento mudar
+  // Buscar documento traduzido e perfil do usuário quando o documento mudar
   useEffect(() => {
     if (document) {
       fetchTranslatedDocument();
+      fetchUserProfile();
     }
   }, [document]);
+
+  const fetchUserProfile = async () => {
+    if (!document || !document.user_id) return;
+    
+    setLoadingProfile(true);
+    try {
+      console.log('🔍 Buscando perfil do usuário para user_id:', document.user_id);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('name, email, phone')
+        .eq('id', document.user_id)
+        .single();
+      
+      if (error) {
+        console.error('❌ Erro ao buscar perfil do usuário:', error);
+        setUserProfile(null);
+      } else {
+        console.log('✅ Perfil do usuário encontrado:', data);
+        setUserProfile(data);
+      }
+    } catch (err) {
+      console.error('💥 Erro na busca do perfil:', err);
+      setUserProfile(null);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   const fetchTranslatedDocument = async () => {
     if (!document) return;
@@ -139,7 +169,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
             </div>
           </div>
 
-          {/* User Info - Simplificado para não quebrar */}
+          {/* User Info */}
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-3">
               <User className="w-6 h-6 text-green-600" />
@@ -151,36 +181,34 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
                 <AlertCircle className="w-4 h-4" />
                 <span>No user ID associated with this document</span>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {/* Sempre mostrar o User ID */}
+            ) : loadingProfile ? (
+              <div className="text-gray-500">Loading user information...</div>
+            ) : userProfile ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Name</label>
+                  <p className="text-gray-900">{userProfile.name || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Email</label>
+                  <p className="text-gray-900 break-all">{userProfile.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <Phone className="w-4 h-4" />
+                    Phone Number
+                  </label>
+                  <p className="text-gray-900">{userProfile.phone || 'Not provided'}</p>
+                </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">User ID</label>
                   <p className="text-gray-900 font-mono text-sm break-all bg-gray-100 p-2 rounded">
                     {document.user_id}
                   </p>
                 </div>
-                
-                {/* Botão para tentar buscar informações avançadas (opcional) */}
-                <button
-                  onClick={() => setShowAdvancedUserInfo(!showAdvancedUserInfo)}
-                  className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                >
-                  {showAdvancedUserInfo ? 'Hide' : 'Try to Load'} Advanced User Info
-                </button>
-                
-                {/* Informações avançadas (se solicitado) */}
-                {showAdvancedUserInfo && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-sm text-blue-800">
-                      <strong>Note:</strong> Advanced user information (name, email, phone) is not available due to database access restrictions.
-                    </p>
-                    <p className="text-sm text-blue-700 mt-1">
-                      This is likely due to RLS (Row Level Security) policies or permission issues.
-                    </p>
-                  </div>
-                )}
               </div>
+            ) : (
+              <div className="text-gray-500">User information not available</div>
             )}
           </div>
           

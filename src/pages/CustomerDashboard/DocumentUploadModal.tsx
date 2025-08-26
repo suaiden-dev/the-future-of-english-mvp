@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, XCircle, FileText, CheckCircle, AlertCircle, Info, Shield, Clock, DollarSign, Globe, Award } from 'lucide-react';
+import { Upload, XCircle, FileText, CheckCircle, AlertCircle, Info, Shield, DollarSign, Award } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { fileStorage } from '../../utils/fileStorage';
 import { generateUniqueFileName } from '../../utils/fileUtils';
@@ -7,14 +7,12 @@ import { generateUniqueFileName } from '../../utils/fileUtils';
 interface DocumentUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpload: (documentData: { filename: string; file_url: string; pages: number; folder_id?: string }) => Promise<void>;
   userId: string;
-  userEmail: string; // Adicionar email do usuário
-  userName?: string; // Adicionar nome do usuário
-  currentFolderId?: string | null;
+  userEmail: string;
+  currentFolderId?: string;
 }
 
-export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEmail, userName, currentFolderId }: DocumentUploadModalProps) {
+export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, currentFolderId }: DocumentUploadModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pages, setPages] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
@@ -23,13 +21,12 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
   const [dragActive, setDragActive] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [tipoTrad, setTipoTrad] = useState<'Certificado' | 'Notorizado'>('Certificado');
+  const [tipoTrad, setTipoTrad] = useState<'Notorizado'>('Notorizado');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
   
   const translationTypes = [
-    { value: 'Certificado', label: 'Certified Translation' },
-    { value: 'Notorizado', label: 'Notarized Translation' },
+    { value: 'Notorizado', label: 'Certified / Notarized' },
   ];
   
   const languages = [
@@ -44,14 +41,14 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
   ];
 
   // Function to calculate the value
-  function calculateValue(pages: number, type: 'Certificado' | 'Notorizado', isBankStatement: boolean) {
+  function calculateValue(pages: number, isBankStatement: boolean) {
     if (isBankStatement) {
-      return type === 'Certificado' ? pages * 25 : pages * 35;
+      return pages * 25; // $20 base + $5 bank statement fee
     } else {
-      return type === 'Certificado' ? pages * 15 : pages * 20;
+      return pages * 20; // $20 per page
     }
   }
-  const value = calculateValue(pages, tipoTrad, isExtrato);
+  const value = calculateValue(pages, isExtrato);
 
   if (!isOpen) return null;
 
@@ -108,7 +105,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
       // Usar payload customizado se fornecido, senão usar o padrão
       const payload = customPayload || {
         pages,
-        isCertified: tipoTrad === 'Certificado',
+        isCertified: true, // Always certified/notarized now
         isNotarized: tipoTrad === 'Notorizado',
         isBankStatement: isExtrato,
         fileId, // Usar o ID do arquivo no IndexedDB
@@ -126,7 +123,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
         filename: selectedFile.name,
         pages,
         status: 'draft',
-        total_cost: calculateValue(pages, tipoTrad, isExtrato)
+        total_cost: calculateValue(pages, isExtrato)
       });
 
       const { data: newDocument, error: createError } = await supabase
@@ -136,12 +133,15 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
           filename: selectedFile.name,
           pages: pages,
           status: 'draft', // Criar como draft até o pagamento ser confirmado
-          total_cost: calculateValue(pages, tipoTrad, isExtrato),
+          total_cost: calculateValue(pages, isExtrato),
           verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
           is_authenticated: true,
           upload_date: new Date().toISOString(),
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          tipo_trad: tipoTrad,
+          idioma_raiz: idiomaRaiz,
+          is_bank_statement: isExtrato
         })
         .select()
         .single();
@@ -235,7 +235,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
           console.log('DEBUG: Mobile - tentando usar IndexedDB (igual ao desktop)');
           const fileId = await fileStorage.storeFile(selectedFile, {
             documentType: tipoTrad,
-            certification: tipoTrad === 'Certificado',
+            certification: true, // Always certified/notarized now
             notarization: tipoTrad === 'Notorizado',
             pageCount: pages,
             isBankStatement: isExtrato,
@@ -263,7 +263,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
               size: selectedFile.size,
               lastModified: selectedFile.lastModified,
               documentType: tipoTrad,
-              certification: tipoTrad === 'Certificado',
+              certification: true, // Always certified/notarized now
               notarization: tipoTrad === 'Notorizado',
               pageCount: pages,
               isBankStatement: isExtrato,
@@ -288,7 +288,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
         console.log('DEBUG: Desktop - usando IndexedDB');
         const fileId = await fileStorage.storeFile(selectedFile, {
           documentType: tipoTrad,
-          certification: tipoTrad === 'Certificado',
+          certification: true, // Always certified/notarized now
           notarization: tipoTrad === 'Notorizado',
           pageCount: pages,
           isBankStatement: isExtrato,
@@ -458,7 +458,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
                       <select
                         id="translation-type"
                         value={tipoTrad}
-                        onChange={e => setTipoTrad(e.target.value as 'Certificado' | 'Notorizado')}
+                        onChange={e => setTipoTrad(e.target.value as 'Notorizado')}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                         aria-label="Translation type"
                       >
@@ -544,7 +544,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
                     <span className="text-2xl font-bold text-tfe-blue-950">${value}.00</span>
                   </div>
                   <p className="text-xs text-tfe-blue-950/80 mb-2">
-                    {translationTypes.find(t => t.value === tipoTrad)?.label} {isExtrato ? (tipoTrad === 'Certificado' ? '$25' : '$35') : (tipoTrad === 'Certificado' ? '$15' : '$20')} per page × {pages} page{pages !== 1 ? 's' : ''}
+                    {translationTypes.find(t => t.value === tipoTrad)?.label} {isExtrato ? '$25' : '$20'} per page × {pages} page{pages !== 1 ? 's' : ''}
                   </p>
                   <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
                     <li>USCIS accepted translations</li>
@@ -571,21 +571,11 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
                       <div className="space-y-2">
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex justify-between items-start mb-1">
-                            <span className="font-medium text-gray-800 text-sm">Certified Translation</span>
-                            <span className="text-xs font-bold text-tfe-blue-600">$15/page</span>
-                          </div>
-                          <p className="text-xs text-gray-600">
-                            Standard translation with official certification for general use, immigration, and legal purposes.
-                          </p>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="flex justify-between items-start mb-1">
-                            <span className="font-medium text-gray-800 text-sm">Notarized Translation</span>
+                            <span className="font-medium text-gray-800 text-sm">Certified / Notarized</span>
                             <span className="text-xs font-bold text-tfe-blue-600">$20/page</span>
                           </div>
                           <p className="text-xs text-gray-600">
-                            Official notarized translation with additional legal authentication for court documents and legal proceedings.
+                            Official certified and notarized translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.
                           </p>
                         </div>
                       </div>
@@ -611,7 +601,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload, userId, userEma
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex justify-between items-start mb-1">
                             <span className="font-medium text-gray-800 text-sm">Bank Statements</span>
-                            <span className="text-xs font-bold text-orange-600">+$10/page</span>
+                            <span className="text-xs font-bold text-orange-600">+$5/page</span>
                           </div>
                           <p className="text-xs text-gray-600">
                             Additional verification and formatting required for financial documents.

@@ -241,7 +241,11 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Source Language</label>
-                <p className="text-gray-900">{(document as any).source_language || 'Not specified'}</p>
+                <p className="text-gray-900">{
+                  (document as any).source_language || 
+                  (document as any).idioma_raiz || 
+                  'Not specified'
+                }</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Bank Statement</label>

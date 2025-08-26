@@ -125,7 +125,7 @@ A landing page de traduções foi completamente atualizada com preços reais, in
 ## 📞 **Informações de Contato Atualizadas:**
 
 - **Telefone**: +1 (555) 123-4567
-- **Email**: lushamericaapps@gmail.com
+- **Email**: contato@lushamerica.com
 - **WhatsApp**: +1 (555) 123-4567
 - **Horário**: Seg-Sex: 9AM-6PM EST
 

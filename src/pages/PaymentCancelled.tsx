@@ -11,11 +11,20 @@ export function PaymentCancelled() {
 
   useEffect(() => {
     // Chamar a função de limpeza assim que a página carregar
-    cleanupDraftDocuments();
-  }, []);
+    // Mas só se não foi executada ainda
+    if (!cleanupComplete) {
+      cleanupDraftDocuments();
+    }
+  }, [cleanupComplete]);
 
   // Função para chamar a Edge Function que limpa o documento
   const cleanupDraftDocuments = async () => {
+    // Evitar chamadas duplas
+    if (isLoading) {
+      console.log('DEBUG: cleanupDraftDocuments já está executando, ignorando');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setCleanupComplete(false);
@@ -26,11 +35,14 @@ export function PaymentCancelled() {
         throw new Error('Usuário não autenticado. Faça login para continuar.');
       }
 
-      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cleanup-draft-documents`;
-
-      console.log('DEBUG: Chamando edge function para limpar documentos do usuário:', {
-        userId: session.user.id
+      const userId = session.user.id;
+      console.log('DEBUG: Iniciando limpeza para usuário:', {
+        userId: userId,
+        userEmail: session.user.email,
+        timestamp: new Date().toISOString()
       });
+
+      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cleanup-draft-documents`;
 
       const response = await fetch(edgeFunctionUrl, {
         method: 'POST',
@@ -39,7 +51,7 @@ export function PaymentCancelled() {
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ 
-          userId: session.user.id
+          userId: userId  // Garantir que estamos usando o userId correto
         }),
       });
 
@@ -47,6 +59,7 @@ export function PaymentCancelled() {
       console.log('DEBUG: Resposta da edge function:', {
         status: response.status,
         ok: response.ok,
+        userId: userId, // Log do userId que foi enviado
         result
       });
 
@@ -54,16 +67,24 @@ export function PaymentCancelled() {
         console.error('ERROR: Falha ao chamar edge function:', {
           status: response.status,
           statusText: response.statusText,
+          userId: userId, // Log do userId que foi enviado
           result
         });
         throw new Error(result.error || 'Falha ao chamar a função de limpeza.');
       }
 
-      console.log('Documento de rascunho limpo com sucesso:', result);
+      console.log('DEBUG: Documento de rascunho limpo com sucesso para usuário:', {
+        userId: userId,
+        result
+      });
       setCleanupComplete(true);
 
     } catch (err: any) {
-      console.error('Erro detalhado ao limpar documento:', err);
+      console.error('DEBUG: Erro detalhado ao limpar documento:', {
+        error: err,
+        message: err.message,
+        timestamp: new Date().toISOString()
+      });
       setError(err.message || 'Ocorreu um erro ao limpar o documento. Por favor, contate o suporte.');
     } finally {
       setIsLoading(false);
