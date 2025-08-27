@@ -1,27 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { StatsCards } from './StatsCards';
 import { PaymentsTable } from './PaymentsTable';
 import { PaymentStatsCards } from './PaymentStatsCards';
 import { FinanceCharts } from './FinanceCharts';
-import AuthenticatorDocumentsTable from './AuthenticatorDocumentsTable';
 import ReportsTable from './ReportsTable';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
-import { DateRangeFilter, DateRange } from '../../components/DateRangeFilter';
+import { DateRange } from '../../components/DateRangeFilter';
 import { Document } from '../../App';
 import { Home, CreditCard, FileText } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface FinanceDashboardProps {
   documents: Document[];
-  onStatusUpdate: (documentId: string, status: 'pending' | 'processing' | 'completed') => void;
 }
 
-export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboardProps) {
+export function FinanceDashboard({ documents }: FinanceDashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'authenticator-docs' | 'reports'>('overview');
-  const [dateRange, setDateRange] = useState<DateRange>({
+  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'reports'>('overview');
+  const [dateRange] = useState<DateRange>({
     startDate: null,
     endDate: null,
     preset: 'all'
@@ -34,23 +32,17 @@ export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboard
       setActiveTab('payments');
     } else if (hash === '#reports') {
       setActiveTab('reports');
-    } else if (hash === '#authenticator-docs') {
-      setActiveTab('authenticator-docs');
     } else {
       // Se não há hash específico, vai para Overview (padrão)
       setActiveTab('overview');
     }
   }, [location.hash]);
 
-  const handleViewDocument = (document: Document) => {
-    setSelectedDocument(document);
-  };
-
   const handleCloseModal = () => {
     setSelectedDocument(null);
   };
 
-  const handleTabChange = (tab: 'overview' | 'payments' | 'authenticator-docs' | 'reports') => {
+  const handleTabChange = (tab: 'overview' | 'payments' | 'reports') => {
     setActiveTab(tab);
     // Atualizar a URL para refletir a aba ativa
     if (tab === 'overview') {
@@ -63,7 +55,6 @@ export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboard
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'payments', label: 'Payments', icon: CreditCard },
-    { id: 'authenticator-docs', label: 'Authenticator Documents', icon: FileText },
     { id: 'reports', label: 'Reports', icon: FileText },
   ];
 
@@ -99,7 +90,7 @@ export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboard
               return (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
+                  onClick={() => handleTabChange(tab.id as 'overview' | 'payments' | 'reports')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-tfe-blue-500 text-tfe-blue-600'
@@ -121,30 +112,14 @@ export function FinanceDashboard({ documents, onStatusUpdate }: FinanceDashboard
             <div className="space-y-4 sm:space-y-6 w-full">
               <StatsCards documents={documents} dateRange={dateRange} />
               <FinanceCharts dateRange={dateRange} />
-              <PaymentsTable 
-                documents={documents}
-                onStatusUpdate={onStatusUpdate}
-                onViewDocument={handleViewDocument}
-                dateRange={dateRange}
-              />
+              <PaymentsTable initialDateRange={dateRange} />
             </div>
           )}
 
           {activeTab === 'payments' && (
             <div className="space-y-4 sm:space-y-6 w-full">
               <PaymentStatsCards dateRange={dateRange} />
-              <PaymentsTable 
-                documents={documents}
-                onStatusUpdate={onStatusUpdate}
-                onViewDocument={handleViewDocument}
-                dateRange={dateRange}
-              />
-            </div>
-          )}
-
-          {activeTab === 'authenticator-docs' && (
-            <div className="space-y-4 sm:space-y-6 w-full">
-              <AuthenticatorDocumentsTable dateRange={dateRange} />
+              <PaymentsTable initialDateRange={dateRange} />
             </div>
           )}
 

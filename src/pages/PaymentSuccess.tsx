@@ -160,7 +160,7 @@ export function PaymentSuccess() {
             },
             metadata: {
               pageCount: parseInt(sessionData.metadata.pages),
-              documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado'
+              documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified'
             }
           };
         
@@ -346,7 +346,7 @@ export function PaymentSuccess() {
           filename: filename,
           pages: parseInt(sessionData.metadata.pages),
           totalCost: parseFloat(sessionData.metadata.totalPrice),
-          documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado',
+          documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified',
           isBankStatement: sessionData.metadata.isBankStatement === 'true',
           sourceLanguage: 'Portuguese',
           targetLanguage: 'English',
@@ -386,7 +386,7 @@ export function PaymentSuccess() {
         size: storedFile?.file?.size || 0,
         user_id: userId,
         pages: parseInt(sessionData.metadata.pages),
-        document_type: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Notorizado',
+        document_type: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified',
         total_cost: sessionData.metadata.totalPrice,
         source_language: 'Portuguese',
         target_language: 'English',

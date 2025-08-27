@@ -14,7 +14,7 @@ export default function AuthenticatorUpload() {
   const [dragActive, setDragActive] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [tipoTrad, setTipoTrad] = useState<'Notorizado'>('Notorizado');
+  const [tipoTrad, setTipoTrad] = useState<'Certified'>('Certified');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
   const [clientName, setClientName] = useState('');
@@ -27,7 +27,7 @@ export default function AuthenticatorUpload() {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
   const translationTypes = [
-    { value: 'Notorizado', label: 'Certified / Notarized' },
+    { value: 'Certified', label: 'Certified' },
   ];
   
   const languages = [
@@ -156,7 +156,7 @@ export default function AuthenticatorUpload() {
       const metadata = {
         documentType: tipoTrad,
         certification: false,
-        notarization: tipoTrad === 'Notorizado',
+                    notarization: tipoTrad === 'Certified',
         pageCount: pages,
         isBankStatement: isExtrato,
         originalLanguage: idiomaRaiz,
@@ -171,7 +171,7 @@ export default function AuthenticatorUpload() {
       const payload = customPayload || {
         pages,
         isCertified: false,
-        isNotarized: tipoTrad === 'Notorizado',
+        isNotarized: tipoTrad === 'Certified',
         isBankStatement: isExtrato,
         filePath: customPayload?.filePath || fileId, // filePath sempre que possível
         userId: user?.id,
@@ -381,7 +381,7 @@ export default function AuthenticatorUpload() {
       const payload = {
         pages,
         isCertified: false,
-        isNotarized: tipoTrad === 'Notorizado',
+        isNotarized: tipoTrad === 'Certified',
         isBankStatement: isExtrato,
         filePath: filePath,
         userId: user.id,
@@ -563,7 +563,7 @@ export default function AuthenticatorUpload() {
                     <select
                       id="translation-type"
                       value={tipoTrad}
-                      onChange={e => setTipoTrad(e.target.value as 'Notorizado')}
+                      onChange={e => setTipoTrad(e.target.value as 'Certified')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Translation type"
                     >
@@ -765,11 +765,11 @@ export default function AuthenticatorUpload() {
                     <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Certified & Notarized Translation</span>
+                          <span className="font-medium text-gray-800">Certified Translation</span>
                           <span className="text-sm font-bold text-tfe-blue-600">$20/page</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Official certified and notarized translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.
+                          Official certified translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
                           <li>• Official certification stamp</li>

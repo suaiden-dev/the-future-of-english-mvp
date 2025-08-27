@@ -70,10 +70,10 @@ export function Translations() {
 
   const pricingPlans = [
     {
-      name: "Certified & Notarized Translation",
+      name: "Certified Translation",
       price: "$20.00",
       period: "per page",
-      description: "Official certified and notarized translation with legal authentication",
+      description: "Official certified translation with legal authentication",
       features: [
         "24-48 hour turnaround",
         "Official notarization",
@@ -85,7 +85,22 @@ export function Translations() {
       ],
       popular: true
     },
-    
+    {
+      name: "Bank Statements",
+      price: "$25.00",
+      period: "per page",
+      description: "Specialized translation for financial documents with enhanced verification",
+      features: [
+        "24-48 hour turnaround",
+        "Financial document expertise",
+        "Enhanced verification process",
+        "USCIS accepted",
+        "Digital verification code",
+        "Email delivery",
+        "Priority support"
+      ],
+      popular: false
+    }
   ];
 
   const documentTypes = [
@@ -194,85 +209,55 @@ export function Translations() {
             </p>
           </div>
 
-          <div className="flex justify-center">
-            <div className="max-w-md">
-              {pricingPlans.map((plan, index) => (
-                <div key={index} className={`relative bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 ${
-                  plan.popular ? 'ring-2 ring-red-500 scale-105' : 'border border-gray-200'
-                }`}>
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-                
-                <div className="text-center">
-                  <h3 className="text-2xl font-bold text-slate-800 mb-2">{plan.name}</h3>
-                  <div className="mb-4">
-                    <span className="text-4xl font-bold text-slate-800">{plan.price}</span>
-                    <span className="text-slate-600 ml-2">{plan.period}</span>
-                  </div>
-                  <p className="text-slate-600 mb-8">{plan.description}</p>
-                  
-                  <div className="space-y-4 mb-8">
-                    {plan.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-center space-x-3">
-                        <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                        <span className="text-slate-700">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => navigate('/register')}
-                    className={`w-full px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
-                      plan.popular
-                        ? 'bg-red-600 text-white hover:bg-red-700'
-                        : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-                    }`}
-                  >
-                    Get Started Now
-                  </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {pricingPlans.map((plan, index) => (
+              <div key={index} className={`relative bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 ${
+                plan.popular ? 'ring-2 ring-red-500 scale-105' : 'border border-gray-200'
+              }`}>
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                    Most Popular
+                  </span>
                 </div>
+              )}
+              
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-800 mb-2">{plan.name}</h3>
+                <div className="mb-4">
+                  <span className="text-4xl font-bold text-slate-800">{plan.price}</span>
+                  <span className="text-slate-600 ml-2">{plan.period}</span>
+                </div>
+                <p className="text-slate-600 mb-8">{plan.description}</p>
+                
+                <div className="space-y-4 mb-8">
+                  {plan.features.map((feature, featureIndex) => (
+                    <div key={featureIndex} className="flex items-center space-x-3">
+                      <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                      <span className="text-slate-700">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => navigate('/register')}
+                  className={`w-full px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
+                    plan.popular
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                  }`}
+                >
+                  {plan.name === "Bank Statements" ? "Choose Bank Statements" : "Get Started Now"}
+                </button>
               </div>
-            ))}
             </div>
+            ))}
           </div>
 
           <div className="text-center mt-12">
             <p className="text-gray-600 text-sm mb-4">
               * Prices are per standard page (250 words). Complex documents may require additional fees.
             </p>
-            
-            {/* Additional Pricing Information */}
-            <div className="bg-gray-50 rounded-2xl p-6 max-w-4xl mx-auto">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Special Pricing Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white p-4 rounded-xl border border-gray-200">
-                  <h4 className="font-semibold text-gray-800 mb-2">Regular Documents</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Birth certificates, marriage certificates, diplomas, transcripts, and other official documents.
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Standard rate</span>
-                    <span className="text-sm font-medium text-gray-800">$20/page</span>
-                  </div>
-                </div>
-                
-                <div className="bg-white p-4 rounded-xl border border-gray-200">
-                  <h4 className="font-semibold text-gray-800 mb-2">Bank Statements</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Additional verification and formatting required for financial documents.
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Additional fee</span>
-                    <span className="text-sm font-bold text-orange-600">+$5/page</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -295,7 +280,7 @@ export function Translations() {
                 <Shield className="w-8 h-8 text-white" weight="fill" />
               </div>
               <h3 className="text-xl font-semibold text-slate-800 mb-4">
-                Certified & Notarized
+                Certified
               </h3>
               <p className="text-slate-600">
                 All translations are certified by licensed professionals and authenticated 

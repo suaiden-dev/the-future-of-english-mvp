@@ -1,39 +1,76 @@
-import React, { useState, useEffect } from 'react';
-import { Document } from '../../App';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+// Assuming `Document` is defined as a type/interface in App.ts or a shared types file
+// For this example, I'll define a minimal Document interface here.
 import { supabase } from '../../lib/supabase';
 import { Eye, Download, Filter, Calendar } from 'lucide-react';
-import { DateRange } from '../../components/DateRangeFilter';
-import { DocumentDetailsModal } from './DocumentDetailsModal';
+import { DateRange } from '../../components/DateRangeFilter'; // Assuming this path is correct
+import { DocumentDetailsModal } from './DocumentDetailsModal'; // Assuming this path is correct
 
-interface PaymentsTableProps {
-  documents?: Document[];
-  onStatusUpdate?: (documentId: string, status: Document['status']) => void;
-  onViewDocument?: (document: Document) => void;
-  dateRange?: DateRange;
+// Minimal Document interface for this component's scope.
+// Adjust based on your actual App.ts Document definition.
+export interface Document {
+  id: string;
+  filename: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'deleted';
+  file_path?: string; // Add other necessary document properties
+  user_id?: string;
+  created_at?: string;
+  // ... any other fields
 }
 
-interface Payment {
+// Define the structure of the data directly from Supabase join
+interface PaymentWithRelations {
   id: string;
   document_id: string;
   user_id: string;
   stripe_session_id: string | null;
   amount: number;
   currency: string;
-  status: string;
+  status: string; // payment status
   payment_method: string | null;
   payment_date: string | null;
   created_at: string;
-  user_email?: string;
-  user_name?: string;
-  document_filename?: string;
+  profiles: { email: string | null; name: string | null } | null;
+  documents: { 
+    filename: string | null; 
+    status: Document['status'] | null;
+    client_name: string | null;
+    idioma_raiz: string | null;
+    tipo_trad: string | null;
+  } | null; // document info from documents table
 }
 
-export function PaymentsTable({ dateRange }: PaymentsTableProps) {
-  const [payments, setPayments] = useState<Payment[]>([]);
+// Define the mapped Payment interface used in the component's state
+interface MappedPayment extends PaymentWithRelations {
+  user_email: string | null;
+  user_name: string | null;
+  client_name: string | null;
+  document_filename: string | null;
+  document_status: Document['status'] | null; // Adding document status here
+  idioma_raiz: string | null;
+  tipo_trad: string | null;
+  // Authentication info from documents_to_be_verified
+  authenticated_by_name: string | null;
+  authenticated_by_email: string | null;
+  authentication_date: string | null;
+  source_language: string | null; // From documents_to_be_verified
+  target_language: string | null; // From documents_to_be_verified
+
+}
+
+interface PaymentsTableProps {
+  // `documents` prop is removed as it's not directly used here.
+  // `onStatusUpdate` and `onViewDocument` props are removed as internal logic handles these.
+  initialDateRange?: DateRange; // Renamed to avoid confusion with internal state
+}
+
+export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
+  const [payments, setPayments] = useState<MappedPayment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [error, setError] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>('all'); // payment status filter
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [localDateRange, setLocalDateRange] = useState<DateRange>(dateRange || {
+  const [dateFilter, setDateFilter] = useState<DateRange>(initialDateRange || {
     startDate: null,
     endDate: null,
     preset: 'all'
@@ -41,120 +78,339 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  useEffect(() => {
-    loadPayments();
-  }, [localDateRange]);
-
-  const handleDateRangeChange = (preset: string) => {
+  // Memoized function for date range presets
+  const updateDateFilter = useCallback((preset: string) => {
     const now = new Date();
+    // Reset time to start of day for consistent range calculations
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    let newDateRange: DateRange;
-    
+
+    let newStartDate: Date | null = null;
+    let newEndDate: Date | null = now; // Default end date to now
+
     switch (preset) {
       case '7d':
-        newDateRange = {
-          startDate: new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000),
-          endDate: now,
-          preset
-        };
+        newStartDate = new Date(startOfToday);
+        newStartDate.setDate(startOfToday.getDate() - 7);
         break;
       case '30d':
-        newDateRange = {
-          startDate: new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000),
-          endDate: now,
-          preset
-        };
+        newStartDate = new Date(startOfToday);
+        newStartDate.setDate(startOfToday.getDate() - 30);
         break;
       case '3m':
-        newDateRange = {
-          startDate: new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()),
-          endDate: now,
-          preset
-        };
+        newStartDate = new Date(startOfToday);
+        newStartDate.setMonth(startOfToday.getMonth() - 3);
         break;
       case '6m':
-        newDateRange = {
-          startDate: new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()),
-          endDate: now,
-          preset
-        };
+        newStartDate = new Date(startOfToday);
+        newStartDate.setMonth(startOfToday.getMonth() - 6);
         break;
       case 'year':
-        newDateRange = {
-          startDate: new Date(now.getFullYear(), 0, 1),
-          endDate: now,
-          preset
-        };
+        newStartDate = new Date(now.getFullYear(), 0, 1); // Start of current year
         break;
       case 'all':
       default:
-        newDateRange = {
-          startDate: null,
-          endDate: null,
-          preset: 'all'
-        };
+        newStartDate = null;
+        newEndDate = null;
+        preset = 'all'; // Ensure preset is 'all' if default
     }
-    
-    setLocalDateRange(newDateRange);
+
+    setDateFilter({
+      startDate: newStartDate,
+      endDate: newEndDate,
+      preset
+    });
+  }, []);
+
+  // Função para carregar documentos dos autenticadores
+  const loadAuthenticatorDocuments = async (startDate: string | null, endDate: string | null): Promise<MappedPayment[]> => {
+    try {
+      console.log('🔍 Carregando documentos de autenticadores (incluindo não aprovados)...');
+      
+      // Buscar documentos da tabela documents_to_be_verified (uploads iniciais dos autenticadores)
+      let documentsQuery = supabase
+        .from('documents_to_be_verified')
+        .select(`
+          id,
+          filename,
+          total_cost,
+          created_at,
+          user_id,
+          source_language,
+          target_language,
+          status,
+          authenticated_by_name,
+          authenticated_by_email,
+          authentication_date
+        `);
+
+      // Aplicar filtros de data se existirem
+      if (startDate) {
+        documentsQuery = documentsQuery.gte('created_at', startDate);
+      }
+      if (endDate) {
+        documentsQuery = documentsQuery.lte('created_at', endDate);
+      }
+
+      const { data: allDocs, error: docsError } = await documentsQuery.order('created_at', { ascending: false });
+
+      if (docsError) {
+        console.error('❌ Erro ao buscar documentos:', docsError);
+        return [];
+      }
+
+      if (!allDocs || allDocs.length === 0) {
+        return [];
+      }
+
+      console.log('📋 Documentos encontrados:', allDocs.length);
+
+      // Para cada documento, buscar informações adicionais
+      const documentPromises = allDocs.map(async (doc: any) => {
+        try {
+          // Buscar dados do uploader para verificar se é autenticador
+          const { data: uploaderProfile } = await supabase
+            .from('profiles')
+            .select('id, name, email, role')
+            .eq('id', doc.user_id)
+            .single();
+
+          // Verificar se é um upload de authenticator
+          if (!uploaderProfile || uploaderProfile.role !== 'authenticator') {
+            return null;
+          }
+
+          // Buscar dados do cliente (user_id do documento)
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('id, name, email')
+            .eq('id', doc.user_id)
+            .single();
+
+          // Verificar se já existe na tabela translated_documents (documento aprovado)
+          const { data: translatedDoc } = await supabase
+            .from('translated_documents')
+            .select('id, user_id')
+            .eq('original_document_id', doc.id)
+            .single();
+
+          // Buscar payment_method na tabela documents
+          const { data: documentsInfo } = await supabase
+            .from('documents')
+            .select('payment_method, receipt_url')
+            .eq('user_id', doc.user_id)
+            .eq('filename', doc.filename)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          // Determinar o status baseado se foi aprovado ou não
+          const isApproved = !!translatedDoc;
+          const paymentStatus = isApproved ? 'completed' : 'pending';
+          const clientUserId = translatedDoc?.user_id || doc.user_id;
+
+          // Criar um objeto similar ao MappedPayment
+          return {
+            // Campos obrigatórios do PaymentWithRelations
+            id: translatedDoc?.id || doc.id, // Usar ID do documento traduzido se existir, senão do original
+            user_id: clientUserId,
+            document_id: doc.id,
+            amount: doc.total_cost || 0,
+            currency: 'USD',
+            status: paymentStatus, // 'completed' se aprovado, 'pending' se não
+            payment_method: documentsInfo?.payment_method || 'upload',
+            payment_date: translatedDoc ? doc.created_at : null, // Data de pagamento só se aprovado
+            stripe_session_id: null,
+            created_at: doc.created_at,
+            profiles: userProfile,
+            documents: null,
+            // Campos específicos do MappedPayment
+            user_email: userProfile?.email || null,
+            user_name: userProfile?.name || null,
+            client_name: uploaderProfile.name || null, // Nome do autenticador
+            document_filename: doc.filename,
+            document_status: doc.status || null,
+            idioma_raiz: null,
+            tipo_trad: null,
+            authenticated_by_name: doc.authenticated_by_name,
+            authenticated_by_email: doc.authenticated_by_email,
+            authentication_date: doc.authentication_date,
+            source_language: doc.source_language,
+            target_language: doc.target_language,
+          } as MappedPayment;
+        } catch (err) {
+          console.error('❌ Erro ao processar documento:', doc.id, err);
+          return null;
+        }
+      });
+
+      // Aguardar todas as promises e filtrar nulls
+      const documentsWithData = (await Promise.all(documentPromises)).filter(Boolean);
+      console.log('✅ Documentos de autenticadores processados:', documentsWithData.length);
+      return documentsWithData as MappedPayment[];
+
+    } catch (error) {
+      console.error('❌ Erro ao carregar documentos de autenticadores:', error);
+      return [];
+    }
   };
 
-  const loadPayments = async () => {
+  // Effect to load payments whenever dateFilter, filterStatus, or searchTerm changes
+  const loadPayments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setPayments([]); // Clear payments on new load
+
+    const startDateParam = dateFilter?.startDate ? dateFilter.startDate.toISOString() : null;
+    const endDateParam = dateFilter?.endDate ? dateFilter.endDate.toISOString() : null;
+
     try {
-      setLoading(true);
-      
-      console.log('🔍 Carregando pagamentos...', { localDateRange });
-      
-      // Buscar pagamentos com informações do usuário e documento
+      console.log('🔍 Loading payments...', { dateFilter, filterStatus, searchTerm });
+
       let query = supabase
         .from('payments')
         .select(`
           *,
-          profiles!payments_user_id_fkey(email, name),
-          documents!payments_document_id_fkey(filename)
-        `);
+          profiles:profiles!payments_user_id_fkey(email, name),
+          documents:documents!payments_document_id_fkey(filename, status, client_name, idioma_raiz, tipo_trad)
+        `)
+        .order('created_at', { ascending: false });
 
-      // Aplicar filtros de data se existirem
-      if (localDateRange?.startDate) {
-        query = query.gte('created_at', localDateRange.startDate.toISOString());
+      // Apply date filters
+      if (startDateParam) {
+        query = query.gte('created_at', startDateParam);
       }
-      if (localDateRange?.endDate) {
-        query = query.lte('created_at', localDateRange.endDate.toISOString());
+      if (endDateParam) {
+        query = query.lte('created_at', endDateParam);
+      }
+      // Apply payment status filter - only for payments table, not for authenticator documents
+      if (filterStatus !== 'all') {
+        query = query.eq('status', filterStatus);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
+      const { data, error } = await query;
+
       if (error) {
-        console.error('❌ Erro ao carregar pagamentos:', error);
-        throw error;
+        console.error('❌ Error loading payments:', error);
+        setError('Failed to load payments.');
+        return;
       }
+
+      // Buscar dados da tabela documents_to_be_verified para status atualizados e informações de autenticação
+      let verifiedQuery = supabase
+        .from('documents_to_be_verified')
+        .select('id, filename, status, authenticated_by_name, authenticated_by_email, authentication_date, source_language, target_language');
       
-      console.log('📊 Dados brutos recebidos:', data);
+      const { data: verifiedData, error: verifiedError } = await verifiedQuery;
       
-      // Mapear os dados para o formato esperado
-      const mappedPayments = data?.map(payment => ({
-        ...payment,
-        user_email: payment.profiles?.email,
-        user_name: payment.profiles?.name,
-        document_filename: payment.documents?.filename
-      })) || [];
+      if (verifiedError) {
+        console.error('❌ Error loading verified documents:', verifiedError);
+      }
+
+      console.log('📊 Raw data received:', data);
+
+      const mappedPayments: MappedPayment[] = data?.map(payment => {
+        // Buscar status atualizado e informações de autenticação da tabela documents_to_be_verified usando filename
+        const verifiedDoc = verifiedData?.find(v => v.filename === payment.documents?.filename);
+        const actualDocumentStatus = verifiedDoc ? verifiedDoc.status : payment.documents?.status;
+
+        return {
+          ...payment,
+          user_email: payment.profiles?.email || null,
+          user_name: payment.profiles?.name || null,
+          client_name: payment.documents?.client_name || null,
+          document_filename: payment.documents?.filename || null,
+          document_status: actualDocumentStatus || null,
+          idioma_raiz: payment.documents?.idioma_raiz || null,
+          tipo_trad: payment.documents?.tipo_trad || null,
+          // Informações de autenticação
+          authenticated_by_name: verifiedDoc?.authenticated_by_name || null,
+          authenticated_by_email: verifiedDoc?.authenticated_by_email || null,
+          authentication_date: verifiedDoc?.authentication_date || null,
+          // Translation info from documents_to_be_verified
+          source_language: verifiedDoc?.source_language || null,
+          target_language: verifiedDoc?.target_language || null,
+        };
+      }) || [];
+
+      // Buscar também documentos dos autenticadores (translated_documents)
+      const authenticatorDocuments = await loadAuthenticatorDocuments(startDateParam, endDateParam);
       
-      console.log('✅ Pagamentos mapeados:', mappedPayments);
+      // Combinar os dados
+      const allPayments = [...mappedPayments, ...authenticatorDocuments];
       
-      setPayments(mappedPayments);
-      
-    } catch (error) {
-      console.error('💥 Erro ao carregar pagamentos:', error);
+      console.log('✅ Payments mapped:', mappedPayments.length);
+      console.log('✅ Authenticator documents:', authenticatorDocuments.length);
+      console.log('✅ Total combined:', allPayments.length);
+
+      setPayments(allPayments);
+
+    } catch (err) {
+      console.error('💥 Error loading payments:', err);
+      setError('An unexpected error occurred while loading payments.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateFilter, filterStatus]); // Removed searchTerm from here, as filtering is done client-side
 
-  const handleViewDocument = async (payment: Payment) => {
-    try {
-      console.log('🔍 Buscando documento para payment:', payment);
+  useEffect(() => {
+    loadPayments();
+  }, [loadPayments]); // Rerun effect when `loadPayments` (memoized) changes
+
+  // Client-side filtering for search term and status
+  const filteredPayments = useMemo(() => {
+    if (!payments) return [];
+    return payments.filter(payment => {
+      // Filter by status first
+      const matchesStatus = filterStatus === 'all' || payment.status === filterStatus;
       
-      // Buscar o documento completo pelo ID
+      // Then filter by search term
+      const matchesSearch = searchTerm === '' ||
+        payment.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.document_filename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.stripe_session_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.id.toLowerCase().includes(searchTerm.toLowerCase()); // Allow searching payment ID
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [payments, searchTerm, filterStatus]);
+
+
+  const handleViewDocument = useCallback(async (payment: MappedPayment) => {
+    try {
+      console.log('🔍 Fetching document for payment:', payment.document_id);
+
+      // Para documentos de autenticadores, buscar na tabela documents_to_be_verified
+      if (payment.payment_method === 'upload') {
+        const { data: document, error } = await supabase
+          .from('documents_to_be_verified')
+          .select('*')
+          .eq('id', payment.document_id)
+          .single();
+
+        if (error) {
+          console.error('❌ Error fetching authenticator document:', error);
+          return;
+        }
+
+        // Criar um objeto Document compatível
+        const documentForModal: Document = {
+          id: document.id,
+          filename: document.filename,
+          status: document.status || 'pending',
+          file_path: document.file_path,
+          user_id: document.user_id,
+          created_at: document.created_at
+        };
+
+        console.log('📄 Authenticator document found:', documentForModal);
+        setSelectedDocument(documentForModal);
+        setShowModal(true);
+        return;
+      }
+
+      // Para pagamentos tradicionais, buscar na tabela documents
       const { data: document, error } = await supabase
         .from('documents')
         .select('*')
@@ -162,30 +418,36 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
         .single();
 
       if (error) {
-        console.error('❌ Erro ao buscar documento:', error);
+        console.error('❌ Error fetching payment document:', error);
         return;
       }
 
-      console.log('📄 Documento encontrado:', document);
-      setSelectedDocument(document);
+      // Buscar status atualizado da tabela documents_to_be_verified
+      const { data: verifiedDoc, error: verifiedError } = await supabase
+        .from('documents_to_be_verified')
+        .select('status')
+        .eq('filename', document.filename)
+        .single();
+
+      if (verifiedError && verifiedError.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('❌ Error fetching verified document:', verifiedError);
+      }
+
+      // Usar status da documents_to_be_verified se existir, senão usar o original
+      const documentWithUpdatedStatus: Document = {
+        ...document,
+        status: verifiedDoc?.status || document.status
+      };
+
+      console.log('📄 Payment document found with updated status:', documentWithUpdatedStatus);
+      setSelectedDocument(documentWithUpdatedStatus as Document);
       setShowModal(true);
-    } catch (error) {
-      console.error('💥 Erro ao abrir documento:', error);
+    } catch (err) {
+      console.error('💥 Error opening document:', err);
     }
-  };
+  }, []); // Empty dependency array because supabase and useState setters are stable
 
-  const filteredPayments = payments.filter(payment => {
-    const matchesStatus = filterStatus === 'all' || payment.status === filterStatus;
-    const matchesSearch = searchTerm === '' || 
-      payment.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.document_filename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.stripe_session_id?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesStatus && matchesSearch;
-  });
-
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null) => {
     switch (status) {
       case 'completed':
         return 'bg-green-100 text-green-800';
@@ -194,58 +456,51 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
       case 'failed':
         return 'bg-red-100 text-red-800';
       case 'refunded':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-200 text-gray-800'; // Changed from gray-100 for more contrast
+      case 'processing': // For document status
+      case 'draft': // For document status
+        return 'bg-blue-100 text-blue-800';
+      case 'deleted': // For document status
+        return 'bg-red-200 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const downloadPaymentsReport = () => {
+  const downloadPaymentsReport = useCallback(() => {
     const csvContent = [
-      ['User Name', 'User Email', 'Document ID', 'Amount', 'Currency', 'Payment Method', 'Payment ID', 'Session ID', 'Status', 'Payment Date', 'Created At'],
+      ['User/Client Name', 'User Email', 'Document ID', 'Document Filename', 'Amount', 'Currency', 'Payment Method', 'Payment ID', 'Session ID', 'Payment Status', 'Document Status', 'Authenticator Name', 'Authenticator Email', 'Translation', 'Authentication Date', 'Payment Date', 'Created At'],
       ...filteredPayments.map(payment => [
-        payment.user_name || '',
+        payment.client_name || payment.user_name || '',
         payment.user_email || '',
         payment.document_id,
-        payment.amount.toString(),
+        payment.document_filename || '',
+        payment.amount.toFixed(2), // Format amount directly
         payment.currency,
         payment.payment_method || '',
         payment.id,
         payment.stripe_session_id || '',
-        payment.status,
-        payment.payment_date || '',
-        payment.created_at
+        payment.status, // payment status
+        payment.document_status || '', // document status
+        payment.authenticated_by_name || '',
+        payment.authenticated_by_email || '',
+        payment.source_language && payment.target_language ? `${payment.source_language} → ${payment.target_language}` : '',
+        payment.authentication_date ? new Date(payment.authentication_date).toLocaleDateString() : '',
+        payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '',
+        new Date(payment.created_at).toLocaleDateString() // Assuming created_at is always present
       ])
-    ].map(row => row.join(',')).join('\n');
+    ].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n'); // Proper CSV escaping
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `payments-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a); // Append to body to ensure it's visible in DOM for click
     a.click();
+    document.body.removeChild(a); // Clean up
     window.URL.revokeObjectURL(url);
-  };
-
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-48 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-32"></div>
-          </div>
-        </div>
-        <div className="p-6">
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, [filteredPayments]); // Depend on filteredPayments to export current view
 
   return (
     <div className="bg-white rounded-lg shadow w-full">
@@ -258,7 +513,8 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
           <div className="flex items-center">
             <button
               onClick={downloadPaymentsReport}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tfe-blue-500"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" // Changed ring color
+              aria-label="Export Payments to CSV"
             >
               <Download className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Export CSV</span>
@@ -275,22 +531,24 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
           <div className="sm:col-span-2 lg:col-span-2">
             <input
               type="text"
-              placeholder="Search by name, email, filename..."
+              placeholder="Search by name, email, filename, ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm bg-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm bg-white" // Changed ring color
+              aria-label="Search payments"
             />
           </div>
-          
-          {/* Status Filter */}
+
+          {/* Status Filter (Payment Status) */}
           <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-gray-400 hidden sm:block" />
+            <Filter className="w-4 h-4 text-gray-400 hidden sm:block" aria-hidden="true" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm" // Changed ring color
+              aria-label="Filter by payment status"
             >
-              <option value="all">All Status</option>
+              <option value="all">All Payment Status</option>
               <option value="completed">Completed</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
@@ -300,11 +558,12 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
 
           {/* Period Filter */}
           <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-gray-400 hidden sm:block" />
+            <Calendar className="w-4 h-4 text-gray-400 hidden sm:block" aria-hidden="true" />
             <select
-              value={localDateRange?.preset || 'all'}
-              onChange={(e) => handleDateRangeChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
+              value={dateFilter?.preset || 'all'}
+              onChange={(e) => updateDateFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm" // Changed ring color
+              aria-label="Filter by date range"
             >
               <option value="all">All Time</option>
               <option value="7d">Last 7 days</option>
@@ -317,204 +576,268 @@ export function PaymentsTable({ dateRange }: PaymentsTableProps) {
         </div>
       </div>
 
-      {/* Mobile: Cards View */}
-      <div className="block sm:hidden">
-        {filteredPayments.length === 0 ? (
-          <div className="px-4 py-12 text-center text-gray-500">
-            {loading ? 'Loading payments...' : 'No payments found'}
-          </div>
-        ) : (
-          <div className="space-y-3 p-3 sm:p-4">
-            {filteredPayments.map((payment) => (
-              <div key={payment.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">
-                      {payment.user_name || 'Unknown'}
-                    </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {payment.user_email || 'No email'}
-                    </div>
-                  </div>
-                  <div className="ml-2 flex-shrink-0">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
-                      {payment.status}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-gray-500">Amount:</span>
-                    <div className="font-medium text-gray-900">${payment.amount.toFixed(2)} {payment.currency}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Document:</span>
-                    <div className="font-medium text-gray-900 truncate">{payment.document_filename || 'Unknown'}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Payment Method:</span>
-                    <div className="font-medium text-gray-900">
-                      {payment.payment_method ? (
-                        payment.payment_method === 'card' ? '💳 Card' : 
-                        payment.payment_method === 'bank_transfer' ? '🏦 Bank' :
-                        payment.payment_method === 'paypal' ? '📱 PayPal' :
-                        payment.payment_method
-                      ) : 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Date:</span>
-                    <div className="font-medium text-gray-900">
-                      {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-3 pt-3 border-t border-gray-300 flex items-center justify-between">
-                  <div className="text-xs text-gray-500">
-                    ID: {payment.id.substring(0, 8)}...
-                  </div>
-                  <button
-                    onClick={() => {
-                      console.log('View payment details:', payment.id);
-                    }}
-                    className="text-tfe-blue-600 hover:text-tfe-blue-900"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+      {loading ? (
+        <div className="p-6">
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => ( // More rows for better loading UX
+              <div key={i} className="h-12 bg-gray-200 rounded animate-pulse"></div>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Desktop: Table View */}
-      <div className="hidden sm:block overflow-x-auto w-full">
-        <table className="w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Document
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amount
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Payment Method
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Payment ID & Session
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredPayments.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                  {loading ? 'Loading payments...' : 'No payments found'}
-                </td>
-              </tr>
-            ) : (
-              filteredPayments.map((payment) => (
-                <tr key={payment.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {payment.user_name || 'Unknown'}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {payment.user_email || 'No email'}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {payment.document_filename || 'Unknown'}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {payment.document_id.substring(0, 8)}...
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      ${payment.amount.toFixed(2)}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {payment.currency}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {payment.payment_method ? (
-                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                          {payment.payment_method === 'card' ? '💳 Credit Card' : 
-                           payment.payment_method === 'bank_transfer' ? '🏦 Bank Transfer' :
-                           payment.payment_method === 'paypal' ? '📱 PayPal' :
-                           payment.payment_method}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">N/A</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {payment.id.substring(0, 8)}...
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {payment.stripe_session_id ? `${payment.stripe_session_id.substring(0, 20)}...` : 'No session ID'}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
-                      {payment.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleViewDocument(payment)}
-                      className="text-tfe-blue-600 hover:text-tfe-blue-900 flex items-center gap-1"
-                      title="View document details"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span className="hidden sm:inline">View</span>
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {filteredPayments.length > 0 && (
-        <div className="px-3 sm:px-4 lg:px-6 py-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-500">
-            <span>Showing {filteredPayments.length} of {payments.length} payments</span>
-            <span className="font-medium text-green-600">Total: ${filteredPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
-          </div>
         </div>
+      ) : error ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative m-6" role="alert">
+          <strong className="font-bold">Error:</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      ) : (
+        <>
+          {/* Mobile: Cards View */}
+          <div className="block sm:hidden">
+            {filteredPayments.length === 0 ? (
+              <div className="px-4 py-12 text-center text-gray-500">
+                No payments found matching your criteria.
+              </div>
+            ) : (
+              <div className="space-y-3 p-3 sm:p-4">
+                {filteredPayments.map((payment) => (
+                  <div key={payment.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {payment.client_name || payment.user_name || 'Unknown'}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {payment.user_email || 'No email'}
+                        </div>
+
+                      </div>
+                      <div className="ml-2 flex-shrink-0">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
+                          {payment.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-gray-500">Amount:</span>
+                        <div className="font-medium text-gray-900">${payment.amount.toFixed(2)} {payment.currency}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Document:</span>
+                        <div className="font-medium text-gray-900 truncate">{payment.document_filename || 'Unknown'}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Doc Status:</span> {/* Added document status */}
+                        <div className="font-medium text-gray-900">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.document_status)}`}>
+                            {payment.document_status || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Payment Method:</span>
+                        <div className="font-medium text-gray-900">
+                          {payment.payment_method ? (
+                            payment.payment_method === 'card' ? '💳 Card' :
+                              payment.payment_method === 'bank_transfer' ? '🏦 Bank' :
+                                payment.payment_method === 'paypal' ? '📱 PayPal' :
+                                  payment.payment_method
+                          ) : 'N/A'}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Authenticator:</span>
+                        <div className="font-medium text-gray-900 truncate">
+                          {payment.authenticated_by_name || 'N/A'}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Translation:</span>
+                        <div className="font-medium text-gray-900 truncate">
+                          {payment.source_language && payment.target_language ? (
+                            `${payment.source_language} → ${payment.target_language}`
+                          ) : 'N/A'}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Date:</span>
+                        <div className="font-medium text-gray-900">
+                          {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-gray-300 flex items-center justify-between">
+                      <div className="text-xs text-gray-500">
+                        ID: {payment.id.substring(0, 8)}...
+                      </div>
+                      <button
+                        onClick={() => handleViewDocument(payment)}
+                        className="text-blue-600 hover:text-blue-900" // Changed color
+                        aria-label={`Details for document ${payment.document_filename}`}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop: Table View */}
+          <div className="hidden sm:block overflow-x-auto w-full">
+            <table className="min-w-full divide-y divide-gray-200"> {/* Added min-w-full */}
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    USER/CLIENT
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Document
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment Method
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Documents
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    AUTHENTICATOR
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    TRANSLATION DETAILS
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Details
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredPayments.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
+                      No payments found matching your criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPayments.map((payment) => (
+                    <tr key={payment.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {payment.client_name || payment.user_name || 'Unknown'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {payment.user_email || 'No email'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {payment.document_filename || 'Unknown'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {payment.document_id.substring(0, 8)}...
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          ${payment.amount.toFixed(2)}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {payment.currency}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {payment.payment_method ? (
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                              {payment.payment_method === 'card' ? '💳 Credit Card' :
+                                payment.payment_method === 'bank_transfer' ? '🏦 Bank Transfer' :
+                                  payment.payment_method === 'paypal' ? '📱 PayPal' :
+                                    payment.payment_method}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">N/A</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
+                          {payment.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.document_status)}`}>
+                          {payment.document_status || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {payment.authenticated_by_name || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {payment.authenticated_by_email || 'No authenticator'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {payment.source_language && payment.target_language ? (
+                            `${payment.source_language} → ${payment.target_language}`
+                          ) : 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {payment.authentication_date ? 
+                            new Date(payment.authentication_date).toLocaleDateString() : 
+                            'Not authenticated'
+                          }
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => handleViewDocument(payment)}
+                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1" // Changed color
+                          title={`Details for document ${payment.document_filename}`}
+                          aria-label={`Details for document ${payment.document_filename}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span className="hidden sm:inline">Details</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredPayments.length > 0 && (
+            <div className="px-3 sm:px-4 lg:px-6 py-3 border-t border-gray-200 bg-gray-50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-500">
+                <span>Showing {filteredPayments.length} of {payments.length} payments</span>
+                <span className="font-medium text-green-600">Total: ${filteredPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Modal de Detalhes do Documento */}
+      {/* Document Details Modal */}
       {showModal && selectedDocument && (
-        <DocumentDetailsModal 
-          document={selectedDocument}
+        <DocumentDetailsModal
+          document={selectedDocument as any}
           onClose={() => {
             setShowModal(false);
             setSelectedDocument(null);

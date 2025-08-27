@@ -424,7 +424,7 @@ function App() {
               subtitle="Monitor payments, track translations, and generate business reports"
             >
               <Routes>
-                <Route path="/" element={<FinanceDashboard documents={documents} onStatusUpdate={handleDocumentStatusUpdate} />} />
+                <Route path="/" element={<FinanceDashboard documents={documents} />} />
                 <Route path="/profile" element={<ProfilePage />} />
               </Routes>
             </AdminLayout>

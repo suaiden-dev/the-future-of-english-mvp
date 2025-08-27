@@ -20,6 +20,8 @@ interface Document {
   target_language?: string;
   is_bank_statement?: boolean;
   verification_code?: string;
+  // ID da tabela documents_to_be_verified se existir
+  verification_id?: string | null;
   // Campos de auditoria
   authenticated_by?: string | null;
   authenticated_by_name?: string | null;
@@ -74,9 +76,9 @@ export default function AuthenticatorDashboard() {
       try {
         console.log('[AuthenticatorDashboard] Buscando documentos...');
         
-        // Buscar todos os documentos para estatísticas
-        const { data: allDocs, error: statsError } = await supabase
-          .from('documents_to_be_verified')
+        // Buscar documentos da tabela principal
+        const { data: mainDocs, error: mainError } = await supabase
+          .from('documents')
           .select(`
             *,
             profiles:user_id (
@@ -86,31 +88,91 @@ export default function AuthenticatorDashboard() {
           `)
           .order('created_at', { ascending: false });
         
-        if (statsError) {
-          console.error('[AuthenticatorDashboard] Error fetching all documents:', statsError);
-          if (statsError.code === '42501' || statsError.code === 'PGRST301') {
+        if (mainError) {
+          console.error('[AuthenticatorDashboard] Error fetching main documents:', mainError);
+          if (mainError.code === '42501' || mainError.code === 'PGRST301') {
             setError('You do not have permission to access this area.');
           } else {
-            setError(statsError.message);
+            setError(mainError.message);
           }
           return;
         }
 
-        // Calcular estatísticas
-        const allDocuments = (allDocs as any[] || []).map(doc => ({
-          ...doc,
-          user_name: doc.profiles?.name || null,
-          user_email: doc.profiles?.email || null
-        })) as Document[];
+        console.log('[AuthenticatorDashboard] Main docs encontrados:', mainDocs?.length || 0);
+
+        // Buscar documentos de verificação
+        const { data: verifiedDocs, error: verifiedError } = await supabase
+          .from('documents_to_be_verified')
+          .select('*')
+          .order('created_at', { ascending: false });
         
-        // Log para debug do is_bank_statement
-        console.log('[AuthenticatorDashboard] Documentos com is_bank_statement:');
-        allDocuments.forEach((doc, index) => {
-          console.log(`  ${index + 1}. ${doc.filename}: is_bank_statement = ${doc.is_bank_statement}`);
+        if (verifiedError) {
+          console.error('[AuthenticatorDashboard] Error fetching verified documents:', verifiedError);
+          setError(verifiedError.message);
+          return;
+        }
+
+        // Mapear documentos principais com informações de verificação
+        const mainDocuments = (mainDocs as any[] || []).map(doc => {
+          const verifiedDoc = verifiedDocs?.find(v => v.filename === doc.filename);
+          
+          console.log(`[AuthenticatorDashboard] Processando documento: ${doc.filename}`);
+          console.log(`[AuthenticatorDashboard] - Documento principal:`, doc);
+          console.log(`[AuthenticatorDashboard] - Documento verificado encontrado:`, verifiedDoc);
+          
+          // Determinar o status do documento para autenticação:
+          // - Se existe na tabela de verificação, usar o status de lá
+          // - Se não existe, consideramos como 'pending' para autenticação se não está 'completed'
+          let authStatus;
+          if (verifiedDoc) {
+            authStatus = verifiedDoc.status;
+            console.log(`[AuthenticatorDashboard] - Usando status da tabela verificada: ${authStatus}`);
+          } else {
+            // Se o documento da tabela principal não está 'completed', ele pode estar pendente para autenticação
+            authStatus = doc.status === 'completed' ? 'completed' : 'pending';
+            console.log(`[AuthenticatorDashboard] - Usando status calculado: ${authStatus} (original era: ${doc.status})`);
+          }
+          
+          const finalDoc = {
+            ...doc,
+            user_name: doc.profiles?.name || null,
+            user_email: doc.profiles?.email || null,
+            // Status para autenticação
+            status: authStatus,
+            // Manter ID da tabela de verificação se existir para operações
+            verification_id: verifiedDoc ? verifiedDoc.id : null,
+            // Dados da verificação se existir
+            translated_file_url: verifiedDoc ? verifiedDoc.translated_file_url : doc.translated_file_url,
+            authenticated_by: verifiedDoc?.authenticated_by,
+            authenticated_by_name: verifiedDoc?.authenticated_by_name,
+            authenticated_by_email: verifiedDoc?.authenticated_by_email,
+            authentication_date: verifiedDoc?.authentication_date
+          };
+          
+          console.log(`[AuthenticatorDashboard] - Documento final:`, finalDoc);
+          return finalDoc;
+        }) as Document[];
+        
+        // Log para debug detalhado
+        console.log('[AuthenticatorDashboard] Documentos principais:', mainDocuments.length);
+        console.log('[AuthenticatorDashboard] Documentos de verificação:', verifiedDocs?.length || 0);
+        console.log('[AuthenticatorDashboard] Sample main document:', mainDocuments[0]);
+        console.log('[AuthenticatorDashboard] Sample verified document:', verifiedDocs?.[0]);
+        
+        // Log detalhado dos status
+        mainDocuments.forEach((doc, index) => {
+          console.log(`[AuthenticatorDashboard] Doc ${index + 1}: ${doc.filename} - Original Status: ${(mainDocs as any[])?.[index]?.status} - Auth Status: ${doc.status}`);
         });
         
-        const pendingCount = allDocuments.filter(doc => doc.status === 'pending').length;
-        const approvedCount = allDocuments.filter(doc => doc.status === 'completed').length;
+        // Calcular estatísticas
+        const pendingCount = mainDocuments.filter(doc => doc.status === 'pending').length;
+        const approvedCount = mainDocuments.filter(doc => doc.status === 'completed').length;
+        
+        console.log('[AuthenticatorDashboard] Status breakdown:', {
+          pending: mainDocuments.filter(doc => doc.status === 'pending').map(d => d.filename),
+          completed: mainDocuments.filter(doc => doc.status === 'completed').map(d => d.filename),
+          other: mainDocuments.filter(doc => doc.status !== 'pending' && doc.status !== 'completed').map(d => ({ filename: d.filename, status: d.status }))
+        });
         
         setStats({
           pending: pendingCount,
@@ -118,11 +180,12 @@ export default function AuthenticatorDashboard() {
         });
 
         // Filtrar apenas documentos pendentes para a lista
-        const pendingDocs = allDocuments.filter(doc => doc.status === 'pending');
+        const pendingDocs = mainDocuments.filter(doc => doc.status === 'pending');
         setDocuments(pendingDocs);
         
         console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount });
-        console.log('[AuthenticatorDashboard] Documentos pendentes:', pendingDocs.length);
+        console.log('[AuthenticatorDashboard] Documentos pendentes para exibir:', pendingDocs.length);
+        console.log('[AuthenticatorDashboard] Documentos pendentes:', pendingDocs.map(d => ({ filename: d.filename, status: d.status, id: d.id })));
         
       } catch (err) {
         console.error('[AuthenticatorDashboard] Unexpected error:', err);
@@ -139,12 +202,54 @@ export default function AuthenticatorDashboard() {
     
     console.log('[AuthenticatorDashboard] Aprovando documento:', id);
     
-    // Buscar o documento original
+    // Encontrar o documento na lista atual
+    const document = documents.find(doc => doc.id === id);
+    if (!document) {
+      console.error('[AuthenticatorDashboard] Documento não encontrado na lista');
+      return;
+    }
+    
+    // Se tem verification_id, usar ele; senão, primeiro inserir na tabela de verificação
+    let verificationId = document.verification_id;
+    
+    if (!verificationId) {
+      // Documento ainda não está na tabela de verificação, vamos inserir
+      const { data: newVerificationDoc, error: insertError } = await supabase
+        .from('documents_to_be_verified')
+        .insert({
+          user_id: document.user_id,
+          filename: document.filename,
+          file_url: document.file_url,
+          translated_file_url: document.translated_file_url,
+          source_language: document.source_language,
+          target_language: document.target_language,
+          pages: document.pages,
+          total_cost: document.total_cost,
+          status: 'pending',
+          is_bank_statement: document.is_bank_statement,
+          verification_code: document.verification_code,
+          translation_status: document.translation_status
+        })
+        .select()
+        .single();
+      
+      if (insertError) {
+        console.error('[AuthenticatorDashboard] Erro ao inserir documento na tabela de verificação:', insertError);
+        alert('Erro ao processar documento. Tente novamente.');
+        return;
+      }
+      
+      verificationId = newVerificationDoc.id;
+      console.log('[AuthenticatorDashboard] Documento inserido na tabela de verificação:', verificationId);
+    }
+    
+    // Buscar o documento de verificação
     const { data: doc, error: fetchError } = await supabase
       .from('documents_to_be_verified')
       .select('*')
-      .eq('id', id)
+      .eq('id', verificationId)
       .single();
+      
     if (fetchError || !doc) {
       console.error('[AuthenticatorDashboard] Erro ao buscar documento:', fetchError);
       return;
@@ -165,7 +270,7 @@ export default function AuthenticatorDashboard() {
         status: 'completed',
         ...authData
       })
-      .eq('id', id);
+      .eq('id', verificationId);
     
     if (updateError) {
       console.error('[AuthenticatorDashboard] Erro ao atualizar documento:', updateError);
@@ -229,11 +334,15 @@ export default function AuthenticatorDashboard() {
       const filePath = uploadData?.path;
       const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath);
       const publicUrl = publicUrlData.publicUrl;
+      
+      // Se tem verification_id, usar ele; senão, usar o id principal do documento
+      const verificationId = doc.verification_id || doc.id;
+      
       // Buscar verification_code do documento original
       const { data: originalDoc, error: fetchError } = await supabase
         .from('documents_to_be_verified')
         .select('verification_code')
-        .eq('id', doc.id)
+        .eq('id', verificationId)
         .single();
       if (fetchError || !originalDoc) throw new Error('Não foi possível obter o verification_code do documento original.');
       
@@ -247,7 +356,7 @@ export default function AuthenticatorDashboard() {
       
       // Inserir na tabela translated_documents com dados do autenticador
       const { error: insertError } = await supabase.from('translated_documents').insert({
-        original_document_id: doc.id,
+        original_document_id: verificationId,
         user_id: doc.user_id,
         filename: state.file.name,
         translated_file_url: publicUrl,
@@ -269,7 +378,7 @@ export default function AuthenticatorDashboard() {
           status: 'completed',
           ...authData
         })
-        .eq('id', doc.id);
+        .eq('id', verificationId);
       
       // Remover o documento da lista após sucesso
       setDocuments(docs => docs.filter(d => d.id !== doc.id));
@@ -367,6 +476,66 @@ export default function AuthenticatorDashboard() {
                     <a href={doc.file_url || ''} target="_blank" rel="noopener noreferrer" className="text-tfe-blue-700 underline font-medium hover:text-tfe-blue-950 transition-colors text-sm">
                       {doc.filename}
                     </a>
+                    
+                    {/* View and Download Buttons */}
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            // Preferir documento traduzido se existir, senão mostrar o original
+                            const urlToView = doc.translated_file_url || doc.file_url;
+                            if (!urlToView) {
+                              alert('No document available to view.');
+                              return;
+                            }
+                            
+                            // Tentar obter uma URL válida
+                            const validUrl = await getValidFileUrl(urlToView);
+                            window.open(validUrl, '_blank', 'noopener,noreferrer');
+                          } catch (error) {
+                            console.error('Error opening document:', error);
+                            alert((error as Error).message || 'Failed to open document. The file may be corrupted or inaccessible.');
+                          }
+                        }}
+                        className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
+                        title={doc.translated_file_url ? "View Translated PDF" : "View Original Document"}
+                      >
+                        <FileText className="w-3 h-3" /> View {doc.translated_file_url ? "PDF" : "Original"}
+                      </button>
+                      
+                      <button
+                        className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
+                        onClick={async e => {
+                          e.preventDefault();
+                          try {
+                            // Preferir documento traduzido se existir, senão baixar o original
+                            const urlToDownload = doc.translated_file_url || doc.file_url;
+                            if (!urlToDownload) {
+                              alert('No document available to download.');
+                              return;
+                            }
+                            
+                            const validUrl = await getValidFileUrl(urlToDownload);
+                            const response = await fetch(validUrl);
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                          } catch (err) {
+                            console.error('Error downloading file:', err);
+                            alert((err as Error).message || 'Failed to download file.');
+                          }
+                        }}
+                        title={doc.translated_file_url ? "Download Translated PDF" : "Download Original Document"}
+                      >
+                        <Download className="w-3 h-3" /> Download
+                      </button>
+                    </div>
                   </div>
 
 
@@ -535,56 +704,66 @@ export default function AuthenticatorDashboard() {
                               {doc.filename}
                             </a>
                           </div>
-                          {doc.translated_file_url && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={async () => {
-                              try {
-                                if (!doc.translated_file_url) {
-                                  alert('No PDF file available to view.');
-                                  return;
+                          <div className="flex gap-2">
+                            {/* Botão View - sempre disponível */}
+                            <button
+                              onClick={async () => {
+                                try {
+                                  // Preferir documento traduzido se existir, senão mostrar o original
+                                  const urlToView = doc.translated_file_url || doc.file_url;
+                                  if (!urlToView) {
+                                    alert('No document available to view.');
+                                    return;
+                                  }
+                                  
+                                  // Tentar obter uma URL válida
+                                  const validUrl = await getValidFileUrl(urlToView);
+                                  window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                } catch (error) {
+                                  console.error('Error opening document:', error);
+                                  alert((error as Error).message || 'Failed to open document. The file may be corrupted or inaccessible.');
                                 }
-                                
-                                // Tentar obter uma URL válida
-                                const validUrl = await getValidFileUrl(doc.translated_file_url);
-                                window.open(validUrl, '_blank', 'noopener,noreferrer');
-                              } catch (error) {
-                                console.error('Error opening PDF:', error);
-                                alert((error as Error).message || 'Failed to open PDF. The file may be corrupted or inaccessible.');
-                              }
-                            }}
-                                className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
-                            title="View PDF"
-                          >
-                                <FileText className="w-3 h-3" /> View
-                          </button>
-                          <button
-                                className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
-                            onClick={async e => {
-                              e.preventDefault();
-                              try {
-                                const validUrl = await getValidFileUrl(doc.translated_file_url || '');
-                                const response = await fetch(validUrl);
-                                const blob = await response.blob();
-                                const url = window.URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                window.URL.revokeObjectURL(url);
-                              } catch (err) {
-                                console.error('Error downloading file:', err);
-                                alert((err as Error).message || 'Failed to download file.');
-                              }
-                            }}
-                            title="Download PDF"
-                          >
-                                <Download className="w-3 h-3" /> Download
-                          </button>
-                        </div>
-                          )}
+                              }}
+                              className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
+                              title={doc.translated_file_url ? "View Translated PDF" : "View Original Document"}
+                            >
+                              <FileText className="w-3 h-3" /> View {doc.translated_file_url ? "PDF" : "Original"}
+                            </button>
+                            
+                            {/* Botão Download - sempre disponível */}
+                            <button
+                              className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
+                              onClick={async e => {
+                                e.preventDefault();
+                                try {
+                                  // Preferir documento traduzido se existir, senão baixar o original
+                                  const urlToDownload = doc.translated_file_url || doc.file_url;
+                                  if (!urlToDownload) {
+                                    alert('No document available to download.');
+                                    return;
+                                  }
+                                  
+                                  const validUrl = await getValidFileUrl(urlToDownload);
+                                  const response = await fetch(validUrl);
+                                  const blob = await response.blob();
+                                  const url = window.URL.createObjectURL(blob);
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                  window.URL.revokeObjectURL(url);
+                                } catch (err) {
+                                  console.error('Error downloading file:', err);
+                                  alert((err as Error).message || 'Failed to download file.');
+                                }
+                              }}
+                              title={doc.translated_file_url ? "Download Translated PDF" : "Download Original Document"}
+                            >
+                              <Download className="w-3 h-3" /> Download
+                            </button>
+                          </div>
                         </div>
                     </td>
                       <td className="px-4 py-3">

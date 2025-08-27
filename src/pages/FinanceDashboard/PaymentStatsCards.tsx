@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CreditCard, DollarSign, TrendingUp, Calendar } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { DateRange } from '../../components/DateRangeFilter';
@@ -12,91 +12,153 @@ export function PaymentStatsCards({ dateRange }: PaymentStatsCardsProps) {
   const [weeklyStats, setWeeklyStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadPaymentStats();
-  }, [dateRange]);
-
-  const loadPaymentStats = async () => {
+  const loadPaymentStats = useCallback(async () => {
     try {
       setLoading(true);
       
-      console.log('🔍 Carregando estatísticas de pagamentos...', { dateRange });
+      console.log('🔍 Carregando estatísticas de pagamentos incluindo documentos de autenticadores...', { dateRange });
       
-      // Buscar dados diretamente da tabela de pagamentos como fallback
-      console.log('📊 Tentando buscar dados diretamente da tabela payments...');
+      const startDateParam = dateRange?.startDate ? dateRange.startDate.toISOString() : null;
+      const endDateParam = dateRange?.endDate ? dateRange.endDate.toISOString() : null;
       
-      // Buscar estatísticas gerais
-      let query = supabase.from('payments').select('*');
+      // Buscar dados da tabela de pagamentos
+      let paymentsQuery = supabase.from('payments').select('*');
       
-      if (dateRange?.startDate) {
-        query = query.gte('created_at', dateRange.startDate.toISOString());
+      if (startDateParam) {
+        paymentsQuery = paymentsQuery.gte('created_at', startDateParam);
       }
-      if (dateRange?.endDate) {
-        query = query.lte('created_at', dateRange.endDate.toISOString());
+      if (endDateParam) {
+        paymentsQuery = paymentsQuery.lte('created_at', endDateParam);
       }
       
-      const { data: allPayments, error: paymentsError } = await query;
+      const { data: paymentsData, error: paymentsError } = await paymentsQuery;
       
       if (paymentsError) {
-        console.error('❌ Erro ao buscar pagamentos diretamente:', paymentsError);
-      } else {
-        console.log('💰 Pagamentos encontrados:', allPayments);
-        
-        // Calcular estatísticas manualmente
-        const totalPayments = allPayments?.length || 0;
-        const totalAmount = allPayments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-        const avgPayment = totalPayments > 0 ? totalAmount / totalPayments : 0;
-        const successfulPayments = allPayments?.filter(p => p.status === 'completed').length || 0;
-        
-        const calculatedStats = {
-          total_payments: totalPayments,
-          total_amount: totalAmount,
-          avg_payment: avgPayment,
-          successful_payments: successfulPayments
-        };
-        
-        console.log('📈 Estatísticas calculadas:', calculatedStats);
-        setStats(calculatedStats);
+        console.error('❌ Erro ao buscar pagamentos:', paymentsError);
+        return;
       }
+      
+      // Buscar documentos dos autenticadores (documents_to_be_verified)
+      let documentsQuery = supabase.from('documents_to_be_verified').select(`
+        id,
+        filename,
+        total_cost,
+        created_at,
+        user_id,
+        status
+      `);
+      
+      if (startDateParam) {
+        documentsQuery = documentsQuery.gte('created_at', startDateParam);
+      }
+      if (endDateParam) {
+        documentsQuery = documentsQuery.lte('created_at', endDateParam);
+      }
+      
+      const { data: allDocs, error: docsError } = await documentsQuery;
+      
+      if (docsError) {
+        console.error('❌ Erro ao buscar documentos:', docsError);
+      }
+      
+      // Filtrar apenas documentos de autenticadores
+      let authenticatorDocuments: any[] = [];
+      if (allDocs && allDocs.length > 0) {
+        for (const doc of allDocs) {
+          try {
+            // Buscar dados do uploader para verificar se é autenticador
+            const { data: uploaderProfile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', doc.user_id)
+              .single();
+            
+            if (uploaderProfile && uploaderProfile.role === 'authenticator') {
+              // Verificar se já existe na tabela translated_documents (documento aprovado)
+              const { data: translatedDoc } = await supabase
+                .from('translated_documents')
+                .select('id')
+                .eq('original_document_id', doc.id)
+                .single();
+              
+              const isApproved = !!translatedDoc;
+              const status = isApproved ? 'completed' : 'pending';
+              
+              authenticatorDocuments.push({
+                id: doc.id,
+                amount: doc.total_cost || 0,
+                status: status,
+                created_at: doc.created_at
+              });
+            }
+          } catch (err) {
+            // Ignorar erros individuais e continuar
+            continue;
+          }
+        }
+      }
+      
+      // Combinar todos os dados
+      const allTransactions = [...(paymentsData || []), ...authenticatorDocuments];
+      
+      console.log('💰 Pagamentos encontrados:', paymentsData?.length || 0);
+      console.log('📋 Documentos de autenticadores:', authenticatorDocuments.length);
+      console.log('📊 Total de transações:', allTransactions.length);
+      
+      // Calcular estatísticas totais
+      const totalPayments = allTransactions.length;
+      const totalAmount = allTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+      const avgPayment = totalPayments > 0 ? totalAmount / totalPayments : 0;
+      const successfulPayments = allTransactions.filter(t => t.status === 'completed').length;
+      
+      const calculatedStats = {
+        total_payments: totalPayments,
+        total_amount: totalAmount,
+        avg_payment: avgPayment,
+        successful_payments: successfulPayments
+      };
+      
+      console.log('📈 Estatísticas calculadas:', calculatedStats);
+      setStats(calculatedStats);
 
       // Buscar estatísticas dos últimos 7 dias
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
-      console.log('🔍 Buscando dados dos últimos 7 dias diretamente da tabela...');
+      console.log('🔍 Buscando dados dos últimos 7 dias...');
       
-      const { data: weeklyPayments, error: weeklyError } = await supabase
-        .from('payments')
-        .select('*')
-        .gte('created_at', sevenDaysAgo.toISOString())
-        .lte('created_at', new Date().toISOString());
-        
-      if (weeklyError) {
-        console.error('❌ Erro ao buscar pagamentos semanais:', weeklyError);
-      } else {
-        console.log('📅 Pagamentos semanais encontrados:', weeklyPayments);
-        
-        // Calcular estatísticas semanais manualmente
-        const weeklyTotalPayments = weeklyPayments?.length || 0;
-        const weeklyTotalAmount = weeklyPayments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-        const weeklySuccessfulPayments = weeklyPayments?.filter(p => p.status === 'completed').length || 0;
-        
-        const calculatedWeeklyStats = {
-          total_payments: weeklyTotalPayments,
-          total_amount: weeklyTotalAmount,
-          successful_payments: weeklySuccessfulPayments
-        };
-        
-        console.log('📈 Estatísticas semanais calculadas:', calculatedWeeklyStats);
-        setWeeklyStats(calculatedWeeklyStats);
-      }
+      // Filtrar transações dos últimos 7 dias
+      const weeklyTransactions = allTransactions.filter(t => {
+        const transactionDate = new Date(t.created_at);
+        return transactionDate >= sevenDaysAgo && transactionDate <= new Date();
+      });
+      
+      console.log('📅 Transações semanais encontradas:', weeklyTransactions.length);
+      
+      // Calcular estatísticas semanais
+      const weeklyTotalPayments = weeklyTransactions.length;
+      const weeklyTotalAmount = weeklyTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+      const weeklySuccessfulPayments = weeklyTransactions.filter(t => t.status === 'completed').length;
+      
+      const calculatedWeeklyStats = {
+        total_payments: weeklyTotalPayments,
+        total_amount: weeklyTotalAmount,
+        successful_payments: weeklySuccessfulPayments
+      };
+      
+      console.log('📈 Estatísticas semanais calculadas:', calculatedWeeklyStats);
+      setWeeklyStats(calculatedWeeklyStats);
 
     } catch (error) {
       console.error('💥 Erro ao carregar estatísticas de pagamentos:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    loadPaymentStats();
+  }, [loadPaymentStats]);
 
   const paymentStatsCards = [
     {

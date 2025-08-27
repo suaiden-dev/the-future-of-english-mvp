@@ -24,183 +24,173 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
     try {
       setLoading(true);
       
-      console.log('🔍 Carregando estatísticas...', { dateRange });
-      
-      // Preparar parâmetros de data para as funções RPC
-      const startDateParam = dateRange?.startDate ? dateRange.startDate.toISOString() : null;
-      const endDateParam = dateRange?.endDate ? dateRange.endDate.toISOString() : null;
-      
-      console.log('📅 DEBUG: Parâmetros de data:', { startDateParam, endDateParam });
-      
-      // Testar primeiro uma função RPC simples
-      console.log('🧪 Testando conexão com banco...');
-      const { data: testData, error: testError } = await supabase
+      // Buscar dados da tabela documents
+      let documentsQuery = supabase
         .from('documents')
-        .select('count', { count: 'exact', head: true });
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            role
+          )
+        `);
       
-      if (testError) {
-        console.error('❌ Erro na conexão básica:', testError);
-      } else {
-        console.log('✅ Conexão OK, total de documentos na base:', testData?.length);
+      // Aplicar filtros de data se fornecidos
+      if (dateRange?.startDate) {
+        documentsQuery = documentsQuery.gte('created_at', dateRange.startDate.toISOString());
+      }
+      if (dateRange?.endDate) {
+        documentsQuery = documentsQuery.lte('created_at', dateRange.endDate.toISOString());
       }
       
-      // Carregar estatísticas de pagamentos com filtro de data
-      console.log('💰 Chamando get_payment_stats...');
-      const paymentParams = startDateParam && endDateParam ? { start_date: startDateParam, end_date: endDateParam } : {};
-      console.log('💰 Parâmetros enviados:', paymentParams);
-      const { data: paymentData, error: paymentError } = await supabase
-        .rpc('get_payment_stats', paymentParams);
+      const { data: documentsData, error: documentsError } = await documentsQuery;
       
-      if (paymentError) {
-        console.error('❌ Erro ao carregar estatísticas de pagamentos:', paymentError);
-        console.error('📊 Detalhes do erro:', {
-          message: paymentError.message,
-          details: paymentError.details,
-          hint: paymentError.hint,
-          code: paymentError.code
-        });
-      } else {
-        console.log('✅ Estatísticas de pagamentos carregadas:', paymentData);
-        console.log('🔍 DEBUG - Primeiro item de paymentData:', paymentData[0]);
-        console.log('🔍 DEBUG - Estrutura completa:', JSON.stringify(paymentData[0], null, 2));
-        setPaymentStats(paymentData[0] || null);
+      if (documentsError) {
+        console.error('❌ Erro ao buscar documentos:', documentsError);
+        return;
       }
 
-      // Carregar estatísticas de traduções com filtro de data
-      console.log('📊 Chamando get_translation_stats...');
-      const translationParams = startDateParam && endDateParam ? { start_date: startDateParam, end_date: endDateParam } : {};
-      console.log('📊 Parâmetros enviados:', translationParams);
-      const { data: translationData, error: translationError } = await supabase
-        .rpc('get_translation_stats', translationParams);
+      // Buscar dados atualizados da tabela documents_to_be_verified
+      let verifiedQuery = supabase
+        .from('documents_to_be_verified')
+        .select('*');
       
-      if (translationError) {
-        console.error('❌ Erro ao carregar estatísticas de traduções:', translationError);
-        console.error('📊 Detalhes do erro:', {
-          message: translationError.message,
-          details: translationError.details,
-          hint: translationError.hint,
-          code: translationError.code
-        });
-      } else {
-        console.log('✅ Estatísticas de traduções carregadas:', translationData);
-        console.log('🔍 DEBUG - Primeiro item de translationData:', translationData[0]);
-        console.log('🔍 DEBUG - Estrutura completa:', JSON.stringify(translationData[0], null, 2));
-        setTranslationStats(translationData[0] || null);
+      // Aplicar filtros de data se fornecidos
+      if (dateRange?.startDate) {
+        verifiedQuery = verifiedQuery.gte('created_at', dateRange.startDate.toISOString());
+      }
+      if (dateRange?.endDate) {
+        verifiedQuery = verifiedQuery.lte('created_at', dateRange.endDate.toISOString());
+      }
+      
+      const { data: verifiedData, error: verifiedError } = await verifiedQuery;
+      
+      if (verifiedError) {
+        console.error('❌ Erro ao buscar documentos verificados:', verifiedError);
       }
 
-      // Carregar estatísticas aprimoradas com separação por tipo de usuário e filtro de data
-      console.log('🚀 Chamando get_enhanced_translation_stats...');
-      const enhancedParams = startDateParam && endDateParam ? { start_date: startDateParam, end_date: endDateParam } : {};
-      console.log('🚀 Parâmetros enviados:', enhancedParams);
-      const { data: enhancedData, error: enhancedError } = await supabase
-        .rpc('get_enhanced_translation_stats', enhancedParams);
+      // Mesclar dados: priorizar status da documents_to_be_verified (usar filename como chave)
+      const allDocs = (documentsData || []).map(doc => {
+        const verifiedDoc = verifiedData?.find(v => v.filename === doc.filename);
+        return {
+          ...doc,
+          status: verifiedDoc ? verifiedDoc.status : doc.status
+        };
+      });
       
-      if (enhancedError) {
-        console.error('❌ Erro ao carregar estatísticas aprimoradas:', enhancedError);
-        console.error('📊 Detalhes do erro:', {
-          message: enhancedError.message,
-          details: enhancedError.details,
-          hint: enhancedError.hint,
-          code: enhancedError.code
-        });
-      } else {
-        console.log('✅ Estatísticas aprimoradas carregadas:', enhancedData);
-        console.log('🔍 DEBUG - Primeiro item de enhancedData:', enhancedData[0]);
-        console.log('🔍 DEBUG - Estrutura completa:', JSON.stringify(enhancedData[0], null, 2));
-        setEnhancedStats(enhancedData[0] || null);
+      // Preparar query para payments
+      let paymentsQuery = supabase
+        .from('payments')
+        .select('*');
+      
+      // Aplicar filtros de data se fornecidos
+      if (dateRange?.startDate) {
+        paymentsQuery = paymentsQuery.gte('created_at', dateRange.startDate.toISOString());
       }
+      if (dateRange?.endDate) {
+        paymentsQuery = paymentsQuery.lte('created_at', dateRange.endDate.toISOString());
+      }
+      
+      const { data: paymentsData, error: paymentsError } = await paymentsQuery;
+      
+      if (paymentsError) {
+        console.error('❌ Erro ao buscar pagamentos:', paymentsError);
+      }
+      
+      
+      // Calcular estatísticas manualmente
+      const allPayments = paymentsData || [];
+      
+      // Estatísticas de pagamentos
+      const calculatedPaymentStats = {
+        total_payments: allPayments.length,
+        total_amount: allPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+        completed_payments: allPayments.filter(p => p.status === 'completed').length,
+        pending_payments: allPayments.filter(p => p.status === 'pending').length,
+        failed_payments: allPayments.filter(p => p.status === 'failed').length
+      };
+      
 
-      // Carregar breakdown por tipo de usuário com filtro de data
-      console.log('👥 Chamando get_user_type_breakdown...');
-      const breakdownParams = startDateParam && endDateParam ? { start_date: startDateParam, end_date: endDateParam } : {};
-      console.log('👥 Parâmetros enviados:', breakdownParams);
-      const { data: breakdownData, error: breakdownError } = await supabase
-        .rpc('get_user_type_breakdown', breakdownParams);
+      setPaymentStats(calculatedPaymentStats);
       
-      if (breakdownError) {
-        console.error('❌ Erro ao carregar breakdown por tipo de usuário:', breakdownError);
-        console.error('📊 Detalhes do erro:', {
-          message: breakdownError.message,
-          details: breakdownError.details,
-          hint: breakdownError.hint,
-          code: breakdownError.code
-        });
-      } else {
-        console.log('✅ Breakdown por tipo de usuário carregado:', breakdownData);
-        console.log('🔍 DEBUG - Estrutura completa do breakdown:', JSON.stringify(breakdownData, null, 2));
-        setUserTypeBreakdown(breakdownData || []);
-      }
+      // Estatísticas de documentos/traduções
+      const calculatedTranslationStats = {
+        total_documents: allDocs.length,
+        completed_translations: allDocs.filter(d => d.status === 'completed').length,
+        pending_translations: allDocs.filter(d => d.status === 'pending').length,
+        total_revenue: allDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0)
+      };
+      
+
+      setTranslationStats(calculatedTranslationStats);
+      
+      // Separar por tipo de usuário
+      const userDocs = allDocs.filter(d => d.profiles?.role === 'user');
+      const authenticatorDocs = allDocs.filter(d => d.profiles?.role === 'authenticator');
+      
+      // Estatísticas aprimoradas com separação por tipo de usuário
+      const calculatedEnhancedStats = {
+        total_documents: allDocs.length,
+        total_revenue: allDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
+        
+        // User uploads
+        user_uploads_total: userDocs.length,
+        user_uploads_completed: userDocs.filter(d => d.status === 'completed').length,
+        user_uploads_pending: userDocs.filter(d => d.status === 'pending').length,
+        user_uploads_revenue: userDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
+        
+        // Authenticator uploads  
+        authenticator_uploads_total: authenticatorDocs.length,
+        authenticator_uploads_completed: authenticatorDocs.filter(d => d.status === 'completed').length,
+        authenticator_uploads_pending: authenticatorDocs.filter(d => d.status === 'pending').length,
+        authenticator_uploads_revenue: authenticatorDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
+        
+        // Status breakdown
+        total_completed: allDocs.filter(d => d.status === 'completed').length,
+        total_pending: allDocs.filter(d => d.status === 'pending').length,
+        total_processing: allDocs.filter(d => d.status === 'processing').length,
+        total_rejected: allDocs.filter(d => d.status === 'rejected').length
+      };
+      
+
+      setEnhancedStats(calculatedEnhancedStats);
+      
+      // Breakdown por tipo de usuário usando os status reais mesclados
+      const calculatedBreakdown = [
+        {
+          user_type: "Regular Users",
+          total_documents: userDocs.length,
+          completed_documents: userDocs.filter(d => d.status === 'completed').length,
+          pending_documents: userDocs.filter(d => d.status === 'pending').length,
+          processing_documents: userDocs.filter(d => d.status === 'processing').length,
+          rejected_documents: userDocs.filter(d => d.status === 'rejected').length,
+          total_revenue: userDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
+          avg_revenue_per_doc: userDocs.length > 0 ? userDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0) / userDocs.length : 0
+        },
+        {
+          user_type: "Authenticators", 
+          total_documents: authenticatorDocs.length,
+          completed_documents: authenticatorDocs.filter(d => d.status === 'completed').length,
+          pending_documents: authenticatorDocs.filter(d => d.status === 'pending').length,
+          processing_documents: authenticatorDocs.filter(d => d.status === 'processing').length,
+          rejected_documents: authenticatorDocs.filter(d => d.status === 'rejected').length,
+          total_revenue: authenticatorDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
+          avg_revenue_per_doc: authenticatorDocs.length > 0 ? authenticatorDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0) / authenticatorDocs.length : 0
+        }
+      ];
+      
+      setUserTypeBreakdown(calculatedBreakdown);
 
     } catch (error) {
       console.error('💥 Erro geral ao carregar estatísticas:', error);
     } finally {
       setLoading(false);
-      console.log('🏁 Carregamento de estatísticas finalizado');
-      
-      // Se algumas funções RPC retornaram zeros mas temos dados de payments, vamos calcular manualmente
-      if (paymentStats && paymentStats.total_amount > 0 && 
-          (!enhancedStats || enhancedStats.total_revenue === 0)) {
-        console.log('🔧 Criando estatísticas baseadas em paymentStats que funcionou...');
-        
-        const manualStats = {
-          total_documents: paymentStats.total_payments || 0,
-          total_revenue: paymentStats.total_amount || 0,
-          user_uploads_total: Math.floor((paymentStats.total_payments || 0) * 0.8), // 80% usuarios
-          user_uploads_completed: Math.floor((paymentStats.completed_payments || 0) * 0.8),
-          user_uploads_pending: Math.floor((paymentStats.pending_payments || 0) * 0.8),
-          user_uploads_revenue: Math.floor((paymentStats.total_amount || 0) * 0.8),
-          authenticator_uploads_total: Math.floor((paymentStats.total_payments || 0) * 0.2), // 20% authenticators  
-          authenticator_uploads_completed: Math.floor((paymentStats.completed_payments || 0) * 0.2),
-          authenticator_uploads_pending: Math.floor((paymentStats.pending_payments || 0) * 0.2),
-          authenticator_uploads_revenue: Math.floor((paymentStats.total_amount || 0) * 0.2),
-          total_completed: paymentStats.completed_payments || 0,
-          total_pending: paymentStats.pending_payments || 0,
-          total_rejected: paymentStats.failed_payments || 0
-        };
-        
-        console.log('📊 Estatísticas manuais criadas:', manualStats);
-        setEnhancedStats(manualStats);
-        
-        // Criar breakdown manual também
-        const manualBreakdown = [
-          {
-            user_type: "Regular Users",
-            total_documents: manualStats.user_uploads_total,
-            completed_documents: manualStats.user_uploads_completed,
-            pending_documents: manualStats.user_uploads_pending,
-            rejected_documents: 0,
-            total_revenue: manualStats.user_uploads_revenue,
-            avg_revenue_per_doc: manualStats.user_uploads_total > 0 ? 
-              manualStats.user_uploads_revenue / manualStats.user_uploads_total : 0
-          },
-          {
-            user_type: "Authenticators",
-            total_documents: manualStats.authenticator_uploads_total,
-            completed_documents: manualStats.authenticator_uploads_completed,
-            pending_documents: manualStats.authenticator_uploads_pending,
-            rejected_documents: 0,
-            total_revenue: manualStats.authenticator_uploads_revenue,
-            avg_revenue_per_doc: manualStats.authenticator_uploads_total > 0 ? 
-              manualStats.authenticator_uploads_revenue / manualStats.authenticator_uploads_total : 0
-          }
-        ];
-        
-        console.log('👥 Breakdown manual criado:', manualBreakdown);
-        setUserTypeBreakdown(manualBreakdown);
-      }
     }
   };
 
   const totalRevenue = documents.reduce((sum, doc) => sum + (doc.total_cost || 0), 0);
 
-  // Debug: Vamos ver o que temos nos states
-  console.log('🎯 DEBUG Estados atuais:');
-  console.log('paymentStats:', paymentStats);
-  console.log('translationStats:', translationStats);
-  console.log('enhancedStats:', enhancedStats);
-  console.log('userTypeBreakdown:', userTypeBreakdown);
-  
-  // Calcular valor real do revenue para usar nos cards
+  // Calcular valores reais primeiro
   const realRevenue = enhancedStats && enhancedStats.total_revenue > 0 
     ? enhancedStats.total_revenue 
     : (paymentStats?.total_amount || totalRevenue);
@@ -208,6 +198,9 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
   const realDocuments = enhancedStats && enhancedStats.total_documents > 0 
     ? enhancedStats.total_documents 
     : (paymentStats?.total_payments || documents.length);
+
+  // Debug simplificado - removido para reduzir logs
+  // console.log('🎯 DEBUG Estados atuais:', { loading });
 
   // Calcular valores reais para todos os cards
   const realUserUploads = enhancedStats && enhancedStats.user_uploads_total > 0 
@@ -226,17 +219,13 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
     ? enhancedStats.authenticator_uploads_revenue 
     : Math.floor((paymentStats?.total_amount || 0) * 0.2);
 
-  console.log('💰 Valor real do revenue para o card:', realRevenue);
-  console.log('📊 Documentos reais para o card:', realDocuments);
-  console.log('👥 User uploads reais:', realUserUploads, 'revenue:', realUserRevenue);
-  console.log('🚀 Auth uploads reais:', realAuthUploads, 'revenue:', realAuthRevenue);
 
   // Estatísticas principais com separação por tipo de usuário
   const stats = [
     {
       title: 'Total Payments',
-      value: paymentStats ? paymentStats.total_payments : '...',
-      subtitle: paymentStats ? `$${paymentStats.total_amount?.toFixed(2) || '0'}` : 'Loading...',
+      value: realDocuments || 0, // Total de documentos (users + authenticators)
+      subtitle: `$${realRevenue?.toFixed(2) || '0.00'}`, // Revenue total
       icon: CreditCard,
       bgColor: 'bg-tfe-blue-100',
       iconColor: 'text-tfe-blue-950',
@@ -253,7 +242,7 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
     },
     {
       title: 'User Uploads',
-      value: realUserUploads,
+      value: realUserUploads || 0,
       subtitle: `$${realUserRevenue?.toFixed(0) || '0'} revenue`,
       icon: Users,
       bgColor: 'bg-purple-100',
@@ -262,7 +251,7 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
     },
     {
       title: 'Authenticator Uploads',
-      value: realAuthUploads,
+      value: realAuthUploads || 0,
       subtitle: `$${realAuthRevenue?.toFixed(0) || '0'} revenue`,
       icon: UserCheck,
       bgColor: 'bg-orange-100',
@@ -345,15 +334,15 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
                 
                 <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <div className="text-center">
-                    <div className="text-xs sm:text-sm font-medium text-gray-900">{breakdown.completed_documents}</div>
+                    <div className="text-xs sm:text-sm font-medium text-gray-900">{breakdown.completed_documents || 0}</div>
                     <div className="text-xs text-gray-500">Completed</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xs sm:text-sm font-medium text-gray-900">{breakdown.pending_documents}</div>
-                    <div className="text-xs text-gray-500">Pending</div>
+                    <div className="text-xs sm:text-sm font-medium text-gray-900">{breakdown.processing_documents || 0}</div>
+                    <div className="text-xs text-gray-500">Processing</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xs sm:text-sm font-medium text-gray-900">{breakdown.rejected_documents}</div>
+                    <div className="text-xs sm:text-sm font-medium text-gray-900">{breakdown.rejected_documents || 0}</div>
                     <div className="text-xs text-gray-500">Rejected</div>
                   </div>
                 </div>

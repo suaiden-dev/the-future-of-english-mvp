@@ -14,6 +14,7 @@ import ProfilePage from './ProfilePage';
 import { CheckCircle, Home } from 'lucide-react';
 import UploadDocument from './UploadDocument';
 import { CustomUser } from '../../hooks/useAuth';
+import { useI18n } from '../../contexts/I18nContext';
 type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register' | 'documents';
 
 type DocumentInsert = Database['public']['Tables']['documents']['Insert'];

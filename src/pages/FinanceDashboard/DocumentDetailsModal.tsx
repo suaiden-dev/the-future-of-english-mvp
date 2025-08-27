@@ -15,12 +15,15 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [translatedDoc, setTranslatedDoc] = useState<any>(null);
   const [loadingTranslated, setLoadingTranslated] = useState(false);
+  const [actualDocumentStatus, setActualDocumentStatus] = useState<string | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(false);
 
-  // Buscar documento traduzido e perfil do usuário quando o documento mudar
+  // Buscar documento traduzido, perfil do usuário e status atualizado quando o documento mudar
   useEffect(() => {
     if (document) {
       fetchTranslatedDocument();
       fetchUserProfile();
+      fetchActualDocumentStatus();
     }
   }, [document]);
 
@@ -77,6 +80,34 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
       console.error('Erro ao buscar documento traduzido:', error);
     } finally {
       setLoadingTranslated(false);
+    }
+  };
+
+  const fetchActualDocumentStatus = async () => {
+    if (!document || !document.filename) return;
+    
+    setLoadingStatus(true);
+    try {
+      // Buscar status atualizado da tabela documents_to_be_verified
+      const { data: verifiedDoc, error } = await supabase
+        .from('documents_to_be_verified')
+        .select('status')
+        .eq('filename', document.filename)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('❌ Erro ao buscar documento verificado:', error);
+        setActualDocumentStatus(document.status);
+      } else if (verifiedDoc) {
+        setActualDocumentStatus(verifiedDoc.status);
+      } else {
+        setActualDocumentStatus(document.status);
+      }
+    } catch (err) {
+      console.error('💥 Erro na busca do status:', err);
+      setActualDocumentStatus(document.status);
+    } finally {
+      setLoadingStatus(false);
     }
   };
 
@@ -160,10 +191,14 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
               <div>
                 <label className="text-sm font-medium text-gray-700">Status</label>
                 <div className="mt-1">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(document)}`}>
-                    {getStatusIcon(document)}
-                    <span className="ml-1 capitalize">{document.file_url ? 'Completed' : document.status || 'Unknown'}</span>
-                  </span>
+                  {loadingStatus ? (
+                    <span className="text-gray-500">Loading...</span>
+                  ) : (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor({ status: actualDocumentStatus || document.status } as Document)}`}>
+                      {getStatusIcon({ status: actualDocumentStatus || document.status } as Document)}
+                      <span className="ml-1 capitalize">{actualDocumentStatus || document.status || 'Unknown'}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

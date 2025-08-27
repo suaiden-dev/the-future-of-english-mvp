@@ -1,0 +1,199 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "view": "Ver",
+    "upload": "Subir",
+    "download": "Descargar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "close": "Cerrar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "confirm": "Confirmar",
+    "yes": "Sí",
+    "no": "No",
+    "error": "Error",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "info": "Información",
+    "to": "para",
+    "user": "Usuario"
+  },
+  "navigation": {
+    "home": "Inicio",
+    "dashboard": "Panel",
+    "documents": "Documentos",
+    "translations": "Traducciones",
+    "profile": "Perfil",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión",
+    "login": "Iniciar sesión",
+    "register": "Registrarse"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "register": "Registrarse",
+    "forgotPassword": "Olvidé mi contraseña",
+    "resetPassword": "Restablecer contraseña",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "signIn": "Iniciar sesión",
+    "signUp": "Registrarse",
+    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    "dontHaveAccount": "¿No tienes una cuenta?",
+    "passwordResetSent": "Correo de restablecimiento enviado",
+    "passwordResetSuccess": "Contraseña restablecida exitosamente",
+    "firstNameRequired": "El nombre es obligatorio",
+    "emailRequired": "El correo electrónico es obligatorio",
+    "phoneRequired": "El número de teléfono es obligatorio",
+    "invalidEmail": "Por favor ingrese un correo electrónico válido",
+    "invalidPhone": "Por favor ingrese un número de teléfono válido",
+    "passwordRequired": "La contraseña es obligatoria",
+    "passwordsDoNotMatch": "Las contraseñas no coinciden",
+    "registrationFailed": "Registro fallido. Por favor inténtelo de nuevo.",
+    "emailAlreadyRegistered": "Este correo electrónico ya está registrado. Intente iniciar sesión.",
+    "passwordTooShort": "La contraseña debe tener al menos 6 caracteres."
+  },
+  "dashboard": {
+    "welcome": "Bienvenido",
+    "welcomeBack": "Bienvenido de vuelta",
+    "overview": "Vista General",
+    "stats": "Estadísticas",
+    "recentActivity": "Actividad Reciente",
+    "quickActions": "Acciones Rápidas",
+    "totalDocuments": "Total de Documentos",
+    "pendingDocuments": "Documentos Pendientes",
+    "completedDocuments": "Documentos Completados",
+    "processingDocuments": "Documentos en Procesamiento",
+    "uploadDescription": "Sube tus documentos para servicios de traducción profesional. Todas las traducciones están certificadas y son aceptadas por USCIS y autoridades de EE.UU."
+  },
+  "documents": {
+    "uploadDocument": "Subir Documento",
+    "documentName": "Nombre del Documento",
+    "documentType": "Tipo de Documento",
+    "documentStatus": "Estado del Documento",
+    "uploadDate": "Fecha de Subida",
+    "completionDate": "Fecha de Finalización",
+    "documentSize": "Tamaño del Documento",
+    "documentLanguage": "Idioma del Documento",
+    "originalLanguage": "Idioma Original",
+    "targetLanguage": "Idioma de Destino",
+    "translationProgress": "Progreso de la Traducción",
+    "pending": "Pendiente",
+    "processing": "En Procesamiento",
+    "completed": "Completado",
+    "cancelled": "Cancelado",
+    "draft": "Borrador"
+  },
+  "folders": {
+    "createFolder": "Crear Carpeta",
+    "folderName": "Nombre de la Carpeta",
+    "folderColor": "Color de la Carpeta",
+    "parentFolder": "Carpeta Padre",
+    "noParent": "Sin carpeta padre",
+    "folderCreated": "Carpeta creada exitosamente",
+    "folderUpdated": "Carpeta actualizada exitosamente",
+    "folderDeleted": "Carpeta eliminada exitosamente"
+  },
+  "notifications": {
+    "notifications": "Notificaciones",
+    "noNotifications": "Sin notificaciones",
+    "markAllAsRead": "Marcar todas como leídas",
+    "unreadCount": "{{count}} no leída",
+    "unreadCount_plural": "{{count}} no leídas"
+  },
+  "payments": {
+    "payment": "Pago",
+    "paymentMethod": "Método de Pago",
+    "paymentStatus": "Estado del Pago",
+    "paymentAmount": "Monto del Pago",
+    "paymentDate": "Fecha del Pago",
+    "paymentSuccess": "Pago realizado exitosamente",
+    "paymentCancelled": "Pago cancelado",
+    "paymentFailed": "Fallo en el pago"
+  },
+  "errors": {
+    "somethingWentWrong": "Algo salió mal",
+    "tryAgain": "Inténtalo de nuevo",
+    "networkError": "Error de conexión",
+    "unauthorized": "No autorizado",
+    "forbidden": "Acceso denegado",
+    "notFound": "No encontrado",
+    "validationError": "Error de validación",
+    "fileTooLarge": "Archivo demasiado grande",
+    "invalidFileType": "Tipo de archivo inválido"
+  },
+  "language": {
+    "portuguese": "Portugués",
+    "spanish": "Español",
+    "english": "Inglés",
+    "selectLanguage": "Seleccionar Idioma"
+  },
+  "company": {
+    "name": "LUSH AMERICA TRANSLATIONS"
+  },
+  "hero": {
+    "title1": "Transforma Tu",
+    "title2": "Futuro con",
+    "title3": "Becas de Estudio",
+    "title4": "en los EE.UU.",
+    "description": "Mentoría especializada para encontrar la mejor escuela y asegurar tu oportunidad de beca con nuestra comprobada",
+    "successRate": "tasa de éxito del 95%",
+    "startNow": "Quiero Empezar Ahora",
+    "talkToSpecialist": "Hablar con Especialista",
+    "personalized": "100% Personalizado",
+    "fastResults": "Resultados Rápidos"
+  },
+  "about": {
+    "title": "Sobre",
+    "titleUs": "Nosotros",
+    "description": "En Lush America Translations, ayudamos a estudiantes internacionales a realizar su sueño de estudiar en los Estados Unidos. Ofrecemos orientación completa, desde la selección de la escuela hasta la obtención de la beca ideal — con excelencia, transparencia y resultados comprobados.",
+    "scholarshipsSecured": "Becas Obtenidas",
+    "partnerSchools": "Escuelas Asociadas",
+    "countriesServed": "Países Atendidos",
+    "monthsAverage": "Meses en Promedio",
+    "features": {
+      "globalNetwork": {
+        "title": "Red Global",
+        "description": "Acceso a más de 50 escuelas asociadas en los Estados Unidos con oportunidades exclusivas de becas."
+      },
+      "expertGuidance": {
+        "title": "Orientación Especializada",
+        "description": "Consultores especializados con años de experiencia en educación internacional y procesos de visa."
+      },
+      "endToEndSupport": {
+        "title": "Soporte Completo",
+        "description": "Desde la consulta inicial hasta la llegada a los EE.UU., manejamos cada paso de tu viaje."
+      }
+    },
+    "values": {
+      "title": "Nuestros Valores",
+      "subtitle": "Principios que guían nuestra misión de transformar vidas a través de la educación",
+      "passion": {
+        "title": "Pasión por la Educación",
+        "description": "Creemos en el poder transformador de la educación internacional"
+      },
+      "innovation": {
+        "title": "Innovación Continua",
+        "description": "Siempre buscamos las mejores prácticas y tecnologías"
+      },
+      "partnership": {
+        "title": "Verdadera Asociación",
+        "description": "Construimos relaciones duraderas con nuestros estudiantes"
+      },
+      "excellence": {
+        "title": "Excelencia en Todo",
+        "description": "Compromiso con la calidad en cada detalle"
+      }
+    }
+  }
+}

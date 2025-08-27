@@ -12,11 +12,11 @@ const corsHeaders = {
 function calculatePrice(pages: number, isCertified: boolean, isNotarized: boolean, isBankStatement: boolean): number {
   let pricePerPage = 0;
   
-  // Novo modelo de preços: apenas "Certified / Notarized" a $20 por página
+  // Novo modelo de preços: apenas "Certified" a $20 por página
   if (isBankStatement) {
     pricePerPage = 25; // $20 base + $5 bank statement fee
   } else {
-    pricePerPage = 20; // $20 per page para Certified / Notarized
+    pricePerPage = 20; // $20 per page para Certified
   }
   
   return pricePerPage * pages;
@@ -24,7 +24,7 @@ function calculatePrice(pages: number, isCertified: boolean, isNotarized: boolea
 
 // Function to generate service description
 function generateServiceDescription(pages: number, isCertified: boolean, isNotarized: boolean, isBankStatement: boolean): string {
-  const services = ['Certified / Notarized'];
+  const services = ['Certified'];
   
   if (isBankStatement) services.push('Bank Statement');
   

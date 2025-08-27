@@ -1,5 +1,7 @@
 import { User, LogOut, Shield, FileText, Search, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../contexts/I18nContext';
+import LanguageSelector from './LanguageSelector';
 
 type Page = 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register';
 
@@ -12,6 +14,7 @@ interface HeaderProps {
 
 export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: HeaderProps) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
@@ -66,7 +69,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
               }`}
             >
               <FileText className="w-4 h-4" />
-              <span className="hidden xl:inline">Translations</span>
+              <span className="hidden xl:inline">{t('navigation.translations')}</span>
             </button>
             
 
@@ -98,7 +101,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
                     }`}
                   >
                     <Shield className="w-4 h-4" />
-                    <span className="hidden xl:inline">Admin</span>
+                    <span className="hidden xl:inline">{t('navigation.dashboard')}</span>
                   </button>
                 )}
                 
@@ -111,36 +114,38 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
                   }`}
                 >
                   <User className="w-4 h-4" />
-                  <span className="hidden xl:inline">Dashboard</span>
+                                      <span className="hidden xl:inline">{t('navigation.dashboard')}</span>
                 </button>
                 
-                <div className="flex items-center space-x-2 min-w-0">
+                                <div className="flex items-center space-x-2 min-w-0">
+                  <LanguageSelector />
                   <span className="text-sm text-gray-600 truncate max-w-32 xl:max-w-48">
-                    Welcome, {user.user_metadata?.name || user.email}
+                    {t('dashboard.welcome')}, {user.user_metadata?.name || user.email}
                   </span>
                   <button
                     onClick={onLogout}
                     className="flex items-center space-x-1 px-2 xl:px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-tfe-red-600 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span className="hidden xl:inline">Logout</span>
+                    <span className="hidden xl:inline">{t('navigation.logout')}</span>
                   </button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => navigate('/login')}
-                  className="px-3 xl:px-4 py-2 text-sm font-medium text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => navigate('/register')}
-                  className="px-3 xl:px-4 py-2 text-sm font-medium text-white bg-tfe-blue-950 hover:bg-tfe-blue-800 rounded-md transition-colors"
-                >
-                  Register
-                </button>
+                                  <LanguageSelector />
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="px-3 xl:px-4 py-2 text-sm font-medium text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors"
+                  >
+                    {t('navigation.login')}
+                  </button>
+                  <button
+                    onClick={() => navigate('/register')}
+                    className="px-3 xl:px-4 py-2 text-sm font-medium text-white bg-tfe-blue-950 hover:bg-tfe-blue-800 rounded-md transition-colors"
+                  >
+                    {t('navigation.register')}
+                  </button>
               </div>
             )}
           </div>

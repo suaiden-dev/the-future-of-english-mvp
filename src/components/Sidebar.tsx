@@ -4,6 +4,7 @@ import type { CustomUser } from '../hooks/useAuth';
 import { FileText as FileTextIcon } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Upload } from 'lucide-react';
+import LanguageSelector from './LanguageSelector';
 
 export interface NavItem {
   id: string;
@@ -112,9 +113,16 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
 
 
 
+          {/* Seletor de idioma */}
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="px-3 py-2">
+              <LanguageSelector />
+            </div>
+          </div>
+
           {/* Seção de logout */}
           {user && (
-            <div className="mt-8 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={onLogout}
                 className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-tfe-red-600 hover:bg-tfe-red-50 hover:text-tfe-red-700"

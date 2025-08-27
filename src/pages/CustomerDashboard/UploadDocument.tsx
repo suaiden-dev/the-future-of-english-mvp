@@ -15,7 +15,7 @@ export default function UploadDocument() {
   const [dragActive, setDragActive] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [tipoTrad, setTipoTrad] = useState<'Notorizado'>('Notorizado');
+  const [tipoTrad, setTipoTrad] = useState<'Certified'>('Certified');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
   
@@ -23,7 +23,7 @@ export default function UploadDocument() {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
   const translationTypes = [
-    { value: 'Notorizado', label: 'Certified / Notarized' },
+    { value: 'Certified', label: 'Certified' },
   ];
   
   const languages = [
@@ -118,8 +118,8 @@ export default function UploadDocument() {
       // Criar payload completo igual ao DocumentUploadModal
       const payload = {
         pages,
-        isCertified: true, // Always certified/notarized now
-        isNotarized: tipoTrad === 'Notorizado',
+        isCertified: true, // Always certified now
+        isNotarized: tipoTrad === 'Certified',
         isBankStatement: isExtrato,
         fileId: fileId || '', // Usar o ID do arquivo no IndexedDB
         userId: user?.id,
@@ -218,8 +218,8 @@ export default function UploadDocument() {
           console.log('DEBUG: Mobile - tentando usar IndexedDB');
           const fileId = await fileStorage.storeFile(selectedFile, {
             documentType: tipoTrad,
-            certification: true, // Always certified/notarized now
-            notarization: tipoTrad === 'Notorizado',
+            certification: true, // Always certified now
+            notarization: tipoTrad === 'Certified',
             pageCount: pages,
             isBankStatement: isExtrato,
             originalLanguage: idiomaRaiz,
@@ -240,8 +240,8 @@ export default function UploadDocument() {
           // Payload para mobile com upload direto
           const payload = {
             pages,
-            isCertified: true, // Always certified/notarized now
-            isNotarized: tipoTrad === 'Notorizado',
+            isCertified: true, // Always certified now
+            isNotarized: tipoTrad === 'Certified',
             isBankStatement: isExtrato,
             filePath, // Caminho do arquivo no Supabase Storage
             userId: user.id,
@@ -260,8 +260,8 @@ export default function UploadDocument() {
         console.log('DEBUG: Desktop - salvando arquivo no IndexedDB');
         const fileId = await fileStorage.storeFile(selectedFile, {
           documentType: tipoTrad,
-          certification: true, // Always certified/notarized now
-          notarization: tipoTrad === 'Notorizado',
+          certification: true, // Always certified now
+          notarization: tipoTrad === 'Certified',
           pageCount: pages,
           isBankStatement: isExtrato,
           originalLanguage: idiomaRaiz,
@@ -418,7 +418,7 @@ export default function UploadDocument() {
                     <select
                       id="translation-type"
                       value={tipoTrad}
-                      onChange={e => setTipoTrad(e.target.value as 'Notorizado')}
+                      onChange={e => setTipoTrad(e.target.value as 'Certified')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Translation type"
                     >
@@ -531,11 +531,11 @@ export default function UploadDocument() {
                     <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Certified / Notarized</span>
+                          <span className="font-medium text-gray-800">Certified</span>
                           <span className="text-sm font-bold text-tfe-blue-600">$20/page</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Official certified and notarized translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.
+                          Official certified translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
                           <li>• Official certification stamp</li>
