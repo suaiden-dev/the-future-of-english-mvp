@@ -142,16 +142,212 @@
     "name": "LUSH AMERICA TRANSLATIONS"
   },
   "hero": {
-    "title1": "Transform Your",
-    "title2": "Future with",
-    "title3": "Study Scholarships",
-    "title4": "in the USA",
-    "description": "Specialized mentorship to find the best school and secure your scholarship opportunity with our proven",
+    "title1": "Professional",
+    "title2": "Document Translation",
+    "description": "Certified translation services for immigration documents with official authentication and verification. 99.9% USCIS acceptance rate.",
+    "startTranslation": "Start Translation",
+    "verifyDocument": "Verify Document",
     "successRate": "95% success rate",
     "startNow": "I Want to Start Now",
     "talkToSpecialist": "Talk to a Specialist",
     "personalized": "100% Personalized",
     "fastResults": "Fast Results"
+  },
+  "stats": {
+    "uscisAcceptance": "USCIS Acceptance",
+    "avgTurnaround": "Avg. Turnaround",
+    "documentsTranslated": "Documents Translated",
+    "languagesSupported": "Languages Supported"
+  },
+  "pricing": {
+    "title": "Simple, Transparent Pricing",
+    "description": "Professional translation services with competitive rates and guaranteed quality",
+    "perPage": "per page",
+    "mostPopular": "Most Popular",
+    "chooseBankStatements": "Choose Bank Statements",
+    "getStartedNow": "Get Started Now",
+    "note": "* Prices are per standard page (250 words). Complex documents may require additional fees.",
+    "certifiedTranslation": {
+      "name": "Certified Translation",
+      "description": "Official certified translation with legal authentication",
+      "features": {
+        "turnaround": "24-48 hour turnaround",
+        "notarization": "Official notarization",
+        "authentication": "Legal authentication",
+        "uscis": "USCIS accepted",
+        "verification": "Digital verification code",
+        "delivery": "Email delivery",
+        "support": "Priority support"
+      }
+    },
+    "bankStatements": {
+      "name": "Bank Statements",
+      "description": "Specialized translation for financial documents with enhanced verification",
+      "features": {
+        "turnaround": "24-48 hour turnaround",
+        "expertise": "Financial document expertise",
+        "verification": "Enhanced verification process",
+        "uscis": "USCIS accepted",
+        "digitalCode": "Digital verification code",
+        "delivery": "Email delivery",
+        "support": "Priority support"
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "How Our Translation Process Works",
+    "description": "Simple, secure, and professional document translation in 4 easy steps",
+    "steps": {
+      "upload": {
+        "title": "Upload Document",
+        "description": "Upload your document securely to our platform. We support PDF, JPG, PNG, and other common formats."
+      },
+      "quote": {
+        "title": "Get Quote",
+        "description": "Automatic calculation based on page count and document type. Transparent pricing with no hidden fees."
+      },
+      "payment": {
+        "title": "Secure Payment",
+        "description": "Secure payment processing with instant confirmation. We accept all major credit cards and PayPal."
+      },
+      "receive": {
+        "title": "Receive Translation",
+        "description": "Get your certified translation with verification code. Email delivery or physical copy available."
+      }
+    }
+  },
+  "features": {
+    "title": "Why Choose Our Translation Services?",
+    "description": "Professional quality with guaranteed acceptance by US authorities",
+    "certified": {
+      "title": "Certified",
+      "description": "All translations are certified by licensed professionals and authenticated with official seals and signatures. 99.9% USCIS acceptance rate."
+    },
+    "fastTurnaround": {
+      "title": "Fast Turnaround",
+      "description": "Standard translations completed in 24-48 hours. Express service available for urgent documents (4-8 hours) with rush processing."
+    }
+  },
+  "testimonials": {
+    "title": "What Our Clients Say",
+    "description": "Real feedback from satisfied clients who trusted us with their important documents",
+    "items": {
+      "0": {
+        "name": "David Thompson",
+        "location": "Canada → New York",
+        "text": "Fast and professional service. My birth certificate translation was accepted by USCIS without any issues.",
+        "document": "Birth Certificate"
+      },
+      "1": {
+        "name": "Jessica Martinez",
+        "location": "Mexico → Texas",
+        "text": "Excellent quality and quick turnaround. The verification system gave me peace of mind.",
+        "document": "Academic Transcript"
+      },
+      "2": {
+        "name": "Ryan Anderson",
+        "location": "Brazil → California",
+        "text": "Professional service with competitive pricing. My marriage certificate translation was perfect.",
+        "document": "Marriage Certificate"
+      }
+    }
+  },
+  "contact": {
+    "title": "Need Help? Contact Us",
+    "description": "Our translation experts are here to help you with any questions",
+    "phone": {
+      "title": "Phone",
+      "hours": "Mon-Fri: 9AM-6PM EST"
+    },
+    "email": {
+      "title": "Email",
+      "support": "24/7 support"
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "description": "Instant messaging"
+    }
+  },
+  "documentTypes": {
+    "title": "We Translate Everything",
+    "description": "From personal documents to complex legal papers - we handle all types of translations",
+    "common": {
+      "title": "Most Common Documents",
+      "birthCertificates": "Birth Certificates",
+      "marriageCertificates": "Marriage Certificates",
+      "academicTranscripts": "Academic Transcripts",
+      "bankStatements": "Bank Statements",
+      "medicalRecords": "Medical Records",
+      "legalDocuments": "Legal Documents"
+    },
+    "more": {
+      "title": "And Much More",
+      "anyOfficial": "Any Official Document",
+      "businessContracts": "Business Contracts",
+      "technicalManuals": "Technical Manuals",
+      "websiteContent": "Website Content",
+      "marketingMaterials": "Marketing Materials"
+    }
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "description": "Everything you need to know about our translation services",
+    "items": {
+      "0": {
+        "question": "How long does translation take?",
+        "answer": "Standard translations are completed within 24-48 hours. Rush services are available for urgent documents (4-8 hours) at an additional fee."
+      },
+      "1": {
+        "question": "Are your translations accepted by USCIS?",
+        "answer": "Yes, all our translations are certified and authenticated, meeting USCIS requirements. They include official certification statements and are accepted by all US immigration authorities."
+      },
+      "2": {
+        "question": "What documents can you translate?",
+        "answer": "We translate all immigration documents including birth certificates, marriage certificates, academic transcripts, medical records, police clearances, and more. Contact us for specific document types."
+      },
+      "3": {
+        "question": "How do I verify my translation is authentic?",
+        "answer": "Each translation comes with a unique verification code. You can verify authenticity on our website or contact us directly with the code."
+      },
+      "4": {
+        "question": "Do you offer rush services?",
+        "answer": "Yes, we offer rush services for urgent documents. 4-8 hour turnaround is available for an additional 50% fee. Contact us for specific rush pricing."
+      },
+      "5": {
+        "question": "What languages do you support?",
+        "answer": "We support Portuguese, Portuguese (Portugal), Spanish, German, Arabic, Hebrew, Japanese, and Korean. All documents are translated to English for USCIS and US authority requirements."
+      }
+    }
+  },
+  "languages": {
+    "title": "Supported Languages",
+    "portuguese": "Portuguese",
+    "portuguesePortugal": "Portuguese (Portugal)",
+    "spanish": "Spanish",
+    "german": "German",
+    "arabic": "Arabic",
+    "hebrew": "Hebrew",
+    "japanese": "Japanese",
+    "korean": "Korean",
+    "description": "All documents are translated to English for USCIS and American authorities requirements."
+  },
+  "footer": {
+    "description": "Transforming dreams into reality through specialized mentoring for scholarships in the United States.",
+    "services": {
+      "title": "Our Services",
+      "documentTranslation": "Document Translation",
+      "documentVerification": "Document Verification"
+    },
+    "contact": {
+      "title": "Contact",
+      "location": "United States"
+    },
+    "copyright": "© 2025 Lush America Translations. All rights reserved.",
+    "links": {
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Use",
+      "cookies": "Cookie Policy"
+    }
   },
   "about": {
     "title": "About",

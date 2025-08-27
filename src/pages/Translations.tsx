@@ -2,102 +2,104 @@ import { useState } from 'react';
 import { FileText, CurrencyDollar, Clock, Shield, CheckCircle, ArrowRight, Star, Globe, ChatCircle, CaretDown, CaretUp, Phone, Envelope, Download, Upload, Eye, Lock } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Footer } from '../components/Footer';
+import { useI18n } from '../contexts/I18nContext';
 
 export function Translations() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
 
   const faqs = [
     {
-      question: "How long does translation take?",
-      answer: "Standard translations are completed within 24-48 hours. Rush services are available for urgent documents (4-8 hours) at an additional fee."
+      question: t('faq.items.0.question', 'How long does translation take?'),
+      answer: t('faq.items.0.answer', 'Standard translations are completed within 24-48 hours. Rush services are available for urgent documents (4-8 hours) at an additional fee.')
     },
     {
-      question: "Are your translations accepted by USCIS?",
-      answer: "Yes, all our translations are certified and authenticated, meeting USCIS requirements. They include official certification statements and are accepted by all US immigration authorities."
+      question: t('faq.items.1.question', 'Are your translations accepted by USCIS?'),
+      answer: t('faq.items.1.answer', 'Yes, all our translations are certified and authenticated, meeting USCIS requirements. They include official certification statements and are accepted by all US immigration authorities.')
     },
     {
-      question: "What documents can you translate?",
-      answer: "We translate all immigration documents including birth certificates, marriage certificates, academic transcripts, medical records, police clearances, and more. Contact us for specific document types."
+      question: t('faq.items.2.question', 'What documents can you translate?'),
+      answer: t('faq.items.2.answer', 'We translate all immigration documents including birth certificates, marriage certificates, academic transcripts, medical records, police clearances, and more. Contact us for specific document types.')
     },
     {
-      question: "How do I verify my translation is authentic?",
-      answer: "Each translation comes with a unique verification code. You can verify authenticity on our website or contact us directly with the code."
+      question: t('faq.items.3.question', 'How do I verify my translation is authentic?'),
+      answer: t('faq.items.3.answer', 'Each translation comes with a unique verification code. You can verify authenticity on our website or contact us directly with the code.')
     },
     {
-      question: "Do you offer rush services?",
-      answer: "Yes, we offer rush services for urgent documents. 4-8 hour turnaround is available for an additional 50% fee. Contact us for specific rush pricing."
+      question: t('faq.items.4.question', 'Do you offer rush services?'),
+      answer: t('faq.items.4.answer', 'Yes, we offer rush services for urgent documents. 4-8 hour turnaround is available for an additional 50% fee. Contact us for specific rush pricing.')
     },
          {
-       question: "What languages do you support?",
-       answer: "We support Portuguese, Portuguese (Portugal), Spanish, German, Arabic, Hebrew, Japanese, and Korean. All documents are translated to English for USCIS and US authority requirements."
+       question: t('faq.items.5.question', 'What languages do you support?'),
+       answer: t('faq.items.5.answer', 'We support Portuguese, Portuguese (Portugal), Spanish, German, Arabic, Hebrew, Japanese, and Korean. All documents are translated to English for USCIS and US authority requirements.')
      }
   ];
 
   const testimonials = [
     {
-      name: "David Thompson",
-      location: "Canada → New York",
+      name: t('testimonials.items.0.name', 'David Thompson'),
+      location: t('testimonials.items.0.location', 'Canada → New York'),
       image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      text: "Fast and professional service. My birth certificate translation was accepted by USCIS without any issues.",
+      text: t('testimonials.items.0.text', 'Fast and professional service. My birth certificate translation was accepted by USCIS without any issues.'),
       rating: 5,
-      document: "Birth Certificate"
+      document: t('testimonials.items.0.document', 'Birth Certificate')
     },
     {
-      name: "Jessica Martinez",
-      location: "Mexico → Texas",
+      name: t('testimonials.items.1.name', 'Jessica Martinez'),
+      location: t('testimonials.items.1.location', 'Mexico → Texas'),
       image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-      text: "Excellent quality and quick turnaround. The verification system gave me peace of mind.",
+      text: t('testimonials.items.1.text', 'Excellent quality and quick turnaround. The verification system gave me peace of mind.'),
       rating: 5,
-      document: "Academic Transcript"
+      document: t('testimonials.items.1.document', 'Academic Transcript')
     },
     {
-      name: "Ryan Anderson",
-      location: "Brazil → California",
+      name: t('testimonials.items.2.name', 'Ryan Anderson'),
+      location: t('testimonials.items.2.location', 'Brazil → California'),
       image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-      text: "Professional service with competitive pricing. My marriage certificate translation was perfect.",
+      text: t('testimonials.items.2.text', 'Professional service with competitive pricing. My marriage certificate translation was perfect.'),
       rating: 5,
-      document: "Marriage Certificate"
+      document: t('testimonials.items.2.document', 'Marriage Certificate')
     }
   ];
 
-  const stats = [
-    { number: "10,000+", label: "Documents Translated", icon: FileText },
-    { number: "99.9%", label: "USCIS Acceptance Rate", icon: Shield },
-    { number: "24h", label: "Average Turnaround", icon: Clock },
-    { number: "8", label: "Languages Supported", icon: Globe }
+    const stats = [
+    { number: "99.9%", label: t('stats.uscisAcceptance', 'USCIS Acceptance') },
+    { number: "24hrs", label: t('stats.avgTurnaround', 'Avg. Turnaround') },
+    { number: "15K+", label: t('stats.documentsTranslated', 'Documents Translated') },
+    { number: "8", label: t('stats.languagesSupported', 'Languages Supported'), icon: Globe }
   ];
 
   const pricingPlans = [
     {
-      name: "Certified Translation",
+      name: t('pricing.certifiedTranslation.name', 'Certified Translation'),
       price: "$20.00",
-      period: "per page",
-      description: "Official certified translation with legal authentication",
+      period: t('pricing.perPage', 'per page'),
+      description: t('pricing.certifiedTranslation.description', 'Official certified translation with legal authentication'),
       features: [
-        "24-48 hour turnaround",
-        "Official notarization",
-        "Legal authentication",
-        "USCIS accepted",
-        "Digital verification code",
-        "Email delivery",
-        "Priority support"
+        t('pricing.certifiedTranslation.features.turnaround', '24-48 hour turnaround'),
+        t('pricing.certifiedTranslation.features.notarization', 'Official notarization'),
+        t('pricing.certifiedTranslation.features.authentication', 'Legal authentication'),
+        t('pricing.certifiedTranslation.features.uscis', 'USCIS accepted'),
+        t('pricing.certifiedTranslation.features.verification', 'Digital verification code'),
+        t('pricing.certifiedTranslation.features.delivery', 'Email delivery'),
+        t('pricing.certifiedTranslation.features.support', 'Priority support')
       ],
       popular: true
     },
     {
-      name: "Bank Statements",
+      name: t('pricing.bankStatements.name', 'Bank Statements'),
       price: "$25.00",
-      period: "per page",
-      description: "Specialized translation for financial documents with enhanced verification",
+      period: t('pricing.perPage', 'per page'),
+      description: t('pricing.bankStatements.description', 'Specialized translation for financial documents with enhanced verification'),
       features: [
-        "24-48 hour turnaround",
-        "Financial document expertise",
-        "Enhanced verification process",
-        "USCIS accepted",
-        "Digital verification code",
-        "Email delivery",
-        "Priority support"
+        t('pricing.bankStatements.features.turnaround', '24-48 hour turnaround'),
+        t('pricing.bankStatements.features.expertise', 'Financial document expertise'),
+        t('pricing.bankStatements.features.verification', 'Enhanced verification process'),
+        t('pricing.bankStatements.features.uscis', 'USCIS accepted'),
+        t('pricing.bankStatements.features.digitalCode', 'Digital verification code'),
+        t('pricing.bankStatements.features.delivery', 'Email delivery'),
+        t('pricing.bankStatements.features.support', 'Priority support')
       ],
       popular: false
     }
@@ -105,37 +107,37 @@ export function Translations() {
 
   const documentTypes = [
     {
-      category: "Personal Documents",
+      category: t('documentTypes.categories.personal', 'Personal Documents'),
       documents: [
-        "Birth Certificates",
-        "Marriage Certificates", 
-        "Divorce Decrees",
-        "Death Certificates",
-        "Passport Pages",
-        "Driver's Licenses",
-        "National ID Cards"
+        t('documentTypes.personal.birthCertificates', 'Birth Certificates'),
+        t('documentTypes.personal.marriageCertificates', 'Marriage Certificates'), 
+        t('documentTypes.personal.divorceDecrees', 'Divorce Decrees'),
+        t('documentTypes.personal.deathCertificates', 'Death Certificates'),
+        t('documentTypes.personal.passportPages', 'Passport Pages'),
+        t('documentTypes.personal.driversLicenses', 'Driver\'s Licenses'),
+        t('documentTypes.personal.nationalIdCards', 'National ID Cards')
       ]
     },
     {
-      category: "Academic Documents",
+      category: t('documentTypes.categories.academic', 'Academic Documents'),
       documents: [
-        "Academic Transcripts",
-        "Diplomas & Degrees",
-        "School Certificates",
-        "Course Descriptions",
-        "Academic References",
-        "Professional Certifications"
+        t('documentTypes.academic.transcripts', 'Academic Transcripts'),
+        t('documentTypes.academic.diplomas', 'Diplomas & Degrees'),
+        t('documentTypes.academic.certificates', 'School Certificates'),
+        t('documentTypes.academic.courseDescriptions', 'Course Descriptions'),
+        t('documentTypes.academic.references', 'Academic References'),
+        t('documentTypes.academic.certifications', 'Professional Certifications')
       ]
     },
     {
-      category: "Legal & Medical",
+      category: t('documentTypes.categories.legalMedical', 'Legal & Medical'),
       documents: [
-        "Police Clearances",
-        "Medical Records",
-        "Vaccination Records",
-        "Employment Records",
-        "Bank Statements",
-        "Legal Documents"
+        t('documentTypes.legalMedical.policeClearances', 'Police Clearances'),
+        t('documentTypes.legalMedical.medicalRecords', 'Medical Records'),
+        t('documentTypes.legalMedical.vaccinationRecords', 'Vaccination Records'),
+        t('documentTypes.legalMedical.employmentRecords', 'Employment Records'),
+        t('documentTypes.legalMedical.bankStatements', 'Bank Statements'),
+        t('documentTypes.legalMedical.legalDocuments', 'Legal Documents')
       ]
     }
   ];
@@ -157,14 +159,13 @@ export function Translations() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white">
-              Professional
+              {t('hero.title1', 'Professional')}
               <span className="text-red-500">
-                {' '}Document Translation
+                {' '}{t('hero.title2', 'Document Translation')}
               </span>
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-slate-200 max-w-4xl mx-auto">
-              Certified translation services for immigration documents with
-              official authentication and verification. 99.9% USCIS acceptance rate.
+              {t('hero.description', 'Certified translation services for immigration documents with official authentication and verification. 99.9% USCIS acceptance rate.')}
             </p>
 
             {/* Stats Preview */}
@@ -182,7 +183,7 @@ export function Translations() {
                 onClick={() => navigate('/register')}
                 className="bg-red-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-red-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2 shadow-xl"
               >
-                <span>Start Translation</span>
+                <span>{t('hero.startTranslation', 'Start Translation')}</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
@@ -190,7 +191,7 @@ export function Translations() {
                 className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white hover:text-slate-800 transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
               >
                 <Eye className="w-5 h-5" />
-                <span>Verify Document</span>
+                <span>{t('hero.verifyDocument', 'Verify Document')}</span>
               </button>
             </div>
           </div>
@@ -202,10 +203,10 @@ export function Translations() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Simple, Transparent Pricing
+              {t('pricing.title', 'Simple, Transparent Pricing')}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Professional translation services with competitive rates and guaranteed quality
+              {t('pricing.description', 'Professional translation services with competitive rates and guaranteed quality')}
             </p>
           </div>
 
@@ -217,7 +218,7 @@ export function Translations() {
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <span className="bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                    Most Popular
+                    {t('pricing.mostPopular', 'Most Popular')}
                   </span>
                 </div>
               )}
@@ -247,7 +248,7 @@ export function Translations() {
                       : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
                   }`}
                 >
-                  {plan.name === "Bank Statements" ? "Choose Bank Statements" : "Get Started Now"}
+                  {plan.name === "Bank Statements" ? t('pricing.chooseBankStatements', 'Choose Bank Statements') : t('pricing.getStartedNow', 'Get Started Now')}
                 </button>
               </div>
             </div>
@@ -256,7 +257,7 @@ export function Translations() {
 
           <div className="text-center mt-12">
             <p className="text-gray-600 text-sm mb-4">
-              * Prices are per standard page (250 words). Complex documents may require additional fees.
+              {t('pricing.note', '* Prices are per standard page (250 words). Complex documents may require additional fees.')}
             </p>
           </div>
         </div>
@@ -267,10 +268,10 @@ export function Translations() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why Choose Our Translation Services?
+              {t('features.title', 'Why Choose Our Translation Services?')}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Professional quality with guaranteed acceptance by US authorities
+              {t('features.description', 'Professional quality with guaranteed acceptance by US authorities')}
             </p>
           </div>
 
@@ -280,11 +281,10 @@ export function Translations() {
                 <Shield className="w-8 h-8 text-white" weight="fill" />
               </div>
               <h3 className="text-xl font-semibold text-slate-800 mb-4">
-                Certified
+                {t('features.certified.title', 'Certified')}
               </h3>
               <p className="text-slate-600">
-                All translations are certified by licensed professionals and authenticated 
-                with official seals and signatures. 99.9% USCIS acceptance rate.
+                {t('features.certified.description', 'All translations are certified by licensed professionals and authenticated with official seals and signatures. 99.9% USCIS acceptance rate.')}
               </p>
             </div>
 
@@ -293,11 +293,10 @@ export function Translations() {
                 <Clock className="w-8 h-8 text-white" weight="fill" />
               </div>
               <h3 className="text-xl font-semibold text-slate-800 mb-4">
-                Fast Turnaround
+                {t('features.fastTurnaround.title', 'Fast Turnaround')}
               </h3>
               <p className="text-slate-600">
-                Standard translations completed in 24-48 hours. Express service available 
-                for urgent documents (4-8 hours) with rush processing.
+                {t('features.fastTurnaround.description', 'Standard translations completed in 24-48 hours. Express service available for urgent documents (4-8 hours) with rush processing.')}
               </p>
             </div>
 
@@ -306,11 +305,10 @@ export function Translations() {
                 <FileText className="w-8 h-8 text-white" weight="fill" />
               </div>
               <h3 className="text-xl font-semibold text-slate-800 mb-4">
-                USCIS Compliant
+                {t('features.uscisCompliant.title', 'USCIS Compliant')}
               </h3>
               <p className="text-slate-600">
-                All translations meet USCIS requirements and are accepted by immigration 
-                offices, embassies, and consulates worldwide.
+                {t('features.uscisCompliant.description', 'All translations meet USCIS requirements and are accepted by immigration offices, embassies, and consulates worldwide.')}
               </p>
             </div>
           </div>
@@ -322,10 +320,10 @@ export function Translations() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              How Our Translation Process Works
+              {t('howItWorks.title', 'How Our Translation Process Works')}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Simple, secure, and professional document translation in 4 easy steps
+              {t('howItWorks.description', 'Simple, secure, and professional document translation in 4 easy steps')}
             </p>
           </div>
 
@@ -334,9 +332,9 @@ export function Translations() {
               <div className="w-20 h-20 bg-slate-800 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
                 <Upload className="w-10 h-10" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-3">Upload Document</h3>
+              <h3 className="text-xl font-semibold text-slate-800 mb-3">{t('howItWorks.steps.upload.title', 'Upload Document')}</h3>
               <p className="text-slate-600">
-                Upload your document securely to our platform. We support PDF, JPG, PNG, and other common formats.
+                {t('howItWorks.steps.upload.description', 'Upload your document securely to our platform. We support PDF, JPG, PNG, and other common formats.')}
               </p>
             </div>
 
@@ -344,9 +342,9 @@ export function Translations() {
               <div className="w-20 h-20 bg-red-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
                 <CurrencyDollar className="w-10 h-10" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-3">Get Quote</h3>
+              <h3 className="text-xl font-semibold text-slate-800 mb-3">{t('howItWorks.steps.quote.title', 'Get Quote')}</h3>
               <p className="text-slate-600">
-                Automatic calculation based on page count and document type. Transparent pricing with no hidden fees.
+                {t('howItWorks.steps.quote.description', 'Automatic calculation based on page count and document type. Transparent pricing with no hidden fees.')}
               </p>
             </div>
 
@@ -354,9 +352,9 @@ export function Translations() {
               <div className="w-20 h-20 bg-slate-800 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
                 <Lock className="w-10 h-10" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-3">Secure Payment</h3>
+              <h3 className="text-xl font-semibold text-slate-800 mb-3">{t('howItWorks.steps.payment.title', 'Secure Payment')}</h3>
               <p className="text-slate-600">
-                Secure payment processing with instant confirmation. We accept all major credit cards and PayPal.
+                {t('howItWorks.steps.payment.description', 'Secure payment processing with instant confirmation. We accept all major credit cards and PayPal.')}
               </p>
             </div>
 
@@ -364,9 +362,9 @@ export function Translations() {
               <div className="w-20 h-20 bg-red-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 mx-auto group-hover:scale-110 transition-transform">
                 <Download className="w-10 h-10" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-3">Receive Translation</h3>
+              <h3 className="text-xl font-semibold text-slate-800 mb-3">{t('howItWorks.steps.receive.title', 'Receive Translation')}</h3>
               <p className="text-slate-600">
-                Get your certified translation with verification code. Email delivery or physical copy available.
+                {t('howItWorks.steps.receive.description', 'Get your certified translation with verification code. Email delivery or physical copy available.')}
               </p>
             </div>
           </div>
@@ -378,10 +376,10 @@ export function Translations() {
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
            <div className="text-center mb-16">
              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-               We Translate Everything
+               {t('documentTypes.title', 'We Translate Everything')}
              </h2>
              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-               From personal documents to complex legal papers - we handle all types of translations
+               {t('documentTypes.description', 'From personal documents to complex legal papers - we handle all types of translations')}
              </p>
            </div>
 
@@ -389,32 +387,32 @@ export function Translations() {
              {/* Common Documents */}
              <div className="bg-white p-8 rounded-2xl shadow-lg">
                <h3 className="text-xl font-semibold text-slate-800 mb-6 text-center">
-                 Most Common Documents
+                 {t('documentTypes.common.title', 'Most Common Documents')}
                </h3>
                                <div className="space-y-4">
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Birth Certificates</span>
+                   <span className="text-slate-700">{t('documentTypes.common.birthCertificates', 'Birth Certificates')}</span>
                  </div>
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Marriage Certificates</span>
+                   <span className="text-slate-700">{t('documentTypes.common.marriageCertificates', 'Marriage Certificates')}</span>
                  </div>
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Academic Transcripts</span>
+                   <span className="text-slate-700">{t('documentTypes.common.academicTranscripts', 'Academic Transcripts')}</span>
                  </div>
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Bank Statements</span>
+                   <span className="text-slate-700">{t('documentTypes.common.bankStatements', 'Bank Statements')}</span>
                  </div>
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Medical Records</span>
+                   <span className="text-slate-700">{t('documentTypes.common.medicalRecords', 'Medical Records')}</span>
                  </div>
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Legal Documents</span>
+                   <span className="text-slate-700">{t('documentTypes.common.legalDocuments', 'Legal Documents')}</span>
                  </div>
                </div>
              </div>
@@ -422,28 +420,28 @@ export function Translations() {
              {/* Everything Else */}
              <div className="bg-white p-8 rounded-2xl shadow-lg">
                <h3 className="text-xl font-semibold text-slate-800 mb-6 text-center">
-                 And Much More
+                 {t('documentTypes.more.title', 'And Much More')}
                </h3>
                <div className="space-y-4">
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Any Official Document</span>
+                   <span className="text-slate-700">{t('documentTypes.more.anyOfficial', 'Any Official Document')}</span>
                  </div>
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Business Contracts</span>
+                   <span className="text-slate-700">{t('documentTypes.more.businessContracts', 'Business Contracts')}</span>
                  </div>
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Technical Manuals</span>
+                   <span className="text-slate-700">{t('documentTypes.more.technicalManuals', 'Technical Manuals')}</span>
                  </div>
                  <div className="flex items-center space-x-3">
                    <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                   <span className="text-slate-700">Website Content</span>
+                   <span className="text-slate-700">{t('documentTypes.more.websiteContent', 'Website Content')}</span>
                  </div>
                                    <div className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <span className="text-slate-700">Marketing Materials</span>
+                    <span className="text-slate-700">{t('documentTypes.more.marketingMaterials', 'Marketing Materials')}</span>
                   </div>
                </div>
              </div>
@@ -453,44 +451,44 @@ export function Translations() {
             <div className="mt-12">
               <div className="bg-white p-8 rounded-2xl shadow-lg">
                 <h3 className="text-xl font-semibold text-slate-800 mb-6 text-center">
-                  Supported Languages
+                  {t('languages.title', 'Supported Languages')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <span className="text-slate-700">Portuguese</span>
+                    <span className="text-slate-700">{t('languages.portuguese', 'Portuguese')}</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <span className="text-slate-700">Portuguese (Portugal)</span>
+                    <span className="text-slate-700">{t('languages.portuguesePortugal', 'Portuguese (Portugal)')}</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <span className="text-slate-700">Spanish</span>
+                    <span className="text-slate-700">{t('languages.spanish', 'Spanish')}</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <span className="text-slate-700">German</span>
+                    <span className="text-slate-700">{t('languages.german', 'German')}</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <span className="text-slate-700">Arabic</span>
+                    <span className="text-slate-700">{t('languages.arabic', 'Arabic')}</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <span className="text-slate-700">Hebrew</span>
+                    <span className="text-slate-700">{t('languages.hebrew', 'Hebrew')}</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <span className="text-slate-700">Japanese</span>
+                    <span className="text-slate-700">{t('languages.japanese', 'Japanese')}</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <span className="text-slate-700">Korean</span>
+                    <span className="text-slate-700">{t('languages.korean', 'Korean')}</span>
                   </div>
                 </div>
                 <p className="text-sm text-gray-500 mt-4 text-center">
-                  All documents are translated to English for USCIS and US authority requirements.
+                  {t('languages.description', 'All documents are translated to English for USCIS and US authority requirements.')}
                 </p>
               </div>
             </div>
@@ -504,10 +502,10 @@ export function Translations() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              What Our Clients Say
+              {t('testimonials.title', 'What Our Clients Say')}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Real feedback from satisfied clients who trusted us with their important documents
+              {t('testimonials.description', 'Real feedback from satisfied clients who trusted us with their important documents')}
             </p>
           </div>
 
@@ -545,10 +543,10 @@ export function Translations() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Frequently Asked Questions
+              {t('faq.title', 'Frequently Asked Questions')}
             </h2>
             <p className="text-xl text-gray-600">
-              Everything you need to know about our translation services
+              {t('faq.description', 'Everything you need to know about our translation services')}
             </p>
           </div>
 
@@ -582,10 +580,10 @@ export function Translations() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Need Help? Contact Us
+              {t('contact.title', 'Need Help? Contact Us')}
             </h2>
             <p className="text-xl text-gray-600">
-              Our translation experts are here to help you with any questions
+              {t('contact.description', 'Our translation experts are here to help you with any questions')}
             </p>
           </div>
 
@@ -597,18 +595,18 @@ export function Translations() {
               <div className="w-16 h-16 bg-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Phone className="w-8 h-8 text-slate-700" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-2">Phone</h3>
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">{t('contact.phone.title', 'Phone')}</h3>
               <p className="text-slate-600">(000) 000-0000</p>
-              <p className="text-sm text-slate-500 mt-2">Mon-Fri: 9AM-6PM EST</p>
+              <p className="text-sm text-slate-500 mt-2">{t('contact.phone.hours', 'Mon-Fri: 9AM-6PM EST')}</p>
             </div>
             
             <div className="bg-slate-50 p-8 rounded-2xl shadow-lg text-center border border-slate-100">
               <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Envelope className="w-8 h-8 text-red-600" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-2">Email</h3>
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">{t('contact.email.title', 'Email')}</h3>
               <p className="text-slate-600">contato@lushamerica.com</p>
-              <p className="text-sm text-slate-500 mt-2">24/7 support</p>
+              <p className="text-sm text-slate-500 mt-2">{t('contact.email.support', '24/7 support')}</p>
             </div>
             
             <div 
@@ -618,9 +616,9 @@ export function Translations() {
               <div className="w-16 h-16 bg-gradient-to-br from-slate-200 to-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <ChatCircle className="w-8 h-8 text-slate-700" weight="fill" />
               </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-2">WhatsApp</h3>
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">{t('contact.whatsapp.title', 'WhatsApp')}</h3>
               <p className="text-slate-600">(000) 000-0000</p>
-              <p className="text-sm text-slate-500 mt-2">Instant messaging</p>
+              <p className="text-sm text-slate-500 mt-2">{t('contact.whatsapp.description', 'Instant messaging')}</p>
             </div>
           </div>
         </div>

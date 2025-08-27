@@ -6,17 +6,31 @@ import { Eye, Download, Filter, Calendar } from 'lucide-react';
 import { DateRange } from '../../components/DateRangeFilter'; // Assuming this path is correct
 import { DocumentDetailsModal } from './DocumentDetailsModal'; // Assuming this path is correct
 
-// Minimal Document interface for this component's scope.
-// Adjust based on your actual App.ts Document definition.
-export interface Document {
-  id: string;
-  filename: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'deleted';
-  file_path?: string; // Add other necessary document properties
-  user_id?: string;
-  created_at?: string;
-  // ... any other fields
-}
+  // Extended Document interface for the modal
+  export interface Document {
+    id: string;
+    filename: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed' | 'deleted';
+    file_path?: string;
+    user_id?: string;
+    created_at?: string;
+    // Campos adicionais para o modal
+    total_cost?: number;
+    pages?: number;
+    source_language?: string;
+    target_language?: string;
+    translation_type?: string;
+    bank_statement?: boolean;
+    authenticated?: boolean;
+    // Informações do usuário
+    user_name?: string;
+    user_email?: string;
+    user_phone?: string;
+    // Tipo de documento
+    document_type?: 'authenticator' | 'payment';
+    // URL do arquivo traduzido
+    translated_file_url?: string;
+  }
 
 // Define the structure of the data directly from Supabase join
 interface PaymentWithRelations {
@@ -193,15 +207,25 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
             .eq('original_document_id', doc.id)
             .single();
 
-          // Buscar payment_method na tabela documents
-          const { data: documentsInfo } = await supabase
-            .from('documents')
-            .select('payment_method, receipt_url')
-            .eq('user_id', doc.user_id)
-            .eq('filename', doc.filename)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+          // Buscar payment_method na tabela documents - simplificar a busca
+          let paymentMethod = 'upload';
+          try {
+            const { data: documentsInfo } = await supabase
+              .from('documents')
+              .select('payment_method')
+              .eq('user_id', doc.user_id)
+              .eq('filename', doc.filename)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (documentsInfo?.payment_method) {
+              paymentMethod = documentsInfo.payment_method;
+            }
+          } catch (err) {
+            // Se não encontrar, manter como 'upload'
+            console.log('📝 Documento não encontrado na tabela documents, usando payment_method padrão');
+          }
 
           // Determinar o status baseado se foi aprovado ou não
           const isApproved = !!translatedDoc;
@@ -217,7 +241,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
             amount: doc.total_cost || 0,
             currency: 'USD',
             status: paymentStatus, // 'completed' se aprovado, 'pending' se não
-            payment_method: documentsInfo?.payment_method || 'upload',
+            payment_method: paymentMethod,
             payment_date: translatedDoc ? doc.created_at : null, // Data de pagamento só se aprovado
             stripe_session_id: null,
             created_at: doc.created_at,
@@ -379,10 +403,20 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
 
   const handleViewDocument = useCallback(async (payment: MappedPayment) => {
     try {
-      console.log('🔍 Fetching document for payment:', payment.document_id);
+      console.log('🔍 Fetching document for payment:', payment);
+      console.log('🔍 Payment method:', payment.payment_method);
+      console.log('🔍 Document ID:', payment.document_id);
+      console.log('🔍 Is authenticator document?', payment.payment_method === 'upload');
+
+      // Buscar dados reais do documento
+      let documentData: any = null;
+      let documentType: 'authenticator' | 'payment' = 'payment';
 
       // Para documentos de autenticadores, buscar na tabela documents_to_be_verified
       if (payment.payment_method === 'upload') {
+        console.log('📋 Buscando documento de autenticador na tabela documents_to_be_verified...');
+        documentType = 'authenticator';
+        
         const { data: document, error } = await supabase
           .from('documents_to_be_verified')
           .select('*')
@@ -391,59 +425,142 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
 
         if (error) {
           console.error('❌ Error fetching authenticator document:', error);
+          // Tentar buscar por filename se falhar por ID
+          console.log('🔄 Tentando buscar por filename...');
+          const { data: docByFilename, error: filenameError } = await supabase
+            .from('documents_to_be_verified')
+            .select('*')
+            .eq('filename', payment.document_filename)
+            .single();
+          
+          if (filenameError) {
+            console.error('❌ Error fetching by filename too:', filenameError);
+            return;
+          }
+          
+          documentData = docByFilename;
+        } else {
+          documentData = document;
+        }
+      } else {
+        // Para pagamentos tradicionais, buscar na tabela documents
+        console.log('💳 Buscando documento de pagamento na tabela documents...');
+        const { data: document, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('id', payment.document_id)
+          .single();
+
+        if (error) {
+          console.error('❌ Error fetching payment document:', error);
           return;
         }
 
-        // Criar um objeto Document compatível
-        const documentForModal: Document = {
-          id: document.id,
-          filename: document.filename,
-          status: document.status || 'pending',
-          file_path: document.file_path,
-          user_id: document.user_id,
-          created_at: document.created_at
-        };
+        documentData = document;
+      }
 
-        console.log('📄 Authenticator document found:', documentForModal);
-        setSelectedDocument(documentForModal);
-        setShowModal(true);
+      if (!documentData) {
+        console.error('❌ No document data found');
         return;
       }
 
-      // Para pagamentos tradicionais, buscar na tabela documents
-      const { data: document, error } = await supabase
-        .from('documents')
+      // Buscar informações adicionais do usuário
+      const { data: userProfile } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('id', payment.document_id)
+        .eq('id', payment.user_id)
         .single();
 
-      if (error) {
-        console.error('❌ Error fetching payment document:', error);
-        return;
-      }
-
-      // Buscar status atualizado da tabela documents_to_be_verified
-      const { data: verifiedDoc, error: verifiedError } = await supabase
+      // Buscar URL do arquivo traduzido da tabela documents_to_be_verified
+      let translatedFileUrl: string | null = null;
+      
+      // Verificar se o documento existe na tabela documents_to_be_verified (independente do método de pagamento)
+      console.log('🔍 Verificando se documento existe na tabela documents_to_be_verified...');
+      console.log('🔍 User ID:', payment.user_id);
+      console.log('🔍 Filename:', payment.document_filename);
+      console.log('🔍 Payment method:', payment.payment_method);
+      
+      // Buscar por user_id na tabela documents_to_be_verified
+      console.log('🔍 Buscando por user_id:', payment.user_id);
+      let { data: translatedDoc, error } = await supabase
         .from('documents_to_be_verified')
-        .select('status')
-        .eq('filename', document.filename)
+        .select('*')
+        .eq('user_id', payment.user_id)
+        .eq('filename', payment.document_filename)
         .single();
-
-      if (verifiedError && verifiedError.code !== 'PGRST116') { // PGRST116 = no rows found
-        console.error('❌ Error fetching verified document:', verifiedError);
+      
+      if (error) {
+        console.log('🔄 Tentando buscar apenas por user_id...');
+        const { data: docsByUserId, error: userIdError } = await supabase
+          .from('documents_to_be_verified')
+          .select('*')
+          .eq('user_id', payment.user_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (!userIdError && docsByUserId) {
+          translatedDoc = docsByUserId;
+          error = null;
+          console.log('✅ Documento encontrado por user_id:', docsByUserId);
+        }
+      }
+      
+      if (error) {
+        console.log('ℹ️ Documento não encontrado na tabela documents_to_be_verified');
+      } else {
+        console.log('✅ Dados encontrados na documents_to_be_verified:', translatedDoc);
+        console.log('✅ Todas as colunas disponíveis:', Object.keys(translatedDoc || {}));
+        console.log('✅ translated_file_url encontrado:', translatedDoc?.translated_file_url);
+        console.log('✅ file_url encontrado:', translatedDoc?.file_url);
+        console.log('✅ file_path encontrado:', translatedDoc?.file_path);
+        
+        // Tentar diferentes campos possíveis para a URL do arquivo traduzido
+        translatedFileUrl = translatedDoc?.translated_file_url || 
+                           translatedDoc?.file_url || 
+                           translatedDoc?.file_path || 
+                           null;
       }
 
-      // Usar status da documents_to_be_verified se existir, senão usar o original
-      const documentWithUpdatedStatus: Document = {
-        ...document,
-        status: verifiedDoc?.status || document.status
+      // Criar um objeto Document completo com todos os dados
+      const completeDocument: Document = {
+        id: documentData.id,
+        filename: documentData.filename || payment.document_filename,
+        status: documentData.status || 'pending',
+        file_path: documentData.file_path || documentData.file_url,
+        user_id: documentData.user_id || payment.user_id,
+        created_at: documentData.created_at || payment.created_at,
+        // Campos adicionais para o modal
+        total_cost: payment.amount,
+        pages: documentData.pages,
+        source_language: documentData.source_language || payment.source_language,
+        target_language: documentData.target_language || payment.target_language,
+        translation_type: payment.payment_method === 'upload' ? documentData.translation_type : payment.tipo_trad,
+        bank_statement: documentData.bank_statement,
+        authenticated: documentData.authenticated,
+        // Informações do usuário
+        user_name: userProfile?.name,
+        user_email: userProfile?.email,
+        user_phone: userProfile?.phone,
+        // Tipo de documento para o modal
+        document_type: documentType,
+        // URL do arquivo traduzido
+        translated_file_url: translatedFileUrl || undefined
       };
 
-      console.log('📄 Payment document found with updated status:', documentWithUpdatedStatus);
-      setSelectedDocument(documentWithUpdatedStatus as Document);
+      console.log('📄 Complete document prepared for modal:', completeDocument);
+      console.log('🔍 Campos importantes:', {
+        file_path: completeDocument.file_path,
+        translated_file_url: completeDocument.translated_file_url,
+        filename: completeDocument.filename
+      });
+      setSelectedDocument(completeDocument);
       setShowModal(true);
+      console.log('✅ Modal opened with complete document data');
+
     } catch (err) {
       console.error('💥 Error opening document:', err);
+      console.error('💥 Error details:', err);
     }
   }, []); // Empty dependency array because supabase and useState setters are stable
 
@@ -469,7 +586,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
 
   const downloadPaymentsReport = useCallback(() => {
     const csvContent = [
-      ['User/Client Name', 'User Email', 'Document ID', 'Document Filename', 'Amount', 'Currency', 'Payment Method', 'Payment ID', 'Session ID', 'Payment Status', 'Document Status', 'Authenticator Name', 'Authenticator Email', 'Translation', 'Authentication Date', 'Payment Date', 'Created At'],
+      ['User/Client Name', 'User Email', 'Document ID', 'Document Filename', 'Amount', 'Currency', 'Payment Method', 'Payment ID', 'Session ID', 'Payment Status', 'Document Status', 'Authenticator Name', 'Authenticator Email', 'Authentication Date', 'Payment Date', 'Created At'],
       ...filteredPayments.map(payment => [
         payment.client_name || payment.user_name || '',
         payment.user_email || '',
@@ -484,7 +601,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
         payment.document_status || '', // document status
         payment.authenticated_by_name || '',
         payment.authenticated_by_email || '',
-        payment.source_language && payment.target_language ? `${payment.source_language} → ${payment.target_language}` : '',
+
         payment.authentication_date ? new Date(payment.authentication_date).toLocaleDateString() : '',
         payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '',
         new Date(payment.created_at).toLocaleDateString() // Assuming created_at is always present
@@ -642,6 +759,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                             payment.payment_method === 'card' ? '💳 Card' :
                               payment.payment_method === 'bank_transfer' ? '🏦 Bank' :
                                 payment.payment_method === 'paypal' ? '📱 PayPal' :
+                                payment.payment_method === 'upload' ? '📋 Upload' :
                                   payment.payment_method
                           ) : 'N/A'}
                         </div>
@@ -652,14 +770,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                           {payment.authenticated_by_name || 'N/A'}
                         </div>
                       </div>
-                      <div>
-                        <span className="text-gray-500">Translation:</span>
-                        <div className="font-medium text-gray-900 truncate">
-                          {payment.source_language && payment.target_language ? (
-                            `${payment.source_language} → ${payment.target_language}`
-                          ) : 'N/A'}
-                        </div>
-                      </div>
+
                       <div>
                         <span className="text-gray-500">Date:</span>
                         <div className="font-medium text-gray-900">
@@ -707,14 +818,12 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                     Payment Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Documents
+                    TRANSLATIONS
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     AUTHENTICATOR
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    TRANSLATION DETAILS
-                  </th>
+
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
@@ -726,7 +835,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredPayments.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                       No payments found matching your criteria.
                     </td>
                   </tr>
@@ -759,12 +868,13 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {payment.payment_method ? (
+                                                    {payment.payment_method ? (
                             <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                               {payment.payment_method === 'card' ? '💳 Credit Card' :
                                 payment.payment_method === 'bank_transfer' ? '🏦 Bank Transfer' :
-                                  payment.payment_method === 'paypal' ? '📱 PayPal' :
-                                    payment.payment_method}
+                                payment.payment_method === 'paypal' ? '📱 PayPal' :
+                                payment.payment_method === 'upload' ? '📋 Upload' :
+                                  payment.payment_method}
                             </span>
                           ) : (
                             <span className="text-gray-400">N/A</span>
@@ -789,19 +899,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                           {payment.authenticated_by_email || 'No authenticator'}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {payment.source_language && payment.target_language ? (
-                            `${payment.source_language} → ${payment.target_language}`
-                          ) : 'N/A'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {payment.authentication_date ? 
-                            new Date(payment.authentication_date).toLocaleDateString() : 
-                            'Not authenticated'
-                          }
-                        </div>
-                      </td>
+
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
                       </td>

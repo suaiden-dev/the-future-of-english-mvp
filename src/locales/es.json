@@ -142,16 +142,212 @@
     "name": "LUSH AMERICA TRANSLATIONS"
   },
   "hero": {
-    "title1": "Transforma Tu",
-    "title2": "Futuro con",
-    "title3": "Becas de Estudio",
-    "title4": "en los EE.UU.",
-    "description": "Mentoría especializada para encontrar la mejor escuela y asegurar tu oportunidad de beca con nuestra comprobada",
+    "title1": "Traducciones de Documentos",
+    "title2": "Profesionales",
+    "description": "Servicios de traducción certificada para documentos de inmigración con autenticación oficial y verificación. Tasa de aceptación del USCIS del 99.9%.",
+    "startTranslation": "Iniciar Traducción",
+    "verifyDocument": "Verificar Documento",
     "successRate": "tasa de éxito del 95%",
     "startNow": "Quiero Empezar Ahora",
     "talkToSpecialist": "Hablar con Especialista",
     "personalized": "100% Personalizado",
     "fastResults": "Resultados Rápidos"
+  },
+  "stats": {
+    "uscisAcceptance": "Aceptación USCIS",
+    "avgTurnaround": "Tiempo Promedio",
+    "documentsTranslated": "Documentos Traducidos",
+    "languagesSupported": "Idiomas Soportados"
+  },
+  "pricing": {
+    "title": "Precios Simples y Transparentes",
+    "description": "Servicios de traducción profesional con precios competitivos y calidad garantizada",
+    "perPage": "por página",
+    "mostPopular": "Más Popular",
+    "chooseBankStatements": "Elegir Estados de Cuenta Bancarios",
+    "getStartedNow": "Comenzar Ahora",
+    "note": "* Los precios son por página estándar (250 palabras). Los documentos complejos pueden requerir tarifas adicionales.",
+    "certifiedTranslation": {
+      "name": "Traducción Certificada",
+      "description": "Traducción certificada oficial con autenticación legal",
+      "features": {
+        "turnaround": "Plazo de 24-48 horas",
+        "notarization": "Notarización oficial",
+        "authentication": "Autenticación legal",
+        "uscis": "Aceptado por USCIS",
+        "verification": "Código de verificación digital",
+        "delivery": "Entrega por correo electrónico",
+        "support": "Soporte prioritario"
+      }
+    },
+    "bankStatements": {
+      "name": "Estados de Cuenta Bancarios",
+      "description": "Traducción especializada para documentos financieros con verificación mejorada",
+      "features": {
+        "turnaround": "Plazo de 24-48 horas",
+        "expertise": "Experiencia en documentos financieros",
+        "verification": "Proceso de verificación mejorado",
+        "uscis": "Aceptado por USCIS",
+        "digitalCode": "Código de verificación digital",
+        "delivery": "Entrega por correo electrónico",
+        "support": "Soporte prioritario"
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "Cómo Funciona Nuestro Proceso de Traducción",
+    "description": "Proceso de traducción de documentos simple, seguro y profesional en 4 pasos fáciles",
+    "steps": {
+      "upload": {
+        "title": "Subir Documento",
+        "description": "Sube tu documento de forma segura a nuestra plataforma. Soportamos PDF, JPG, PNG y otros formatos comunes."
+      },
+      "quote": {
+        "title": "Obtener Presupuesto",
+        "description": "Cálculo automático basado en el número de páginas y tipo de documento. Precios transparentes sin tarifas ocultas."
+      },
+      "payment": {
+        "title": "Pago Seguro",
+        "description": "Procesamiento de pago seguro con confirmación instantánea. Aceptamos todas las principales tarjetas de crédito y PayPal."
+      },
+      "receive": {
+        "title": "Recibir Traducción",
+        "description": "Recibe tu traducción certificada con código de verificación. Entrega por correo electrónico o copia física disponible."
+      }
+    }
+  },
+  "features": {
+    "title": "¿Por Qué Elegir Nuestros Servicios de Traducción?",
+    "description": "Calidad profesional con aceptación garantizada por las autoridades estadounidenses",
+    "certified": {
+      "title": "Certificado",
+      "description": "Todas las traducciones están certificadas por profesionales licenciados y autenticadas con sellos y firmas oficiales. Tasa de aceptación del USCIS del 99.9%."
+    },
+    "fastTurnaround": {
+      "title": "Entrega Rápida",
+      "description": "Traducciones estándar completadas en 24-48 horas. Servicio exprés disponible para documentos urgentes (4-8 horas) con procesamiento prioritario."
+    }
+  },
+  "testimonials": {
+    "title": "Lo Que Dicen Nuestros Clientes",
+    "description": "Comentarios reales de clientes satisfechos que confiaron sus documentos importantes a nosotros",
+    "items": {
+      "0": {
+        "name": "David Thompson",
+        "location": "Canadá → Nueva York",
+        "text": "Servicio rápido y profesional. Mi traducción de certificado de nacimiento fue aceptada por USCIS sin problemas.",
+        "document": "Certificado de Nacimiento"
+      },
+      "1": {
+        "name": "Jessica Martinez",
+        "location": "México → Texas",
+        "text": "Excelente calidad y entrega rápida. El sistema de verificación me dio tranquilidad.",
+        "document": "Expediente Académico"
+      },
+      "2": {
+        "name": "Ryan Anderson",
+        "location": "Brasil → California",
+        "text": "Servicio profesional con precios competitivos. Mi traducción de certificado de matrimonio quedó perfecta.",
+        "document": "Certificado de Matrimonio"
+      }
+    }
+  },
+  "contact": {
+    "title": "¿Necesitas Ayuda? Contáctanos",
+    "description": "Nuestros especialistas en traducción están aquí para ayudar con cualquier pregunta",
+    "phone": {
+      "title": "Teléfono",
+      "hours": "Lun-Vie: 9AM-6PM EST"
+    },
+    "email": {
+      "title": "Correo Electrónico",
+      "support": "Soporte 24/7"
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "description": "Mensajería instantánea"
+    }
+  },
+  "documentTypes": {
+    "title": "Traducimos Todo",
+    "description": "Desde documentos personales hasta papeles legales complejos - manejamos todos los tipos de traducciones",
+    "common": {
+      "title": "Documentos Más Comunes",
+      "birthCertificates": "Certificados de Nacimiento",
+      "marriageCertificates": "Certificados de Matrimonio",
+      "academicTranscripts": "Expedientes Académicos",
+      "bankStatements": "Estados de Cuenta Bancarios",
+      "medicalRecords": "Registros Médicos",
+      "legalDocuments": "Documentos Legales"
+    },
+    "more": {
+      "title": "Y Mucho Más",
+      "anyOfficial": "Cualquier Documento Oficial",
+      "businessContracts": "Contratos Comerciales",
+      "technicalManuals": "Manuales Técnicos",
+      "websiteContent": "Contenido de Sitio Web",
+      "marketingMaterials": "Material de Marketing"
+    }
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "description": "Todo lo que necesitas saber sobre nuestros servicios de traducción",
+    "items": {
+      "0": {
+        "question": "¿Cuánto tiempo toma la traducción?",
+        "answer": "Las traducciones estándar se completan en 24-48 horas. Los servicios urgentes están disponibles para documentos urgentes (4-8 horas) con tarifa adicional."
+      },
+      "1": {
+        "question": "¿Son aceptadas sus traducciones por USCIS?",
+        "answer": "Sí, todas nuestras traducciones están certificadas y autenticadas, cumpliendo los requisitos de USCIS. Incluyen declaraciones de certificación oficial y son aceptadas por todas las autoridades de inmigración estadounidenses."
+      },
+      "2": {
+        "question": "¿Qué documentos pueden traducir?",
+        "answer": "Traducimos todos los documentos de inmigración incluyendo certificados de nacimiento, certificados de matrimonio, expedientes académicos, registros médicos, antecedentes penales y más. Contáctanos para tipos específicos de documentos."
+      },
+      "3": {
+        "question": "¿Cómo verifico que mi traducción es auténtica?",
+        "answer": "Cada traducción viene con un código de verificación único. Puedes verificar la autenticidad en nuestro sitio web o contactarnos directamente con el código."
+      },
+      "4": {
+        "question": "¿Ofrecen servicios urgentes?",
+        "answer": "Sí, ofrecemos servicios urgentes para documentos urgentes. El plazo de 4-8 horas está disponible por una tarifa adicional del 50%. Contáctanos para precios específicos del servicio urgente."
+      },
+      "5": {
+        "question": "¿Qué idiomas soportan?",
+        "answer": "Soportamos Portugués, Portugués (Portugal), Español, Alemán, Árabe, Hebreo, Japonés y Coreano. Todos los documentos se traducen al inglés para los requisitos de USCIS y autoridades estadounidenses."
+      }
+    }
+  },
+  "languages": {
+    "title": "Idiomas Soportados",
+    "portuguese": "Portugués",
+    "portuguesePortugal": "Portugués (Portugal)",
+    "spanish": "Español",
+    "german": "Alemán",
+    "arabic": "Árabe",
+    "hebrew": "Hebreo",
+    "japanese": "Japonés",
+    "korean": "Coreano",
+    "description": "Todos los documentos son traducidos al inglés para requisitos del USCIS y autoridades americanas."
+  },
+  "footer": {
+    "description": "Transformando sueños en realidad a través de mentoría especializada para becas de estudio en Estados Unidos.",
+    "services": {
+      "title": "Nuestros Servicios",
+      "documentTranslation": "Traducción de Documentos",
+      "documentVerification": "Verificación de Documentos"
+    },
+    "contact": {
+      "title": "Contacto",
+      "location": "Estados Unidos"
+    },
+    "copyright": "© 2025 Lush America Translations. Todos los derechos reservados.",
+    "links": {
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Uso",
+      "cookies": "Política de Cookies"
+    }
   },
   "about": {
     "title": "Sobre",

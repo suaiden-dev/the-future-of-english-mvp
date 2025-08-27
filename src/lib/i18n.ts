@@ -8,6 +8,9 @@ import es from '../locales/es.json';
 import en from '../locales/en.json';
 
 // Configurar i18next
+console.log('🚀 Iniciando configuração do i18next...');
+console.log('📁 Recursos disponíveis:', { pt, es, en });
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -29,6 +32,13 @@ i18n
       order: ['localStorage', 'navigator', 'htmlTag'],
       caches: ['localStorage'],
     }
+  }).then(() => {
+    console.log('✅ i18next inicializado com sucesso!');
+    console.log('🌐 Idioma atual:', i18n.language);
+    console.log('📚 Recursos carregados:', Object.keys(i18n.store.data || {}));
+    console.log('🔍 Teste de tradução:', i18n.t('hero.title1'));
+  }).catch((error) => {
+    console.error('❌ Erro ao inicializar i18next:', error);
   });
 
 export default i18n;

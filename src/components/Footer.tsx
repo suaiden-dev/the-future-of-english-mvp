@@ -1,6 +1,8 @@
 import { FacebookLogo, InstagramLogo, LinkedinLogo, TwitterLogo, Envelope, Phone, MapPin, WhatsappLogo } from '@phosphor-icons/react';
+import { useI18n } from '../contexts/I18nContext';
 
 export function Footer() {
+  const { t } = useI18n();
   return (
     <footer className="bg-tfe-blue-950 text-white">
       {/* Main Footer Content */}
@@ -26,7 +28,7 @@ export function Footer() {
             </div>
             
             <p className="text-gray-300 mb-6 leading-relaxed">
-              Transforming dreams into reality through specialized mentorship for study scholarships in the United States.
+              {t('footer.description', 'Transforming dreams into reality through specialized mentorship for study scholarships in the United States.')}
             </p>
             
             {/* Social Media Icons */}
@@ -48,16 +50,16 @@ export function Footer() {
 
           {/* Our Services */}
           <div>
-            <h4 className="text-lg font-semibold mb-6">Our Services</h4>
+            <h4 className="text-lg font-semibold mb-6">{t('footer.services.title', 'Our Services')}</h4>
                                                   <ul className="space-y-3">
               <li>
                 <a href="/translations" className="text-gray-300 hover:text-white transition-colors">
-                  Document Translation
+                  {t('footer.services.documentTranslation', 'Document Translation')}
                 </a>
               </li>
               <li>
                 <a href="/verify" className="text-gray-300 hover:text-white transition-colors">
-                  Document Verification
+                  {t('footer.services.documentVerification', 'Document Verification')}
                 </a>
               </li>
             </ul>
@@ -67,7 +69,7 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="text-lg font-semibold mb-6">Contact</h4>
+            <h4 className="text-lg font-semibold mb-6">{t('footer.contact.title', 'Contact')}</h4>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Envelope className="w-5 h-5 text-tfe-red-400" weight="fill" />
@@ -86,7 +88,7 @@ export function Footer() {
               <div className="flex items-center gap-3">
                 <MapPin className="w-5 h-5 text-tfe-red-400" weight="fill" />
                 <span className="text-gray-300">
-                  United States
+                  {t('footer.contact.location', 'United States')}
                 </span>
               </div>
               
@@ -106,18 +108,18 @@ export function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-gray-400 text-sm">
-              © 2025 Lush America Translations. All rights reserved.
+              {t('footer.copyright', '© 2025 Lush America Translations. All rights reserved.')}
             </div>
             
                          <div className="flex gap-6 text-sm">
                <a href="/privacy" className="text-gray-400 hover:text-white transition-colors">
-                 Privacy Policy
+                 {t('footer.links.privacy', 'Privacy Policy')}
                </a>
                <a href="/terms" className="text-gray-400 hover:text-white transition-colors">
-                 Terms of Use
+                 {t('footer.links.terms', 'Terms of Use')}
                </a>
                <a href="/cookies" className="text-gray-400 hover:text-white transition-colors">
-                 Cookie Policy
+                 {t('footer.links.cookies', 'Cookie Policy')}
                </a>
              </div>
           </div>
