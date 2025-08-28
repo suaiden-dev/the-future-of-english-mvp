@@ -17,6 +17,7 @@ export default function AuthenticatorUpload() {
   const [tipoTrad, setTipoTrad] = useState<'Certified'>('Certified');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
+  const [idiomaDestino, setIdiomaDestino] = useState('English');
   const [clientName, setClientName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -30,10 +31,22 @@ export default function AuthenticatorUpload() {
     { value: 'Certified', label: 'Certified' },
   ];
   
-  const languages = [
+  const sourceLanguages = [
     'Portuguese',
     'Portuguese (Portugal)',
     'Spanish',
+    'English',
+    'German',
+    'Arabic',
+    'Hebrew',
+    'Japanese',
+    'Korean',
+  ];
+  
+  const targetLanguages = [
+    'Portuguese',
+    'Spanish',
+    'English',
     'German',
     'Arabic',
     'Hebrew',
@@ -160,6 +173,7 @@ export default function AuthenticatorUpload() {
         pageCount: pages,
         isBankStatement: isExtrato,
         originalLanguage: idiomaRaiz,
+        targetLanguage: idiomaDestino,
         userId: user?.id,
         clientName: clientName.trim(),
         paymentMethod: paymentMethod
@@ -167,20 +181,23 @@ export default function AuthenticatorUpload() {
 
       console.log('DEBUG: Salvando arquivo no IndexedDB com metadata:', metadata);
       
-      // Usar payload customizado se fornecido, senão criar padrão
+      // Usar payload customizado se fornecido (que já tem originalLanguage e targetLanguage corretos)
       const payload = customPayload || {
         pages,
         isCertified: false,
         isNotarized: tipoTrad === 'Certified',
         isBankStatement: isExtrato,
-        filePath: customPayload?.filePath || fileId, // filePath sempre que possível
+        filePath: fileId,
         userId: user?.id,
         userEmail: user?.email,
         filename: selectedFile?.name,
         clientName: clientName.trim(),
+        originalLanguage: idiomaRaiz,
+        targetLanguage: idiomaDestino,
+        documentType: 'Certificado',
         paymentMethod: paymentMethod
       };
-      console.log('Payload enviado para webhook:', payload);
+      console.log('Payload final a ser enviado para webhook:', payload);
 
       // Verificar se o documento já existe na tabela documents
       console.log('DEBUG: Verificando se documento já existe na tabela documents...');
@@ -217,6 +234,7 @@ export default function AuthenticatorUpload() {
             tipo_trad: tipoTrad,
             valor: valor,
             idioma_raiz: idiomaRaiz,
+            // idioma_destino: idiomaDestino, // Temporariamente comentado até criar a coluna no banco
             is_bank_statement: isExtrato,
             file_url: publicUrl,
             verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
@@ -248,6 +266,7 @@ export default function AuthenticatorUpload() {
         is_bank_statement: isExtrato,
         client_name: clientName.trim(),
         idioma_raiz: idiomaRaiz,
+        idioma_destino: idiomaDestino,
         tipo_trad: tipoTrad,
         mimetype: selectedFile?.type,
         size: selectedFile?.size,
@@ -313,6 +332,7 @@ export default function AuthenticatorUpload() {
     console.log('DEBUG: tipoTrad:', tipoTrad);
     console.log('DEBUG: isExtrato:', isExtrato);
     console.log('DEBUG: idiomaRaiz:', idiomaRaiz);
+    console.log('DEBUG: idiomaDestino:', idiomaDestino);
     console.log('DEBUG: isUploading:', isUploading);
     
     // Proteção contra chamadas duplicadas
@@ -377,6 +397,13 @@ export default function AuthenticatorUpload() {
       
       console.log('DEBUG: Upload para Supabase Storage bem-sucedido:', data);
       
+      // Debug dos valores antes de criar o payload
+      console.log('DEBUG: Valores no momento do payload:');
+      console.log('DEBUG: idiomaRaiz:', idiomaRaiz);
+      console.log('DEBUG: idiomaDestino:', idiomaDestino);
+      console.log('DEBUG: tipoTrad:', tipoTrad);
+      console.log('DEBUG: isExtrato:', isExtrato);
+      
       // Payload para webhook
       const payload = {
         pages,
@@ -388,11 +415,16 @@ export default function AuthenticatorUpload() {
         userEmail: user.email,
         filename: selectedFile?.name,
         clientName: clientName.trim(),
+        originalLanguage: idiomaRaiz,
+        targetLanguage: idiomaDestino,
+        documentType: 'Certificado',
         isMobile: isMobile,
         paymentMethod: paymentMethod,
         receiptPath: receiptPath
       };
       console.log('DEBUG: Payload enviado:', payload);
+      console.log('DEBUG: Payload.originalLanguage:', payload.originalLanguage);
+      console.log('DEBUG: Payload.targetLanguage:', payload.targetLanguage);
       
       // Chama o upload direto com payload
       await handleDirectUpload(filePath, payload);
@@ -600,7 +632,24 @@ export default function AuthenticatorUpload() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Original document language"
                     >
-                      {languages.map(lang => (
+                      {sourceLanguages.map(lang => (
+                        <option key={lang} value={lang}>{lang}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-language">
+                      7. Target Language (Translation To)
+                    </label>
+                    <select
+                      id="target-language"
+                      value={idiomaDestino}
+                      onChange={e => setIdiomaDestino(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                      aria-label="Target language for translation"
+                    >
+                      {targetLanguages.map(lang => (
                         <option key={lang} value={lang}>{lang}</option>
                       ))}
                     </select>
@@ -610,7 +659,7 @@ export default function AuthenticatorUpload() {
                 {/* Payment Method */}
                 <section>
                   <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="payment-method">
-                    7. Payment Method
+                    8. Payment Method
                   </label>
                   <select
                     id="payment-method"
@@ -631,7 +680,7 @@ export default function AuthenticatorUpload() {
                 {/* Receipt Upload */}
                 <section>
                   <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="receipt-upload">
-                    8. Payment Receipt (Optional)
+                    9. Payment Receipt (Optional)
                   </label>
                   <div
                     className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer flex flex-col items-center justify-center ${receiptFile ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-green-400'}`}
@@ -740,6 +789,12 @@ export default function AuthenticatorUpload() {
                 <p className="text-xs text-tfe-blue-950/80 mb-2">
                                     {translationTypes.find(t => t.value === tipoTrad)?.label} $20 per page × {pages} pages = ${(pages * 20).toFixed(2)}
                 </p>
+                <div className="mb-3 p-2 bg-tfe-blue-100 rounded-lg">
+                  <p className="text-xs text-tfe-blue-950/80 font-medium flex items-center gap-1">
+                    <Globe className="w-3 h-3" />
+                    {idiomaRaiz} → {idiomaDestino}
+                  </p>
+                </div>
                 <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
                   <li>USCIS accepted translations</li>
                   <li>Official certification & authentication</li>
@@ -826,7 +881,7 @@ export default function AuthenticatorUpload() {
                       Supported Languages
                     </h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      {languages.map(lang => (
+                      {sourceLanguages.map(lang => (
                         <div key={lang} className="flex items-center gap-2">
                           <CheckCircle className="w-3 h-3 text-green-500" />
                           <span className="text-gray-700">{lang}</span>

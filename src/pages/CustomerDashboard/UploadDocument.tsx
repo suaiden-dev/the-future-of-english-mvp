@@ -18,6 +18,7 @@ export default function UploadDocument() {
   const [tipoTrad, setTipoTrad] = useState<'Certified'>('Certified');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
+  const [idiomaDestino, setIdiomaDestino] = useState('English');
   
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -26,10 +27,22 @@ export default function UploadDocument() {
     { value: 'Certified', label: 'Certified' },
   ];
   
-  const languages = [
+  const sourceLanguages = [
     'Portuguese',
     'Portuguese (Portugal)',
     'Spanish',
+    'English',
+    'German',
+    'Arabic',
+    'Hebrew',
+    'Japanese',
+    'Korean',
+  ];
+  
+  const targetLanguages = [
+    'Portuguese',
+    'Spanish',
+    'English',
     'German',
     'Arabic',
     'Hebrew',
@@ -125,6 +138,9 @@ export default function UploadDocument() {
         userId: user?.id,
         userEmail: user?.email, // Adicionar email do usuário
         filename: selectedFile?.name,
+        originalLanguage: idiomaRaiz,
+        targetLanguage: idiomaDestino,
+        documentType: 'Certificado', // Enviar "Certificado" no payload
         documentId: customPayload.documentId // Adicionar o documentId
       };
 
@@ -200,6 +216,7 @@ export default function UploadDocument() {
           updated_at: new Date().toISOString(),
           tipo_trad: tipoTrad,
           idioma_raiz: idiomaRaiz,
+          idioma_destino: idiomaDestino,
           is_bank_statement: isExtrato
         })
         .select()
@@ -217,12 +234,13 @@ export default function UploadDocument() {
         try {
           console.log('DEBUG: Mobile - tentando usar IndexedDB');
           const fileId = await fileStorage.storeFile(selectedFile, {
-            documentType: tipoTrad,
+            documentType: 'Certificado',
             certification: true, // Always certified now
             notarization: tipoTrad === 'Certified',
             pageCount: pages,
             isBankStatement: isExtrato,
             originalLanguage: idiomaRaiz,
+            targetLanguage: idiomaDestino,
             userId: user.id
           });
           
@@ -247,6 +265,9 @@ export default function UploadDocument() {
             userId: user.id,
             userEmail: user.email, // Adicionar email do usuário
             filename: selectedFile?.name,
+            originalLanguage: idiomaRaiz,
+            targetLanguage: idiomaDestino,
+            documentType: 'Certificado', // Enviar "Certificado" no payload
             isMobile: true, // Mobile
             documentId: newDocument.id // Adicionar documentId
           };
@@ -259,12 +280,13 @@ export default function UploadDocument() {
         // Desktop: Salvar arquivo no IndexedDB primeiro
         console.log('DEBUG: Desktop - salvando arquivo no IndexedDB');
         const fileId = await fileStorage.storeFile(selectedFile, {
-          documentType: tipoTrad,
+          documentType: 'Certificado',
           certification: true, // Always certified now
           notarization: tipoTrad === 'Certified',
           pageCount: pages,
           isBankStatement: isExtrato,
           originalLanguage: idiomaRaiz,
+          targetLanguage: idiomaDestino,
           userId: user.id
         });
         
@@ -455,7 +477,24 @@ export default function UploadDocument() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Original document language"
                     >
-                      {languages.map(lang => (
+                      {sourceLanguages.map(lang => (
+                        <option key={lang} value={lang}>{lang}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-language">
+                      6. Target Language (Translation To)
+                    </label>
+                    <select
+                      id="target-language"
+                      value={idiomaDestino}
+                      onChange={e => setIdiomaDestino(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                      aria-label="Target language for translation"
+                    >
+                      {targetLanguages.map(lang => (
                         <option key={lang} value={lang}>{lang}</option>
                       ))}
                     </select>
@@ -506,6 +545,12 @@ export default function UploadDocument() {
                 <p className="text-xs text-tfe-blue-950/80 mb-2">
                   {translationTypes.find(t => t.value === tipoTrad)?.label} {isExtrato ? '$25' : '$20'} per page × {pages} page{pages !== 1 ? 's' : ''}
                 </p>
+                <div className="mb-3 p-2 bg-tfe-blue-100 rounded-lg">
+                  <p className="text-xs text-tfe-blue-950/80 font-medium flex items-center gap-1">
+                    <Globe className="w-3 h-3" />
+                    {idiomaRaiz} → {idiomaDestino}
+                  </p>
+                </div>
                 <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
                   <li>USCIS accepted translations</li>
                   <li>Official certification & authentication</li>
@@ -592,7 +637,7 @@ export default function UploadDocument() {
                       Supported Languages
                     </h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      {languages.map(lang => (
+                      {sourceLanguages.map(lang => (
                         <div key={lang} className="flex items-center gap-2">
                           <CheckCircle className="w-3 h-3 text-green-500" />
                           <span className="text-gray-700">{lang}</span>

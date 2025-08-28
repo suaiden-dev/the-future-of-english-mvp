@@ -59,12 +59,14 @@ Deno.serve(async (req: Request) => {
       fileSize,
       fileType,
       originalLanguage,
+      targetLanguage, // Adicionar targetLanguage
+      documentType, // Adicionar documentType
       documentId, // Adicionar documentId
       clientName // Adicionar clientName
     } = await req.json();
 
     console.log('DEBUG: Dados recebidos:', {
-      pages, isCertified, isNotarized, isBankStatement, fileId, filePath, isMobile, userId, userEmail, filename, fileSize, fileType, originalLanguage, clientName
+      pages, isCertified, isNotarized, isBankStatement, fileId, filePath, isMobile, userId, userEmail, filename, fileSize, fileType, originalLanguage, targetLanguage, documentType, clientName
     });
 
     // Validações
@@ -165,6 +167,8 @@ Deno.serve(async (req: Request) => {
         fileSize: fileSize?.toString() || '',
         fileType: fileType || '',
         originalLanguage: originalLanguage || '',
+        targetLanguage: targetLanguage || '', // Adicionar targetLanguage aos metadados
+        documentType: documentType || '', // Adicionar documentType aos metadados
         documentId: documentId || '', // Adicionar documentId aos metadados
         clientName: clientName || '', // Adicionar clientName aos metadados
       },
@@ -206,6 +210,8 @@ Deno.serve(async (req: Request) => {
               fileSize,
               fileType,
               originalLanguage,
+              targetLanguage, // Adicionar targetLanguage aos metadados do banco
+              documentType, // Adicionar documentType aos metadados do banco
               documentId,
               clientName
             },

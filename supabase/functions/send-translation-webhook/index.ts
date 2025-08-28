@@ -160,10 +160,19 @@ Deno.serve(async (req: Request) => {
       valor, 
       source_language,
       target_language,
-      idioma_raiz, 
+      idioma_raiz,
+      idioma_destino,
       is_bank_statement, 
       client_name 
     } = parsedBody;
+    
+    // Debug logs para idiomas
+    console.log("=== LANGUAGE DEBUG ===");
+    console.log("source_language:", source_language);
+    console.log("target_language:", target_language);
+    console.log("idioma_raiz:", idioma_raiz);
+    console.log("idioma_destino:", idioma_destino);
+    
     let payload;
 
     if (record) {
@@ -195,10 +204,10 @@ Deno.serve(async (req: Request) => {
         user_id: record.user_id || record.metadata?.user_id || null,
         // Sempre usar campos padronizados
         pages: record.pages || pages || paginas || 1,
-        document_type: record.document_type || document_type || record.tipo_trad || tipo_trad || 'Certificado',
+        document_type: 'Certificado', // Sempre usar 'Certificado' em português
         total_cost: record.total_cost || total_cost || record.valor || valor || '0',
         source_language: record.source_language || source_language || record.idioma_raiz || idioma_raiz || 'Portuguese',
-        target_language: record.target_language || target_language || 'English',
+        target_language: record.target_language || target_language || record.idioma_destino || idioma_destino || 'English',
         is_bank_statement: record.is_bank_statement || is_bank_statement || false,
         client_name: record.client_name || client_name || null,
         // Adicionar informações sobre o tipo de arquivo
@@ -249,10 +258,10 @@ Deno.serve(async (req: Request) => {
         user_id: user_id || null, 
         // Sempre usar campos padronizados
         pages: pages || paginas || 1,
-        document_type: document_type || tipo_trad || 'Certificado',
+        document_type: 'Certificado', // Sempre usar 'Certificado' em português
         total_cost: total_cost || valor || '0',
         source_language: source_language || idioma_raiz || 'Portuguese',
-        target_language: target_language || 'English',
+        target_language: target_language || idioma_destino || 'English',
         is_bank_statement: is_bank_statement || false,
         client_name: client_name || null,
         // Adicionar informações sobre o tipo de arquivo

@@ -348,8 +348,8 @@ export function PaymentSuccess() {
           totalCost: parseFloat(sessionData.metadata.totalPrice),
           documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified',
           isBankStatement: sessionData.metadata.isBankStatement === 'true',
-          sourceLanguage: 'Portuguese',
-          targetLanguage: 'English',
+          sourceLanguage: sessionData.metadata.originalLanguage || 'Portuguese',
+          targetLanguage: sessionData.metadata.targetLanguage || 'English',
           clientName: sessionData.metadata.clientName || 'Cliente Padrão'
         })
       });
@@ -368,6 +368,9 @@ export function PaymentSuccess() {
       console.log('DEBUG: 🚀 INICIANDO ENVIO PARA N8N - CHAMADA MANUAL');
       console.log('DEBUG: Chamando send-translation-webhook para enviar para n8n');
       console.log('DEBUG: 📋 CONFIRMAÇÃO - APENAS UMA REQUISIÇÃO SERÁ ENVIADA PARA O N8N');
+      console.log('DEBUG: Metadados da sessão disponíveis:', sessionData.metadata);
+      console.log('DEBUG: Original Language:', sessionData.metadata.originalLanguage);
+      console.log('DEBUG: Target Language:', sessionData.metadata.targetLanguage);
       
       // Garantir que a URL seja válida
       let finalUrl = publicUrl;
@@ -388,8 +391,8 @@ export function PaymentSuccess() {
         pages: parseInt(sessionData.metadata.pages),
         document_type: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified',
         total_cost: sessionData.metadata.totalPrice,
-        source_language: 'Portuguese',
-        target_language: 'English',
+        source_language: sessionData.metadata.originalLanguage || 'Portuguese',
+        target_language: sessionData.metadata.targetLanguage || 'English',
         is_bank_statement: sessionData.metadata.isBankStatement === 'true',
         document_id: finalDocumentId,
         // Campos padronizados para compatibilidade com n8n
