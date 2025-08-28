@@ -20,7 +20,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
   // Estados para informações do usuário e do documento
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [translatedDoc, setTranslatedDoc] = useState<{ translated_file_url: string; filename: string; } | null>(null);
+  const [translatedDoc, setTranslatedDoc] = useState<{ translated_file_url: string; filename: string; original_document_id?: string; } | null>(null);
   const [loadingTranslated, setLoadingTranslated] = useState(false);
   const [actualDocumentStatus, setActualDocumentStatus] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
@@ -64,23 +64,69 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
     
     setLoadingTranslated(true);
     try {
+      console.log('🔍 Buscando documento traduzido para:', { 
+        user_id: document.user_id, 
+        filename: document.filename 
+      });
+
+      // Primeiro, buscar o document_id na tabela documents_to_be_verified usando o filename
+      const { data: verifiedDoc, error: verifiedError } = await supabase
+        .from('documents_to_be_verified')
+        .select('id, filename')
+        .eq('user_id', document.user_id)
+        .eq('filename', document.filename)
+        .single();
+
+      if (verifiedError) {
+        console.error('❌ Erro ao buscar documento verificado:', verifiedError);
+        
+        // Fallback: buscar diretamente na translated_documents por user_id e filename
+        const { data: translatedDocs, error } = await supabase
+          .from('translated_documents')
+          .select('translated_file_url, filename, original_document_id')
+          .eq('user_id', document.user_id)
+          .eq('filename', document.filename);
+
+        if (error) {
+          console.error('❌ Erro ao buscar documentos traduzidos (fallback):', error);
+          return;
+        }
+
+        console.log('📋 Documentos traduzidos encontrados (fallback):', translatedDocs);
+        
+        if (translatedDocs && translatedDocs.length > 0) {
+          setTranslatedDoc(translatedDocs[0]);
+          console.log('✅ Documento traduzido encontrado via fallback:', translatedDocs[0]);
+        }
+        return;
+      }
+
+      console.log('📋 Documento verificado encontrado:', verifiedDoc);
+
+      // Agora buscar o documento traduzido usando o original_document_id
       const { data: translatedDocs, error } = await supabase
         .from('translated_documents')
-        .select('translated_file_url, filename')
+        .select('translated_file_url, filename, original_document_id, user_id')
+        .eq('original_document_id', verifiedDoc.id)
         .eq('user_id', document.user_id);
 
       if (error) {
-        console.error('Erro ao buscar documentos traduzidos:', error);
+        console.error('❌ Erro ao buscar documentos traduzidos:', error);
         return;
       }
       
-      const matchingTranslatedDoc = translatedDocs?.find(td => td.filename === document.filename);
+      console.log('📋 Documentos traduzidos encontrados por original_document_id:', translatedDocs);
       
-      if (matchingTranslatedDoc) {
+      if (translatedDocs && translatedDocs.length > 0) {
+        // Pegar o mais recente se houver múltiplos
+        const matchingTranslatedDoc = translatedDocs[0];
+        console.log('✅ Documento traduzido encontrado:', matchingTranslatedDoc);
         setTranslatedDoc(matchingTranslatedDoc);
+      } else {
+        console.log('ℹ️ Nenhum documento traduzido encontrado para este documento verificado');
       }
     } catch (error) {
-      console.error('Erro ao buscar documento traduzido:', error);
+      console.error('💥 Erro ao buscar documento traduzido:', error);
     } finally {
       setLoadingTranslated(false);
     }
@@ -91,6 +137,8 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
     
     setLoadingStatus(true);
     try {
+      // Buscar o status real na tabela documents_to_be_verified
+      // Status 'completed' ou 'approved' indica que foi aprovado pelo autenticador
       const { data: verifiedDoc, error } = await supabase
         .from('documents_to_be_verified')
         .select('status')
@@ -113,20 +161,39 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
   };
 
   const handleDownload = async () => {
-    // A URL prioritária é a do documento traduzido, se não, a do original
-    const fileUrl = document.translated_file_url || translatedDoc?.translated_file_url || document.file_path;
+    if (!document) return;
+    
+    // Verificar se o documento foi aprovado pelo autenticador
+    const isAuthenticated = actualDocumentStatus === 'completed' || actualDocumentStatus === 'approved';
+    
+    let fileUrl: string | null = null;
+    
+    if (isAuthenticated) {
+      // Para documentos aprovados, priorizar SEMPRE arquivo da tabela translated_documents
+      fileUrl = translatedDoc?.translated_file_url || document?.translated_file_url || document?.file_path || null;
+      console.log('📄 Download - Documento aprovado - usando arquivo traduzido:', {
+        translatedDocUrl: translatedDoc?.translated_file_url,
+        documentTranslatedUrl: document?.translated_file_url,
+        fallbackUrl: document?.file_path,
+        finalUrl: fileUrl
+      });
+    } else {
+      // Para documentos não aprovados, usar apenas o arquivo original
+      fileUrl = document?.file_path || null;
+      console.log('📄 Download - Documento não aprovado - usando arquivo original:', fileUrl);
+    }
     
     if (fileUrl) {
       try {
         // Usar um link simples para download é mais direto e compatível
-        const link = document.createElement('a');
+        const link = globalThis.document.createElement('a');
         link.href = fileUrl;
         link.download = document.filename; // O nome que o arquivo terá ao ser baixado
         link.target = '_blank'; // Abrir em nova aba para iniciar o download
         link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
+        globalThis.document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        globalThis.document.body.removeChild(link);
       } catch (error) {
         console.error('Error downloading file:', error);
         alert('Error downloading file');
@@ -137,11 +204,39 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
   };
 
   const handleViewFile = () => {
-    const url = document.translated_file_url || translatedDoc?.translated_file_url || document.file_path;
+    // Verificar se o documento foi aprovado pelo autenticador
+    const isAuthenticated = actualDocumentStatus === 'completed' || actualDocumentStatus === 'approved';
+    
+    console.log('🔍 HandleViewFile - Status check:', {
+      actualDocumentStatus,
+      isAuthenticated,
+      documentStatus: document?.status
+    });
+    
+    let url: string | null = null;
+    
+    if (isAuthenticated) {
+      // Para documentos aprovados, priorizar SEMPRE arquivo da tabela translated_documents
+      url = translatedDoc?.translated_file_url || document?.translated_file_url || document?.file_path || null;
+      console.log('📄 Documento aprovado - usando arquivo traduzido:', {
+        translatedDocUrl: translatedDoc?.translated_file_url,
+        documentTranslatedUrl: document?.translated_file_url,
+        fallbackUrl: document?.file_path,
+        finalUrl: url,
+        translatedDocData: translatedDoc
+      });
+    } else {
+      // Para documentos não aprovados, usar apenas o arquivo original
+      url = document?.file_path || null;
+      console.log('📄 Documento não aprovado - usando arquivo original:', url);
+    }
+    
+    console.log('🚀 Tentando abrir URL:', url);
     
     if (url) {
       window.open(url, '_blank', 'noopener,noreferrer');
     } else {
+      console.error('❌ Nenhuma URL disponível para visualizar');
       alert('No file available to view');
     }
   };
@@ -186,8 +281,8 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
                   {loadingStatus ? (
                     <span className="text-gray-500">Loading...</span>
                   ) : (
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor({ status: currentStatus } as Document)}`}>
-                      {getStatusIcon({ status: currentStatus } as Document)}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor({ status: currentStatus } as any)}`}>
+                      {getStatusIcon({ status: currentStatus } as any)}
                       <span className="ml-1 capitalize">{currentStatus || 'Unknown'}</span>
                     </span>
                   )}
@@ -273,7 +368,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Last Updated</label>
-                <p className="text-gray-900">{document.updated_at ? new Date(document.updated_at).toLocaleString() : 'Not available'}</p>
+                <p className="text-gray-900">{(document as any).updated_at ? new Date((document as any).updated_at).toLocaleString() : 'Not available'}</p>
               </div>
             </div>
           </div>
@@ -285,7 +380,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Verification Code</label>
-              <p className="text-gray-900 font-mono text-sm break-all">{document.verification_code || 'Not available'}</p>
+              <p className="text-gray-900 font-mono text-sm break-all">{(document as any).verification_code || 'Not available'}</p>
             </div>
           </div>
 
@@ -297,12 +392,29 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
               {loadingTranslated && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-tfe-blue-600"></div>
               )}
-              {(document.translated_file_url || translatedDoc?.translated_file_url) && (
-                <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
-                  Translated Available
+              {/* Mostrar status de aprovação */}
+              {actualDocumentStatus === 'completed' || actualDocumentStatus === 'approved' ? (
+                (document.translated_file_url || translatedDoc?.translated_file_url) && (
+                  <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
+                    Approved - Translated Available
+                  </span>
+                )
+              ) : (
+                <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
+                  Awaiting Authentication
                 </span>
               )}
             </div>
+            
+            {/* Aviso quando não foi aprovado */}
+            {!(actualDocumentStatus === 'completed' || actualDocumentStatus === 'approved') && (
+              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> Translated documents are only available after authenticator approval. 
+                  Currently showing original document only.
+                </p>
+              </div>
+            )}
             
             <div className="flex flex-col sm:flex-row gap-3">
               <button
@@ -311,7 +423,11 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
                 disabled={loadingTranslated}
               >
                 <Eye className="w-4 h-4" />
-                {(document.translated_file_url || translatedDoc?.translated_file_url) ? 'View Translated File' : 'View Original File'}
+                {(actualDocumentStatus === 'completed' || actualDocumentStatus === 'approved') && 
+                 (document.translated_file_url || translatedDoc?.translated_file_url) 
+                  ? 'View Translated File' 
+                  : 'View Original File'
+                }
               </button>
               <button
                 onClick={handleDownload}

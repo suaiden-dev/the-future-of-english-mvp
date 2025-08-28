@@ -102,9 +102,30 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
   };
   
   const handleDownload = async () => {
-    // Prioriza translated_file_url se encontrou documento traduzido, senão usa file_url
-    const url = translatedDoc?.translated_file_url || (document as any)?.translated_file_url || (document as any)?.file_url;
-    const filename = translatedDoc?.filename || (document as any)?.filename || 'document.pdf';
+    // Verifica se o documento foi aprovado pelo autenticador
+    const isApproved = (document as any)?.is_authenticated === true || 
+                      (document as any)?.status === 'approved' || 
+                      (document as any)?.status === 'completed';
+    
+    let url: string | null = null;
+    let filename: string = '';
+    
+    if (isApproved) {
+      // Se aprovado, prioriza o arquivo traduzido
+      url = translatedDoc?.translated_file_url || (document as any)?.translated_file_url;
+      filename = translatedDoc?.filename || (document as any)?.filename || 'document.pdf';
+      
+      // Se não encontrou arquivo traduzido, usa o arquivo original como fallback
+      if (!url) {
+        url = (document as any)?.file_url;
+        filename = (document as any)?.filename || 'document.pdf';
+      }
+    } else {
+      // Se não aprovado, faz download apenas do arquivo original
+      url = (document as any)?.file_url;
+      filename = (document as any)?.filename || 'document.pdf';
+    }
+    
     if (url && filename) {
       try {
         const response = await fetch(url);
@@ -112,15 +133,17 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
         const objUrl = window.URL.createObjectURL(blob);
         const link = window.document.createElement('a');
         link.href = objUrl;
-        link.download = filename || 'document.pdf';
+        link.download = filename;
         window.document.body.appendChild(link);
         link.click();
         window.document.body.removeChild(link);
         window.URL.revokeObjectURL(objUrl);
       } catch (error) {
         console.error('Error downloading file:', error);
-        alert('Error downloading file');
+        alert('Erro ao fazer download do arquivo');
       }
+    } else {
+      alert('Arquivo não disponível para download');
     }
   };
 
@@ -129,15 +152,39 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
     console.log('📄 document:', document);
     console.log('📑 translatedDoc:', translatedDoc);
     
-    // Prioriza translated_file_url se encontrou documento traduzido, senão usa file_url
-    const url = translatedDoc?.translated_file_url || (document as any)?.translated_file_url || (document as any)?.file_url;
+    // Verifica se o documento foi aprovado pelo autenticador
+    const isApproved = (document as any)?.is_authenticated === true || 
+                      (document as any)?.status === 'approved' || 
+                      (document as any)?.status === 'completed';
     
-    console.log('🔗 URL do arquivo:', url);
+    console.log('✅ Documento aprovado:', isApproved);
+    
+    let url: string | null = null;
+    let fileType: string = '';
+    
+    if (isApproved) {
+      // Se aprovado, prioriza o arquivo traduzido
+      url = translatedDoc?.translated_file_url || (document as any)?.translated_file_url;
+      fileType = 'traduzido';
+      
+      // Se não encontrou arquivo traduzido, usa o arquivo original como fallback
+      if (!url) {
+        url = (document as any)?.file_url;
+        fileType = 'original (traduzido não encontrado)';
+      }
+    } else {
+      // Se não aprovado, mostra apenas o arquivo original
+      url = (document as any)?.file_url;
+      fileType = 'original';
+    }
+    
+    console.log(`🔗 Abrindo arquivo ${fileType}:`, url);
     
     if (url) {
       window.open(url, '_blank', 'noopener,noreferrer');
     } else {
       console.log('❌ Nenhuma URL encontrada para abrir');
+      alert('Arquivo não disponível');
     }
   };
 
@@ -298,14 +345,36 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Eye className="w-4 h-4" />
-                  {(document as any).translated_file_url ? 'View Translated' : 'View File'}
+                  {(() => {
+                    const isApproved = (document as any)?.is_authenticated === true || 
+                                      (document as any)?.status === 'approved' || 
+                                      (document as any)?.status === 'completed';
+                    const hasTranslated = translatedDoc?.translated_file_url || (document as any)?.translated_file_url;
+                    
+                    if (isApproved && hasTranslated) {
+                      return 'View Translated';
+                    } else {
+                      return 'View Original';
+                    }
+                  })()}
                 </button>
                 <button
                   onClick={handleDownload}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Download className="w-4 h-4" />
-                  {(document as any).translated_file_url ? 'Download Translated' : 'Download'}
+                  {(() => {
+                    const isApproved = (document as any)?.is_authenticated === true || 
+                                      (document as any)?.status === 'approved' || 
+                                      (document as any)?.status === 'completed';
+                    const hasTranslated = translatedDoc?.translated_file_url || (document as any)?.translated_file_url;
+                    
+                    if (isApproved && hasTranslated) {
+                      return 'Download Translated';
+                    } else {
+                      return 'Download Original';
+                    }
+                  })()}
                 </button>
               </div>
             </div>

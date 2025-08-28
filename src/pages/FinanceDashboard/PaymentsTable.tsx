@@ -22,6 +22,7 @@ import { DocumentDetailsModal } from './DocumentDetailsModal'; // Assuming this 
     translation_type?: string;
     bank_statement?: boolean;
     authenticated?: boolean;
+    verification_code?: string;
     // Informações do usuário
     user_name?: string;
     user_email?: string;
@@ -51,6 +52,7 @@ interface PaymentWithRelations {
     client_name: string | null;
     idioma_raiz: string | null;
     tipo_trad: string | null;
+    verification_code: string | null;
   } | null; // document info from documents table
 }
 
@@ -295,7 +297,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
         .select(`
           *,
           profiles:profiles!payments_user_id_fkey(email, name),
-          documents:documents!payments_document_id_fkey(filename, status, client_name, idioma_raiz, tipo_trad)
+          documents:documents!payments_document_id_fkey(filename, status, client_name, idioma_raiz, tipo_trad, verification_code)
         `)
         .order('created_at', { ascending: false });
 
@@ -538,6 +540,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
         translation_type: payment.payment_method === 'upload' ? documentData.translation_type : payment.tipo_trad,
         bank_statement: documentData.bank_statement,
         authenticated: documentData.authenticated,
+        verification_code: documentData.verification_code || payment.documents?.verification_code,
         // Informações do usuário
         user_name: userProfile?.name,
         user_email: userProfile?.email,

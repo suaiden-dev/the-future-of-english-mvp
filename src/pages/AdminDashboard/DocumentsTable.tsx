@@ -1,238 +1,466 @@
-import React, { useState } from 'react';
-import { FileText, Eye, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { FileText, Eye, Download } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import { Document } from '../../App';
 
+// Interface estendida para incluir dados de tabelas relacionadas
+interface ExtendedDocument extends Omit<Document, 'client_name' | 'payment_method'> {
+  user_name?: string;
+  user_email?: string;
+  user_phone?: string;
+  document_type?: 'regular' | 'verified';
+  authenticated_by_name?: string;
+  authenticated_by_email?: string;
+  authentication_date?: string;
+  source_language?: string;
+  target_language?: string;
+  payment_method?: string | null;
+  client_name?: string | null;
+}
+
+// Propriedades do componente
 interface DocumentsTableProps {
-  documents: Document[];
-  onStatusUpdate: (documentId: string, status: Document['status']) => void;
+  documents: Document[]; // Mantido para conformidade, embora os dados sejam buscados internamente
   onViewDocument: (document: Document) => void;
 }
 
-export function DocumentsTable({ documents, onStatusUpdate, onViewDocument }: DocumentsTableProps) {
+export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
+  const [extendedDocuments, setExtendedDocuments] = useState<ExtendedDocument[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [showFilters, setShowFilters] = useState(false);
+  const [dateFilter, setDateFilter] = useState<string>('all');
 
-  // Filtrar documentos
-  const filteredDocuments = documents.filter(doc => {
-    const matchesSearch = doc.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doc.user_id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Função para buscar e combinar dados de ambas as tabelas de documentos
+  const loadExtendedDocuments = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Buscar documentos da tabela principal com perfis de usuário
+      const { data: mainDocuments, error: mainError } = await supabase
+        .from('documents')
+        .select('*, profiles:profiles!documents_user_id_fkey(name, email, phone)')
+        .order('created_at', { ascending: false });
 
-  if (documents.length === 0) {
+      if (mainError) {
+        console.error('Error loading documents:', mainError);
+      }
+
+      // Buscar documentos da tabela documents_to_be_verified
+      const { data: verifiedDocuments, error: verifiedError } = await supabase
+        .from('documents_to_be_verified')
+        .select('*, profiles:profiles!documents_to_be_verified_user_id_fkey(name, email, phone)')
+        .order('created_at', { ascending: false });
+
+      if (verifiedError) {
+        console.error('Error loading verified documents:', verifiedError);
+      }
+
+      // Buscar dados de pagamentos para obter payment_method
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('stripe_sessions')
+        .select('document_id, payment_method, status, amount, currency');
+
+      if (paymentsError) {
+        console.error('Error loading payments data:', paymentsError);
+      }
+
+      // Usar a mesma lógica da StatsCards: priorizar documents_to_be_verified
+      const documentsWithCorrectStatus = mainDocuments?.map(doc => {
+        const verifiedDoc = verifiedDocuments?.find(vDoc => vDoc.filename === doc.filename);
+        const paymentInfo = paymentsData?.find(payment => payment.document_id === doc.id);
+        
+        // Se existe em documents_to_be_verified, usar dados de lá
+        if (verifiedDoc) {
+          return {
+            ...doc,
+            status: verifiedDoc.status,
+            user_name: verifiedDoc.profiles?.name || doc.profiles?.name || null,
+            user_email: verifiedDoc.profiles?.email || doc.profiles?.email || null,
+            user_phone: verifiedDoc.profiles?.phone || doc.profiles?.phone || null,
+            document_type: 'verified' as const,
+            authenticated_by_name: verifiedDoc.authenticated_by_name,
+            authenticated_by_email: verifiedDoc.authenticated_by_email,
+            authentication_date: verifiedDoc.authentication_date,
+            source_language: verifiedDoc.source_language,
+            target_language: verifiedDoc.target_language,
+            payment_method: paymentInfo?.payment_method || doc.payment_method || null,
+            client_name: doc.client_name || null,
+          };
+        } else {
+          // Se não existe em documents_to_be_verified, usar dados originais
+          return {
+            ...doc,
+            user_name: doc.profiles?.name || null,
+            user_email: doc.profiles?.email || null,
+            user_phone: doc.profiles?.phone || null,
+            document_type: 'regular' as const,
+            payment_method: paymentInfo?.payment_method || doc.payment_method || null,
+            client_name: doc.client_name || null,
+          };
+        }
+      }) || [];
+
+      setExtendedDocuments(documentsWithCorrectStatus);
+
+    } catch (error) {
+      console.error('Error loading extended documents:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadExtendedDocuments();
+  }, [loadExtendedDocuments]);
+
+  // Aplica os filtros de busca, status e data
+  const filteredDocuments = useMemo(() => {
+    return extendedDocuments.filter(doc => {
+      // Filtro de busca textual
+      const matchesSearch = searchTerm === '' ||
+        doc.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.user_id.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Filtro de status
+      const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
+
+      // Filtro de data
+      let matchesDate = true;
+      if (dateFilter !== 'all') {
+        const docDate = new Date(doc.created_at || '');
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        switch (dateFilter) {
+          case '7d':
+            matchesDate = docDate >= new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case '30d':
+            matchesDate = docDate >= new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+          case '3m':
+            matchesDate = docDate >= new Date(startOfToday.getTime() - 90 * 24 * 60 * 60 * 1000);
+            break;
+          case '6m':
+            matchesDate = docDate >= new Date(startOfToday.getTime() - 180 * 24 * 60 * 60 * 1000);
+            break;
+          case 'year':
+            matchesDate = docDate.getFullYear() === now.getFullYear();
+            break;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [extendedDocuments, searchTerm, statusFilter, dateFilter]);
+
+  // Define a cor de fundo e texto com base no status do documento
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'processing': return 'bg-blue-100 text-blue-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Gera e inicia o download de um relatório CSV dos documentos filtrados
+  const downloadDocumentsReport = useCallback(() => {
+    const csvContent = [
+      ['Document Name', 'User Name', 'User Email', 'Document Type', 'Status', 'Pages', 'Cost', 'Source Language', 'Target Language', 'Authenticator', 'Created At'],
+      ...filteredDocuments.map(doc => [
+        doc.filename,
+        doc.user_name || '',
+        doc.user_email || '',
+        doc.document_type || 'regular',
+        doc.status || 'pending',
+        doc.pages?.toString() || 'N/A',
+        doc.total_cost?.toFixed(2) || '0.00',
+        doc.source_language || '',
+        doc.target_language || '',
+        doc.authenticated_by_name || '',
+        new Date(doc.created_at || '').toLocaleDateString()
+      ])
+    ].map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `documents-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, [filteredDocuments]);
+
+  // Renderiza um esqueleto de carregamento enquanto os dados são buscados
+  if (loading) {
     return (
-      <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 w-full">
-        <div className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 border-b border-gray-200">
-          <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">All Documents</h3>
-        </div>
-        <div className="px-3 sm:px-4 lg:px-6 py-6 sm:py-8 text-center text-gray-500">
-          <FileText className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 sm:mb-3 text-gray-300" />
-          <p className="text-sm sm:text-base font-medium">No documents in the system yet.</p>
-          <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">Documents will appear here once users start uploading.</p>
+      <div className="bg-white rounded-lg shadow w-full p-6">
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-12 bg-gray-200 rounded animate-pulse"></div>
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 w-full">
-      {/* Header */}
-      <div className="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">All Documents</h3>
-          
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            {/* Search */}
-            <div className="relative flex-1 sm:w-56 lg:w-64">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search documents..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-7 sm:pl-8 pr-2 py-1 sm:py-1.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-xs w-full"
-              />
-            </div>
-            
-            {/* Filter Toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-xs w-full sm:w-auto"
-            >
-              <Filter className="w-3.5 h-3.5" />
-              Filter
-              {showFilters ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
+    <div className="bg-white rounded-lg shadow w-full">
+      {/* Cabeçalho */}
+      <div className="px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">All Documents</h3>
+            <p className="text-sm text-gray-500">
+              Showing {filteredDocuments.length} of {extendedDocuments.length} documents
+            </p>
           </div>
+          <button
+            onClick={downloadDocumentsReport}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tfe-blue-500"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            <span>Export CSV</span>
+          </button>
         </div>
+      </div>
 
-        {/* Filter Options */}
-        {showFilters && (
-          <div className="mt-3 pt-3 sm:mt-4 sm:pt-4 border-t border-gray-200">
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-xs w-full sm:w-40 lg:w-48"
-                aria-label="Filter by status"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
+      {/* Filtros */}
+      <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="sm:col-span-2">
+            <input
+              type="text"
+              placeholder="Search by name, email, filename..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
+            />
           </div>
-        )}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
+          >
+            <option value="all">All Status</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="failed">Failed</option>
+          </select>
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
+          >
+            <option value="all">All Time</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="3m">Last 3 months</option>
+            <option value="6m">Last 6 months</option>
+            <option value="year">This year</option>
+          </select>
+        </div>
       </div>
 
-      {/* Results Count */}
-      <div className="px-2 sm:px-4 lg:px-6 py-1.5 sm:py-2 bg-gray-50 border-b border-gray-200">
-        <p className="text-[11px] sm:text-xs text-gray-500">
-          Showing {filteredDocuments.length} of {documents.length} documents
-        </p>
-      </div>
-      
-      {/* Desktop Table */}
-      <div className="hidden lg:block border-t border-gray-200">
-        <div className="relative">
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-fixed divide-y divide-gray-200">
+      {/* Conteúdo: Tabela para Desktop e Cartões para Mobile */}
+      {filteredDocuments.length === 0 ? (
+        <div className="text-center py-8 px-4">
+          <FileText className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+          <p className="text-base font-medium text-gray-700">No documents found</p>
+          <p className="text-sm text-gray-500">Try adjusting your search or filter criteria.</p>
+        </div>
+      ) : (
+        <>
+          {/* Mobile: Cards View */}
+          <div className="sm:hidden px-3 py-2 space-y-2">
+            {filteredDocuments.map((doc) => (
+              <div key={doc.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{doc.filename}</p>
+                    <p className="text-xs text-gray-500 truncate">{doc.user_name || doc.user_email || 'Unknown user'}</p>
+                  </div>
+                  <span className={`ml-2 flex-shrink-0 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(doc.status || 'pending')}`}>
+                    {doc.status || 'pending'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                  <div>
+                    <span className="text-gray-500">Amount:</span>
+                    <p className="font-medium text-gray-900">${doc.total_cost?.toFixed(2) || '0.00'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Payment Method:</span>
+                    <p className="font-medium text-gray-900 truncate">
+                      {doc.payment_method ? (
+                        doc.payment_method === 'card' ? '💳 Card' :
+                          doc.payment_method === 'bank_transfer' ? '🏦 Bank' :
+                            doc.payment_method === 'paypal' ? '📱 PayPal' :
+                              doc.payment_method === 'upload' ? '📋 Upload' :
+                                doc.payment_method
+                      ) : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Translation:</span>
+                    <p className="font-medium text-gray-900">
+                      {doc.status || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Authenticator:</span>
+                    <p className="font-medium text-gray-900 truncate">
+                      {doc.authenticated_by_name || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
+                  <p className="text-xs text-gray-500">{new Date(doc.created_at || '').toLocaleDateString('pt-BR')}</p>
+                  <button onClick={() => onViewDocument(doc as Document)} className="text-blue-600 hover:text-blue-900">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: Table View */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="py-2 pl-3 pr-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                    USER/CLIENT
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                     Document
                   </th>
-                  <th scope="col" className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Pages
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                    Amount
                   </th>
-                  <th scope="col" className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Status
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                    Payment Method
                   </th>
-                  <th scope="col" className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Cost
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                    Payment Status
                   </th>
-                  <th scope="col" className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                    TRANSLATIONS
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                    AUTHENTICATOR
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                     Date
                   </th>
-                  <th scope="col" className="pl-2 pr-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Actions
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                    Details
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredDocuments.map((doc) => (
                   <tr key={doc.id} className="hover:bg-gray-50">
-                    <td className="py-2 pl-3 pr-2 whitespace-nowrap text-sm">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <span className="font-medium text-gray-900 truncate max-w-xs" title={doc.filename}>
-                          {doc.filename}
+                    {/* USER/CLIENT */}
+                    <td className="px-3 py-3 text-xs">
+                      <div>
+                        <div className="font-medium text-gray-900 truncate">
+                          {doc.user_name || 'N/A'}
+                        </div>
+                        <div className="text-gray-500 truncate">
+                          {doc.user_email || 'No email'}
+                        </div>
+                      </div>
+                    </td>
+                    
+                    {/* Document */}
+                    <td className="px-3 py-3 text-xs">
+                      <div className="flex items-center">
+                        <FileText className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-medium text-gray-900 truncate">
+                            {doc.filename}
+                          </div>
+                          <div className="text-gray-500">
+                            {doc.pages} páginas
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    
+                    {/* Amount */}
+                    <td className="px-3 py-3 text-xs font-medium text-gray-900">
+                      ${doc.total_cost?.toFixed(2) || '0.00'}
+                    </td>
+                    
+                    {/* Payment Method */}
+                    <td className="px-3 py-3 text-xs">
+                      {doc.payment_method ? (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          {doc.payment_method === 'card' ? '💳 Card' :
+                            doc.payment_method === 'bank_transfer' ? '🏦 Bank' :
+                            doc.payment_method === 'paypal' ? '📱 PayPal' :
+                            doc.payment_method === 'upload' ? '📋 Upload' :
+                              doc.payment_method}
                         </span>
-                      </div>
-                      <div className="text-xs text-gray-500 font-mono truncate mt-0.5" title={doc.user_id}>
-                        {doc.user_id}
-                      </div>
+                      ) : (
+                        <span className="text-gray-400">N/A</span>
+                      )}
                     </td>
-                    <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-900">
-                      {doc.pages}
-                    </td>
-                    <td className="px-2 py-2 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(doc)}`}>
-                        {getStatusIcon(doc)}
-                        <span className="ml-1 capitalize">{doc.file_url ? 'Completed' : doc.status}</span>
+                    
+                    {/* Payment Status */}
+                    <td className="px-3 py-3 text-xs">
+                      <span className="inline-flex px-2 py-1 font-medium rounded-full bg-green-100 text-green-800">
+                        Paid
                       </span>
                     </td>
-                    <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-900">
-                      ${doc.total_cost}.00
+                    
+                    {/* TRANSLATIONS */}
+                    <td className="px-3 py-3 text-xs">
+                      <span className={`inline-flex px-2 py-1 font-semibold rounded-full ${getStatusColor(doc.status || 'pending')}`}>
+                        {doc.status || 'N/A'}
+                      </span>
                     </td>
-                    <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(doc.created_at || '').toLocaleDateString()}
-                    </td>
-                    <td className="pl-2 pr-3 py-2 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => onViewDocument(doc)}
-                          className="text-tfe-blue-600 hover:text-tfe-blue-800 transition-colors p-1"
-                          title="View details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                    
+                    {/* AUTHENTICATOR */}
+                    <td className="px-3 py-3 text-xs">
+                      <div className="truncate">
+                        <div className="font-medium text-gray-900">
+                          {doc.authenticated_by_name || 'N/A'}
+                        </div>
+                        <div className="text-gray-500 truncate">
+                          {doc.authenticated_by_email || 'No authenticator'}
+                        </div>
                       </div>
+                    </td>
+                    
+                    {/* Date */}
+                    <td className="px-3 py-3 text-xs text-gray-500">
+                      {new Date(doc.created_at || '').toLocaleDateString('pt-BR')}
+                    </td>
+                    
+                    {/* Details */}
+                    <td className="px-3 py-3 text-xs text-right">
+                      <button
+                        onClick={() => onViewDocument(doc as Document)}
+                        className="text-blue-600 hover:text-blue-900 font-medium p-1"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="lg:hidden border-t border-gray-200">
-        <div className="divide-y divide-gray-200">
-          {filteredDocuments.map((doc) => (
-            <div key={doc.id} className="p-2 sm:p-3 hover:bg-gray-50">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5">
-                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-xs font-medium text-gray-900 truncate" title={doc.filename}>
-                        {doc.filename}
-                      </h4>
-                      <p className="text-[10px] sm:text-xs text-gray-500 font-mono truncate">
-                        {doc.user_id}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-x-2 sm:gap-x-3 gap-y-1 sm:gap-y-2 text-[11px] sm:text-xs text-gray-600">
-                    <div className="truncate">
-                      <span className="font-medium">Pages:</span> {doc.pages}
-                    </div>
-                    <div className="truncate">
-                      <span className="font-medium">Cost:</span> ${doc.total_cost}.00
-                    </div>
-                    <div className="truncate">
-                      <span className="font-medium">Date:</span> {new Date(doc.created_at || '').toLocaleDateString()}
-                    </div>
-                    <div>
-                      <span className="font-medium">Status:</span>
-                      <span className={`ml-1 inline-flex items-center px-1 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${getStatusColor(doc)}`}>
-                        {getStatusIcon(doc)}
-                        <span className="ml-0.5 capitalize truncate">{doc.file_url ? 'Completed' : doc.status}</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col items-end justify-between gap-1.5 flex-shrink-0">
-                  <button
-                    onClick={() => onViewDocument(doc)}
-                    className="text-tfe-blue-600 hover:text-tfe-blue-800 transition-colors p-0.5 sm:p-1"
-                    title="View details"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Empty State for Filtered Results */}
-      {filteredDocuments.length === 0 && documents.length > 0 && (
-        <div className="px-2 sm:px-4 lg:px-6 py-4 sm:py-6 text-center text-gray-500">
-          <Search className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 sm:mb-3 text-gray-300" />
-          <p className="text-sm sm:text-base font-medium">No documents found</p>
-          <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">Try adjusting your search or filters.</p>
-        </div>
+        </>
       )}
     </div>
   );
