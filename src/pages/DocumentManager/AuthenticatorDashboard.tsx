@@ -146,7 +146,10 @@ export default function AuthenticatorDashboard() {
             authenticated_by: verifiedDoc?.authenticated_by,
             authenticated_by_name: verifiedDoc?.authenticated_by_name,
             authenticated_by_email: verifiedDoc?.authenticated_by_email,
-            authentication_date: verifiedDoc?.authentication_date
+            authentication_date: verifiedDoc?.authentication_date,
+            // ✅ CORREÇÃO: Pegar idiomas da tabela correta
+            source_language: verifiedDoc?.source_language || doc.idioma_raiz,
+            target_language: verifiedDoc?.target_language || doc.idioma_destino
           };
           
           console.log(`[AuthenticatorDashboard] - Documento final:`, finalDoc);
@@ -284,8 +287,8 @@ export default function AuthenticatorDashboard() {
       user_id: doc.user_id,
       filename: doc.filename,
       translated_file_url: doc.translated_file_url,
-      source_language: doc.source_language,
-      target_language: doc.target_language,
+      source_language: doc.source_language || 'portuguese', // ✅ Fix: garantir valor não-nulo
+      target_language: doc.target_language || 'english', // ✅ Fix: garantir valor não-nulo
       pages: doc.pages,
       status: 'completed',
       total_cost: doc.total_cost,
@@ -354,14 +357,22 @@ export default function AuthenticatorDashboard() {
         authentication_date: new Date().toISOString()
       };
       
+      // Debug: verificar os valores dos idiomas antes da inserção
+      console.log('DEBUG: Idiomas antes da inserção em translated_documents:');
+      console.log('doc.source_language:', doc.source_language);
+      console.log('doc.target_language:', doc.target_language);
+      console.log('Valores finais que serão inseridos:');
+      console.log('source_language:', doc.source_language || 'Portuguese');
+      console.log('target_language:', doc.target_language || 'English');
+      
       // Inserir na tabela translated_documents com dados do autenticador
       const { error: insertError } = await supabase.from('translated_documents').insert({
         original_document_id: verificationId,
         user_id: doc.user_id,
         filename: state.file.name,
         translated_file_url: publicUrl,
-        source_language: doc.source_language,
-        target_language: doc.target_language,
+        source_language: doc.source_language || 'Portuguese',
+        target_language: doc.target_language || 'English',
         pages: doc.pages,
         status: 'completed',
         total_cost: doc.total_cost,

@@ -3,6 +3,7 @@ import { Clock, FileText, Download } from 'lucide-react';
 import { Document } from '../../App';
 import { db } from '../../lib/supabase'; // Supondo que 'db' seja um wrapper com helpers
 import { supabase } from '../../lib/supabase';
+import { useI18n } from '../../contexts/I18nContext';
 
 interface RecentActivityProps {
   documents: Document[];
@@ -14,6 +15,7 @@ interface DocumentStatus {
 }
 
 export function RecentActivity({ documents, onViewDocument }: RecentActivityProps) {
+  const { t } = useI18n();
   const [documentStatuses, setDocumentStatuses] = useState<DocumentStatus>({});
   const [loading, setLoading] = useState(true);
 
@@ -234,24 +236,24 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
     switch (currentStatus) {
       case 'pending':
         color = 'bg-yellow-100 text-yellow-800';
-        text = 'Pending';
+        text = t('dashboard.recentActivity.status.pending');
         break;
       case 'processing':
         color = 'bg-blue-100 text-blue-800';
-        text = 'In Progress';
+        text = t('dashboard.recentActivity.status.processing');
         break;
       case 'completed':
       case 'approved':
         color = 'bg-green-100 text-green-800';
-        text = 'Completed';
+        text = t('dashboard.recentActivity.status.completed');
         break;
       case 'rejected':
         color = 'bg-red-100 text-red-800';
-        text = 'Rejected';
+        text = t('dashboard.recentActivity.status.rejected');
         break;
       default:
         color = 'bg-gray-100 text-gray-600';
-        text = currentStatus || 'Unknown';
+        text = currentStatus || t('dashboard.recentActivity.status.unknown');
     }
     return <span className={`px-2 py-1 rounded-full text-xs font-semibold ${color}`}>{text}</span>;
   };
@@ -260,9 +262,9 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
     return (
       <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
         <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">No Recent Activity</h3>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard.recentActivity.noActivity.title')}</h3>
         <p className="text-gray-600 text-lg">
-          Your recent document activity will appear here once you start uploading documents.
+          {t('dashboard.recentActivity.noActivity.description')}
         </p>
       </div>
     );
@@ -270,11 +272,11 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
 
   return (
     <div className="bg-white rounded-2xl shadow-sm p-6">
-      <h3 className="text-2xl font-bold text-gray-900 mb-4">Recent Activity</h3>
+      <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('dashboard.recentActivity.title')}</h3>
       {loading ? (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-          <span className="ml-2 text-gray-600">Loading status...</span>
+          <span className="ml-2 text-gray-600">{t('dashboard.recentActivity.loading')}</span>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
@@ -297,13 +299,13 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
                       onClick={() => handleDownload(doc.file_url!, doc.filename)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-xs"
                     >
-                      <Download className="w-4 h-4" /> Download
+                      <Download className="w-4 h-4" /> {t('dashboard.recentActivity.actions.download')}
                     </button>
                     <button
                       onClick={() => handleViewDocument(doc)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-lg font-medium hover:bg-blue-50 transition-colors text-xs"
                     >
-                      View
+                      {t('dashboard.recentActivity.actions.view')}
                     </button>
                   </>
                 )}

@@ -67,14 +67,118 @@
     "welcome": "Welcome",
     "welcomeBack": "Welcome back",
     "overview": "Overview",
-    "stats": "Statistics",
-    "recentActivity": "Recent Activity",
-    "quickActions": "Quick Actions",
+    "statistics": {
+      "title": "Your Statistics",
+      "description": "Overview of your document translation activity",
+      "welcome": {
+        "title": "Welcome to your Dashboard!",
+        "description": "Upload your first document to start tracking progress and statistics of your translations."
+      },
+      "cards": {
+        "totalDocuments": "Total Documents",
+        "inProgress": "In Progress",
+        "completed": "Completed",
+        "totalSpent": "Total Spent",
+        "thisMonth": "This Month",
+        "successRate": "Success Rate",
+        "descriptions": {
+          "pagesTotal": "pages in total",
+          "pendingProgress": "pending,",
+          "inProgressText": "in progress",
+          "readyDownload": "Ready for download",
+          "avgPerDocument": "average per document",
+          "documentsUploaded": "Documents uploaded",
+          "completionRate": "Completion rate"
+        }
+      },
+      "features": {
+        "perPage": "Per page",
+        "turnaround": "Turnaround",
+        "accepted": "Accepted",
+        "translation": "Translation"
+      }
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "description": "Your recent document activity will appear here once you start uploading documents.",
+      "noActivity": {
+        "title": "No Recent Activity",
+        "description": "Your recent document activity will appear here once you start uploading documents."
+      },
+      "status": {
+        "pending": "Pending",
+        "processing": "Processing",
+        "inProgress": "In Progress",
+        "completed": "Completed",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "unknown": "Unknown"
+      },
+      "actions": {
+        "download": "Download",
+        "view": "View"
+      },
+      "loading": "Loading status..."
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "description": "Common tasks and shortcuts",
+      "actions": {
+        "upload": {
+          "title": "Upload Document",
+          "description": "Start a new translation project"
+        },
+        "download": {
+          "title": "Download Translations",
+          "description": "Access completed documents"
+        },
+        "verify": {
+          "title": "Verify Document",
+          "description": "Check document authenticity"
+        },
+        "translations": {
+          "title": "Translation Services",
+          "description": "Learn about our services"
+        },
+        "contact": {
+          "title": "Contact Support",
+          "description": "Get help and support"
+        }
+      },
+      "stats": {
+        "pricing": "Pricing",
+        "perPage": "per page",
+        "turnaround": "Turnaround",
+        "deliveryTime": "delivery time"
+      },
+      "features": {
+        "title": "✨ What you get:",
+        "list": {
+          "uscisAccepted": "USCIS accepted translations",
+          "officialCertification": "Official certification & authentication",
+          "digitalVerification": "Digital verification system",
+          "support": "24/7 customer support"
+        }
+      },
+      "help": {
+        "title": "Need Help?",
+        "description": "Check our FAQ or contact support for assistance with your translation needs.",
+        "buttons": {
+          "viewFaq": "View FAQ",
+          "contactSupport": "Contact Support"
+        }
+      }
+    },
     "totalDocuments": "Total Documents",
     "pendingDocuments": "Pending Documents",
     "completedDocuments": "Completed Documents",
     "processingDocuments": "Processing Documents",
-    "uploadDescription": "Upload your documents for professional translation services. All translations are certified and accepted by USCIS and US authorities."
+    "uploadDescription": "Upload your documents for professional translation services. All translations are certified and accepted by USCIS and US authorities.",
+    "notifications": {
+      "translationReady": "Your translation is ready!",
+      "download": "Download",
+      "close": "Close notification"
+    }
   },
   "documents": {
     "uploadDocument": "Upload Document",
@@ -389,6 +493,132 @@
       "excellence": {
         "title": "Excellence in Everything",
         "description": "Commitment to quality in every detail"
+      }
+    }
+  },
+  "upload": {
+    "pageTitle": "Document Translation",
+    "pageDescription": "Get your documents professionally translated with our secure and reliable service.",
+    "howItWorksTitle": "How It Works",
+    "steps": {
+      "upload": {
+        "title": "Upload Document",
+        "description": "Select your PDF or image file"
+      },
+      "choose": {
+        "title": "Choose Service",
+        "description": "Select translation type and language"
+      },
+      "receive": {
+        "title": "Get Translation",
+        "description": "Receive your translated document"
+      }
+    },
+    "form": {
+      "selectDocument": "1. Select Document",
+      "uploadArea": {
+        "clickToUpload": "Click to upload or drag and drop",
+        "supportedFormats": "PDF, JPG, PNG up to 10MB",
+        "removeFile": "Remove file"
+      },
+      "numberOfPages": "2. Number of Pages",
+      "translationType": "3. Translation Type",
+      "isBankStatement": "4. Is it a bank statement?",
+      "originalLanguage": "5. Original Document Language",
+      "targetLanguage": "6. Target Language (Translation To)",
+      "selectOptions": {
+        "yes": "Yes",
+        "no": "No"
+      }
+    },
+    "summary": {
+      "title": "Order Summary",
+      "fileName": "File",
+      "pages": "pages",
+      "page": "page",
+      "originalLang": "Original Language",
+      "targetLang": "Target Language",
+      "translationType": "Translation Type",
+      "bankStatement": "Bank Statement",
+      "pricing": {
+        "title": "Pricing",
+        "perPage": "per page",
+        "certified": "Certified",
+        "bankStatementFee": "Bank statement fee",
+        "totalCost": "Total Cost"
+      },
+      "guarantees": {
+        "title": "Our Guarantees",
+        "uscisAccepted": "USCIS Accepted",
+        "certifiedTranslation": "Certified Translation",
+        "fastDelivery": "Fast Delivery",
+        "moneyBack": "Money Back Guarantee"
+      },
+      "processPayment": "Process Payment"
+    },
+    "errors": {
+      "noFile": "No file selected",
+      "invalidFile": "Invalid file type",
+      "fileTooLarge": "File too large",
+      "uploadFailed": "Upload failed",
+      "paymentFailed": "Payment failed"
+    },
+    "success": {
+      "uploaded": "Document uploaded successfully!",
+      "processing": "Your document is being processed."
+    },
+    "serviceInfo": {
+      "title": "Service Information",
+      "translationTypes": {
+        "title": "Translation Types",
+        "certified": {
+          "title": "Certified",
+          "price": "$20/page",
+          "description": "Official certified translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.",
+          "features": [
+            "Official certification stamp",
+            "Notary public certification",
+            "USCIS accepted",
+            "Digital verification code",
+            "Legal document authentication",
+            "Court-accepted format",
+            "Enhanced verification",
+            "24-48 hour turnaround"
+          ]
+        }
+      },
+      "documentTypes": {
+        "title": "Document Types",
+        "regular": {
+          "title": "Regular Documents",
+          "price": "Standard rate",
+          "description": "Birth certificates, marriage certificates, diplomas, transcripts, and other official documents."
+        },
+        "bankStatements": {
+          "title": "Bank Statements",
+          "price": "+$5/page",
+          "description": "Additional verification and formatting required for financial documents.",
+          "features": [
+            "Enhanced verification process",
+            "Financial document formatting",
+            "Additional security measures"
+          ]
+        }
+      },
+      "supportedLanguages": {
+        "title": "Supported Languages",
+        "note": "All documents are translated to English for USCIS and US authority requirements."
+      },
+      "serviceFeatures": {
+        "title": "Service Features",
+        "features": [
+          "USCIS & Government Accepted",
+          "Official Certification",
+          "Digital Verification System",
+          "24-48 Hour Turnaround",
+          "Secure File Handling",
+          "24/7 Customer Support"
+        ]
       }
     }
   }

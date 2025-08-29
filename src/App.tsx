@@ -3,6 +3,7 @@ import { useAuth } from './hooks/useAuth';
 import { useDocuments, useAllDocuments } from './hooks/useDocuments';
 import { useFolders } from './hooks/useFolders';
 import { ToastProvider } from './contexts/ToastContext';
+import { I18nProvider } from './contexts/I18nContext';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { AdminLayout } from './components/AdminLayout';
@@ -300,8 +301,9 @@ function App() {
   };
 
   return (
-    <ToastProvider>
-      <div className="min-h-screen bg-gray-50">
+    <I18nProvider>
+      <ToastProvider>
+        <div className="min-h-screen bg-gray-50">
       {/* Mobile menu */}
       <MobileMenu />
       
@@ -522,6 +524,7 @@ function App() {
 
     </div>
     </ToastProvider>
+    </I18nProvider>
   );
 }
 

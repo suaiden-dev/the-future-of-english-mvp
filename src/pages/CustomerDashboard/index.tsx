@@ -42,6 +42,7 @@ export function CustomerDashboard({
   onViewDocument
 }: CustomerDashboardProps) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 
@@ -106,7 +107,7 @@ export function CustomerDashboard({
         <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-50 border border-green-200 rounded-xl shadow-lg flex items-center px-6 py-4 gap-4 animate-fade-in-up min-w-[320px] max-w-[90vw]">
           <CheckCircle className="w-7 h-7 text-green-600" />
           <div className="flex-1">
-            <div className="font-semibold text-green-900 text-base mb-1">Your translation is ready!</div>
+            <div className="font-semibold text-green-900 text-base mb-1">{t('dashboard.notifications.translationReady')}</div>
             <div className="text-green-800 text-sm truncate">{newCompletedDoc.filename}</div>
           </div>
           <button
@@ -116,12 +117,12 @@ export function CustomerDashboard({
               onViewDocument(newCompletedDoc);
             }}
           >
-            Download
+            {t('dashboard.notifications.download')}
           </button>
           <button
             className="ml-2 text-green-700 hover:text-green-900 text-xl font-bold"
             onClick={() => setShowToast(false)}
-            aria-label="Close notification"
+            aria-label={t('dashboard.notifications.close')}
           >
             ×
           </button>

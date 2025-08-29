@@ -68,13 +68,118 @@
     "welcomeBack": "Bem-vindo de volta",
     "overview": "Visão Geral",
     "stats": "Estatísticas",
-    "recentActivity": "Atividade Recente",
-    "quickActions": "Ações Rápidas",
+    "quickActions": {
+      "title": "Ações Rápidas",
+      "description": "Tarefas comuns e atalhos",
+      "actions": {
+        "upload": {
+          "title": "Enviar Documento",
+          "description": "Iniciar um novo projeto de tradução"
+        },
+        "download": {
+          "title": "Baixar Traduções",
+          "description": "Acessar documentos concluídos"
+        },
+        "verify": {
+          "title": "Verificar Documento",
+          "description": "Verificar autenticidade do documento"
+        },
+        "translations": {
+          "title": "Serviços de Tradução",
+          "description": "Saiba mais sobre nossos serviços"
+        },
+        "contact": {
+          "title": "Contatar Suporte",
+          "description": "Obter ajuda e suporte"
+        }
+      },
+      "stats": {
+        "pricing": "Preços",
+        "perPage": "por página",
+        "turnaround": "Prazo",
+        "deliveryTime": "tempo de entrega"
+      },
+      "features": {
+        "title": "✨ O que você recebe:",
+        "list": {
+          "uscisAccepted": "Traduções aceitas pela USCIS",
+          "officialCertification": "Certificação oficial e autenticação",
+          "digitalVerification": "Sistema de verificação digital",
+          "support": "Suporte ao cliente 24/7"
+        }
+      },
+      "help": {
+        "title": "Precisa de Ajuda?",
+        "description": "Consulte nossas Perguntas Frequentes ou entre em contato com o suporte para assistência com suas necessidades de tradução.",
+        "buttons": {
+          "viewFaq": "Ver FAQ",
+          "contactSupport": "Contatar Suporte"
+        }
+      }
+    },
     "totalDocuments": "Total de Documentos",
     "pendingDocuments": "Documentos Pendentes",
     "completedDocuments": "Documentos Concluídos",
     "processingDocuments": "Documentos em Processamento",
-    "uploadDescription": "Envie seus documentos para serviços de tradução profissional. Todas as traduções são certificadas e aceitas pela USCIS e autoridades dos EUA."
+    "uploadDescription": "Envie seus documentos para serviços de tradução profissional. Todas as traduções são certificadas e aceitas pela USCIS e autoridades dos EUA.",
+    "notifications": {
+      "translationReady": "Sua tradução está pronta!",
+      "download": "Baixar",
+      "close": "Fechar notificação"
+    },
+    "statistics": {
+      "title": "Suas Estatísticas",
+      "description": "Visão geral da sua atividade de tradução de documentos",
+      "welcome": {
+        "title": "Bem-vindo ao seu Painel!",
+        "description": "Envie seu primeiro documento para começar a acompanhar o progresso e estatísticas das suas traduções."
+      },
+      "cards": {
+        "totalDocuments": "Total de Documentos",
+        "inProgress": "Em Andamento",
+        "completed": "Concluídos",
+        "totalSpent": "Total Gasto",
+        "thisMonth": "Este Mês",
+        "successRate": "Taxa de Sucesso",
+        "descriptions": {
+          "pagesTotal": "páginas no total",
+          "pendingProgress": "pendente,",
+          "inProgressText": "em andamento",
+          "readyDownload": "Prontos para download",
+          "avgPerDocument": "média por documento",
+          "documentsUploaded": "Documentos enviados",
+          "completionRate": "Taxa de conclusão"
+        }
+      },
+      "features": {
+        "perPage": "Por página",
+        "turnaround": "Prazo",
+        "accepted": "Aceito",
+        "translation": "Tradução"
+      }
+    },
+    "recentActivity": {
+      "title": "Atividade Recente",
+      "description": "Sua atividade recente de documentos aparecerá aqui assim que você começar a enviar documentos.",
+      "noActivity": {
+        "title": "Nenhuma Atividade Recente",
+        "description": "Sua atividade recente de documentos aparecerá aqui assim que você começar a enviar documentos."
+      },
+      "status": {
+        "pending": "Pendente",
+        "processing": "Em Andamento",
+        "inProgress": "Em Progresso",
+        "completed": "Concluído",
+        "approved": "Aprovado",
+        "rejected": "Rejeitado",
+        "unknown": "Desconhecido"
+      },
+      "actions": {
+        "download": "Baixar",
+        "view": "Visualizar"
+      },
+      "loading": "Carregando status..."
+    }
   },
   "documents": {
     "uploadDocument": "Enviar Documento",
@@ -389,6 +494,132 @@
       "excellence": {
         "title": "Excelência em Tudo",
         "description": "Compromisso com a qualidade em cada detalhe"
+      }
+    }
+  },
+  "upload": {
+    "pageTitle": "Tradução de Documentos",
+    "pageDescription": "Tenha seus documentos traduzidos profissionalmente com nosso serviço seguro e confiável.",
+    "howItWorksTitle": "Como Funciona",
+    "steps": {
+      "upload": {
+        "title": "Enviar Documento",
+        "description": "Selecione seu arquivo PDF ou imagem"
+      },
+      "choose": {
+        "title": "Escolher Serviço",
+        "description": "Selecione tipo de tradução e idioma"
+      },
+      "receive": {
+        "title": "Receber Tradução",
+        "description": "Receba seu documento traduzido"
+      }
+    },
+    "form": {
+      "selectDocument": "1. Selecionar Documento",
+      "uploadArea": {
+        "clickToUpload": "Clique para enviar ou arraste e solte",
+        "supportedFormats": "PDF, JPG, PNG até 10MB",
+        "removeFile": "Remover arquivo"
+      },
+      "numberOfPages": "2. Número de Páginas",
+      "translationType": "3. Tipo de Tradução",
+      "isBankStatement": "4. É um extrato bancário?",
+      "originalLanguage": "5. Idioma Original do Documento",
+      "targetLanguage": "6. Idioma de Destino (Traduzir Para)",
+      "selectOptions": {
+        "yes": "Sim",
+        "no": "Não"
+      }
+    },
+    "summary": {
+      "title": "Resumo do Pedido",
+      "fileName": "Arquivo",
+      "pages": "páginas",
+      "page": "página",
+      "originalLang": "Idioma Original",
+      "targetLang": "Idioma de Destino",
+      "translationType": "Tipo de Tradução",
+      "bankStatement": "Extrato Bancário",
+      "pricing": {
+        "title": "Preços",
+        "perPage": "por página",
+        "certified": "Certificada",
+        "bankStatementFee": "Taxa de extrato bancário",
+        "totalCost": "Custo Total"
+      },
+      "guarantees": {
+        "title": "Nossas Garantias",
+        "uscisAccepted": "Aceito pela USCIS",
+        "certifiedTranslation": "Tradução Certificada",
+        "fastDelivery": "Entrega Rápida",
+        "moneyBack": "Garantia de Devolução"
+      },
+      "processPayment": "Processar Pagamento"
+    },
+    "errors": {
+      "noFile": "Nenhum arquivo selecionado",
+      "invalidFile": "Tipo de arquivo inválido",
+      "fileTooLarge": "Arquivo muito grande",
+      "uploadFailed": "Falha no envio",
+      "paymentFailed": "Falha no pagamento"
+    },
+    "success": {
+      "uploaded": "Documento enviado com sucesso!",
+      "processing": "Seu documento está sendo processado."
+    },
+    "serviceInfo": {
+      "title": "Informações do Serviço",
+      "translationTypes": {
+        "title": "Tipos de Tradução",
+        "certified": {
+          "title": "Certificada",
+          "price": "$20/página",
+          "description": "Tradução certificada oficial com autenticação legal completa para todos os fins, incluindo documentos judiciais, processos legais, imigração e aplicações USCIS.",
+          "features": [
+            "Carimbo de certificação oficial",
+            "Certificação de tabelião público",
+            "Aceito pela USCIS",
+            "Código de verificação digital",
+            "Autenticação de documento legal",
+            "Formato aceito por tribunais",
+            "Verificação aprimorada",
+            "Prazo de 24-48 horas"
+          ]
+        }
+      },
+      "documentTypes": {
+        "title": "Tipos de Documento",
+        "regular": {
+          "title": "Documentos Regulares",
+          "price": "Taxa padrão",
+          "description": "Certidões de nascimento, certidões de casamento, diplomas, históricos escolares e outros documentos oficiais."
+        },
+        "bankStatements": {
+          "title": "Extratos Bancários",
+          "price": "+$5/página",
+          "description": "Verificação adicional e formatação necessária para documentos financeiros.",
+          "features": [
+            "Processo de verificação aprimorado",
+            "Formatação de documentos financeiros",
+            "Medidas de segurança adicionais"
+          ]
+        }
+      },
+      "supportedLanguages": {
+        "title": "Idiomas Suportados",
+        "note": "Todos os documentos são traduzidos para o inglês para requisitos da USCIS e autoridades americanas."
+      },
+      "serviceFeatures": {
+        "title": "Características do Serviço",
+        "features": [
+          "Aceito pela USCIS e Governo",
+          "Certificação Oficial",
+          "Sistema de Verificação Digital",
+          "Prazo de 24-48 Horas",
+          "Manuseio Seguro de Arquivos",
+          "Suporte ao Cliente 24/7"
+        ]
       }
     }
   }

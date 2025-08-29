@@ -206,8 +206,8 @@ Deno.serve(async (req: Request) => {
         pages: record.pages || pages || paginas || 1,
         document_type: 'Certificado', // Sempre usar 'Certificado' em português
         total_cost: record.total_cost || total_cost || record.valor || valor || '0',
-        source_language: record.source_language || source_language || record.idioma_raiz || idioma_raiz || 'Portuguese',
-        target_language: record.target_language || target_language || record.idioma_destino || idioma_destino || 'English',
+        source_language: record.source_language || source_language || record.idioma_raiz || idioma_raiz,
+        target_language: record.target_language || target_language || record.idioma_destino || idioma_destino,
         is_bank_statement: record.is_bank_statement || is_bank_statement || false,
         client_name: record.client_name || client_name || null,
         // Adicionar informações sobre o tipo de arquivo
@@ -260,8 +260,8 @@ Deno.serve(async (req: Request) => {
         pages: pages || paginas || 1,
         document_type: 'Certificado', // Sempre usar 'Certificado' em português
         total_cost: total_cost || valor || '0',
-        source_language: source_language || idioma_raiz || 'Portuguese',
-        target_language: target_language || idioma_destino || 'English',
+        source_language: source_language || idioma_raiz,
+        target_language: target_language || idioma_destino,
         is_bank_statement: is_bank_statement || false,
         client_name: client_name || null,
         // Adicionar informações sobre o tipo de arquivo
