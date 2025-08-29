@@ -181,6 +181,13 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
       
       setUserTypeBreakdown(calculatedBreakdown);
 
+      // Debug dos valores calculados
+      console.log('🔍 Enhanced Stats:', enhancedStats);
+      console.log('🔍 Payment Stats:', paymentStats);
+      console.log('🔍 User Docs Revenue:', userDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0));
+      console.log('🔍 Auth Docs Revenue:', authenticatorDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0));
+      console.log('🔍 Total Docs Revenue:', allDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0));
+
     } catch (error) {
       console.error('💥 Erro geral ao carregar estatísticas:', error);
     } finally {
@@ -188,36 +195,32 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
     }
   };
 
-  const totalRevenue = documents.reduce((sum, doc) => sum + (doc.total_cost || 0), 0);
-
-  // Calcular valores reais primeiro
-  const realRevenue = enhancedStats && enhancedStats.total_revenue > 0 
-    ? enhancedStats.total_revenue 
-    : (paymentStats?.total_amount || totalRevenue);
+  // Calcular valores reais primeiro - usar sempre os dados do enhancedStats
+  const realRevenue = enhancedStats?.total_revenue ?? 0;
   
-  const realDocuments = enhancedStats && enhancedStats.total_documents > 0 
-    ? enhancedStats.total_documents 
-    : (paymentStats?.total_payments || documents.length);
+  const realDocuments = enhancedStats?.total_documents ?? 0;
 
   // Debug simplificado - removido para reduzir logs
   // console.log('🎯 DEBUG Estados atuais:', { loading });
 
-  // Calcular valores reais para todos os cards
-  const realUserUploads = enhancedStats && enhancedStats.user_uploads_total > 0 
-    ? enhancedStats.user_uploads_total 
-    : Math.floor((paymentStats?.total_payments || 0) * 0.8);
+  // Calcular valores reais para todos os cards - usar sempre os dados do enhancedStats
+  const realUserUploads = enhancedStats?.user_uploads_total ?? 0;
     
-  const realUserRevenue = enhancedStats && enhancedStats.user_uploads_revenue > 0 
-    ? enhancedStats.user_uploads_revenue 
-    : Math.floor((paymentStats?.total_amount || 0) * 0.8);
+  const realUserRevenue = enhancedStats?.user_uploads_revenue ?? 0;
     
-  const realAuthUploads = enhancedStats && enhancedStats.authenticator_uploads_total >= 0 
-    ? enhancedStats.authenticator_uploads_total 
-    : Math.floor((paymentStats?.total_payments || 0) * 0.2);
+  const realAuthUploads = enhancedStats?.authenticator_uploads_total ?? 0;
     
-  const realAuthRevenue = enhancedStats && enhancedStats.authenticator_uploads_revenue >= 0 
-    ? enhancedStats.authenticator_uploads_revenue 
-    : Math.floor((paymentStats?.total_amount || 0) * 0.2);
+  const realAuthRevenue = enhancedStats?.authenticator_uploads_revenue ?? 0;
+
+  // Debug dos valores finais
+  console.log('🎯 Final Values:', {
+    realRevenue,
+    realDocuments,
+    realUserUploads,
+    realUserRevenue,
+    realAuthUploads,
+    realAuthRevenue
+  });
 
 
   // Estatísticas principais com separação por tipo de usuário
@@ -338,7 +341,7 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
                     <div className="text-xs text-gray-500">Completed</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xs sm:text-sm font-medium text-gray-900">{breakdown.processing_documents || 0}</div>
+                    <div className="text-xs sm:text-sm font-medium text-gray-900">{(breakdown.processing_documents || 0) + (breakdown.pending_documents || 0)}</div>
                     <div className="text-xs text-gray-500">Processing</div>
                   </div>
                   <div className="text-center">

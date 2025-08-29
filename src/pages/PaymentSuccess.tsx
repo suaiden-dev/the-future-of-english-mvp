@@ -350,7 +350,9 @@ export function PaymentSuccess() {
           isBankStatement: sessionData.metadata.isBankStatement === 'true',
           sourceLanguage: sessionData.metadata.originalLanguage || 'Portuguese',
           targetLanguage: sessionData.metadata.targetLanguage || 'English',
-          clientName: sessionData.metadata.clientName || 'Cliente Padrão'
+          clientName: sessionData.metadata.clientName || 'Cliente Padrão',
+          sourceCurrency: sessionData.metadata.sourceCurrency || null,
+          targetCurrency: sessionData.metadata.targetCurrency || null
         })
       });
 
@@ -371,6 +373,14 @@ export function PaymentSuccess() {
       console.log('DEBUG: Metadados da sessão disponíveis:', sessionData.metadata);
       console.log('DEBUG: Original Language:', sessionData.metadata.originalLanguage);
       console.log('DEBUG: Target Language:', sessionData.metadata.targetLanguage);
+      console.log('DEBUG: Source Currency RAW:', sessionData.metadata.sourceCurrency);
+      console.log('DEBUG: Target Currency RAW:', sessionData.metadata.targetCurrency);
+      console.log('DEBUG: Is Bank Statement:', sessionData.metadata.isBankStatement);
+      console.log('DEBUG: VERIFICAÇÃO CRÍTICA - CAMPOS DE MOEDA:');
+      console.log('DEBUG: sessionData.metadata.sourceCurrency type:', typeof sessionData.metadata.sourceCurrency);
+      console.log('DEBUG: sessionData.metadata.targetCurrency type:', typeof sessionData.metadata.targetCurrency);
+      console.log('DEBUG: sourceCurrency value:', JSON.stringify(sessionData.metadata.sourceCurrency));
+      console.log('DEBUG: targetCurrency value:', JSON.stringify(sessionData.metadata.targetCurrency));
       
       // Garantir que a URL seja válida
       let finalUrl = publicUrl;
@@ -394,6 +404,8 @@ export function PaymentSuccess() {
         source_language: sessionData.metadata.originalLanguage || 'Portuguese',
         target_language: sessionData.metadata.targetLanguage || 'English',
         is_bank_statement: sessionData.metadata.isBankStatement === 'true',
+        source_currency: sessionData.metadata.sourceCurrency || null,
+        target_currency: sessionData.metadata.targetCurrency || null,
         document_id: finalDocumentId,
         // Campos padronizados para compatibilidade com n8n
         isPdf: true,
@@ -403,6 +415,11 @@ export function PaymentSuccess() {
       };
 
       console.log('DEBUG: Payload para send-translation-webhook:', webhookPayload);
+      console.log('DEBUG: VERIFICAÇÃO FINAL - MOEDAS NO PAYLOAD:');
+      console.log('DEBUG: source_currency no payload:', webhookPayload.source_currency);
+      console.log('DEBUG: target_currency no payload:', webhookPayload.target_currency);
+      console.log('DEBUG: Tipo source_currency:', typeof webhookPayload.source_currency);
+      console.log('DEBUG: Tipo target_currency:', typeof webhookPayload.target_currency);
 
       const webhookResponse = await fetch(`${supabaseUrl}/functions/v1/send-translation-webhook`, {
         method: 'POST',

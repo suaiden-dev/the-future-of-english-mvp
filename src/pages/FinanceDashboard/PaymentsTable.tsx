@@ -408,16 +408,24 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       console.log('🔍 Fetching document for payment:', payment);
       console.log('🔍 Payment method:', payment.payment_method);
       console.log('🔍 Document ID:', payment.document_id);
-      console.log('🔍 Is authenticator document?', payment.payment_method === 'upload');
 
       // Buscar dados reais do documento
       let documentData: any = null;
       let documentType: 'authenticator' | 'payment' = 'payment';
 
-      // Para documentos de autenticadores, buscar na tabela documents_to_be_verified
-      if (payment.payment_method === 'upload') {
-        console.log('📋 Buscando documento de autenticador na tabela documents_to_be_verified...');
+      // Primeiro tentar buscar na tabela documents para ver se existe
+      console.log('💳 Tentando buscar documento na tabela documents primeiro...');
+      const { data: documentCheck, error: docCheckError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('id', payment.document_id)
+        .single();
+
+      // Se não encontrou na tabela documents, é documento de autenticador
+      if (docCheckError || !documentCheck) {
+        console.log('📋 Documento não encontrado na tabela documents, buscando na documents_to_be_verified...');
         documentType = 'authenticator';
+        console.log('🔍 Document type detected:', documentType);
         
         const { data: document, error } = await supabase
           .from('documents_to_be_verified')
@@ -445,20 +453,10 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
           documentData = document;
         }
       } else {
-        // Para pagamentos tradicionais, buscar na tabela documents
-        console.log('💳 Buscando documento de pagamento na tabela documents...');
-        const { data: document, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('id', payment.document_id)
-          .single();
-
-        if (error) {
-          console.error('❌ Error fetching payment document:', error);
-          return;
-        }
-
-        documentData = document;
+        // Para pagamentos tradicionais, usar documento já encontrado
+        console.log('💳 Usando documento já encontrado na tabela documents');
+        console.log('🔍 Document type detected:', documentType);
+        documentData = documentCheck;
       }
 
       if (!documentData) {

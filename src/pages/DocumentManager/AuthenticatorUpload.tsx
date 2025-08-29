@@ -24,6 +24,10 @@ export default function AuthenticatorUpload() {
   const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
   const receiptInputRef = useRef<HTMLInputElement>(null);
   
+  // Estados para moedas do bank statement
+  const [sourceCurrency, setSourceCurrency] = useState('USD');
+  const [targetCurrency, setTargetCurrency] = useState('USD');
+  
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
@@ -52,6 +56,22 @@ export default function AuthenticatorUpload() {
     'Hebrew',
     'Japanese',
     'Korean',
+  ];
+  
+  const currencies = [
+    'USD',
+    'BRL',
+    'EUR',
+    'GBP',
+    'CAD',
+    'AUD',
+    'JPY',
+    'CHF',
+    'CNY',
+    'MXN',
+    'ARS',
+    'CLP',
+    'COP',
   ];
   
   const paymentMethods = [
@@ -176,7 +196,11 @@ export default function AuthenticatorUpload() {
         targetLanguage: idiomaDestino,
         userId: user?.id,
         clientName: clientName.trim(),
-        paymentMethod: paymentMethod
+        paymentMethod: paymentMethod,
+        ...(isExtrato && {
+          sourceCurrency: sourceCurrency,
+          targetCurrency: targetCurrency
+        })
       };
 
       console.log('DEBUG: Salvando arquivo no IndexedDB com metadata:', metadata);
@@ -195,7 +219,11 @@ export default function AuthenticatorUpload() {
         originalLanguage: idiomaRaiz,
         targetLanguage: idiomaDestino,
         documentType: 'Certificado',
-        paymentMethod: paymentMethod
+        paymentMethod: paymentMethod,
+        ...(isExtrato && {
+          sourceCurrency: sourceCurrency,
+          targetCurrency: targetCurrency
+        })
       };
       console.log('Payload final a ser enviado para webhook:', payload);
 
@@ -242,7 +270,11 @@ export default function AuthenticatorUpload() {
             payment_method: paymentMethod,
             receipt_url: customPayload?.receiptPath ? supabase.storage.from('documents').getPublicUrl(customPayload.receiptPath).data.publicUrl : null,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            ...(isExtrato && {
+              source_currency: sourceCurrency,
+              target_currency: targetCurrency
+            })
           })
           .select()
           .single();
@@ -270,7 +302,11 @@ export default function AuthenticatorUpload() {
         tipo_trad: tipoTrad,
         mimetype: selectedFile?.type,
         size: selectedFile?.size,
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
+        ...(isExtrato && {
+          source_currency: sourceCurrency,
+          target_currency: targetCurrency
+        })
       };
 
       console.log('DEBUG: Dados enviados para webhook:', webhookData);
@@ -420,7 +456,11 @@ export default function AuthenticatorUpload() {
         documentType: 'Certificado',
         isMobile: isMobile,
         paymentMethod: paymentMethod,
-        receiptPath: receiptPath
+        receiptPath: receiptPath,
+        ...(isExtrato && {
+          sourceCurrency: sourceCurrency,
+          targetCurrency: targetCurrency
+        })
       };
       console.log('DEBUG: Payload enviado:', payload);
       console.log('DEBUG: Payload.originalLanguage:', payload.originalLanguage);
@@ -620,6 +660,45 @@ export default function AuthenticatorUpload() {
                       <option value="yes">Yes</option>
                     </select>
                   </div>
+                  
+                  {/* Campos de moeda - aparecem apenas se for bank statement */}
+                  {isExtrato && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="source-currency">
+                          5a. Source Currency (Original Document)
+                        </label>
+                        <select
+                          id="source-currency"
+                          value={sourceCurrency}
+                          onChange={e => setSourceCurrency(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                          aria-label="Source currency"
+                        >
+                          {currencies.map(currency => (
+                            <option key={currency} value={currency}>{currency}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-currency">
+                          5b. Target Currency (Translation To)
+                        </label>
+                        <select
+                          id="target-currency"
+                          value={targetCurrency}
+                          onChange={e => setTargetCurrency(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                          aria-label="Target currency"
+                        >
+                          {currencies.map(currency => (
+                            <option key={currency} value={currency}>{currency}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="original-language">

@@ -21,6 +21,8 @@ export default function UploadDocument() {
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
   const [idiomaDestino, setIdiomaDestino] = useState('English');
+  const [sourceCurrency, setSourceCurrency] = useState('USD');
+  const [targetCurrency, setTargetCurrency] = useState('BRL');
   
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -50,6 +52,21 @@ export default function UploadDocument() {
     'Hebrew',
     'Japanese',
     'Korean',
+  ];
+
+  const currencies = [
+    'USD',
+    'BRL',
+    'EUR',
+    'GBP',
+    'CAD',
+    'AUD',
+    'JPY',
+    'KRW',
+    'CNY',
+    'INR',
+    'MXN',
+    'CHF',
   ];
   
   function calcularValor(pages: number, extrato: boolean) {
@@ -143,7 +160,9 @@ export default function UploadDocument() {
         originalLanguage: idiomaRaiz,
         targetLanguage: idiomaDestino,
         documentType: 'Certificado', // Enviar "Certificado" no payload
-        documentId: customPayload.documentId // Adicionar o documentId
+        documentId: customPayload.documentId, // Adicionar o documentId
+        sourceCurrency: isExtrato ? sourceCurrency : null,
+        targetCurrency: isExtrato ? targetCurrency : null
       };
 
       console.log('DEBUG: Payload completo criado:', payload);
@@ -219,7 +238,9 @@ export default function UploadDocument() {
           tipo_trad: tipoTrad,
           idioma_raiz: idiomaRaiz,
           idioma_destino: idiomaDestino,
-          is_bank_statement: isExtrato
+          is_bank_statement: isExtrato,
+          source_currency: isExtrato ? sourceCurrency : null,
+          target_currency: isExtrato ? targetCurrency : null
         })
         .select()
         .single();
@@ -243,7 +264,9 @@ export default function UploadDocument() {
             isBankStatement: isExtrato,
             originalLanguage: idiomaRaiz,
             targetLanguage: idiomaDestino,
-            userId: user.id
+            userId: user.id,
+            sourceCurrency: isExtrato ? sourceCurrency : null,
+            targetCurrency: isExtrato ? targetCurrency : null
           });
           
           console.log('DEBUG: Mobile - IndexedDB funcionou, usando fileId:', fileId);
@@ -271,7 +294,9 @@ export default function UploadDocument() {
             targetLanguage: idiomaDestino,
             documentType: 'Certificado', // Enviar "Certificado" no payload
             isMobile: true, // Mobile
-            documentId: newDocument.id // Adicionar documentId
+            documentId: newDocument.id, // Adicionar documentId
+            sourceCurrency: isExtrato ? sourceCurrency : null,
+            targetCurrency: isExtrato ? targetCurrency : null
           };
           console.log('Payload mobile com upload direto enviado para checkout:', payload);
           
@@ -289,7 +314,9 @@ export default function UploadDocument() {
           isBankStatement: isExtrato,
           originalLanguage: idiomaRaiz,
           targetLanguage: idiomaDestino,
-          userId: user.id
+          userId: user.id,
+          sourceCurrency: isExtrato ? sourceCurrency : null,
+          targetCurrency: isExtrato ? targetCurrency : null
         });
         
         console.log('DEBUG: Arquivo salvo no IndexedDB com ID:', fileId);
@@ -467,6 +494,45 @@ export default function UploadDocument() {
                       <option value="yes">{t('upload.form.selectOptions.yes')}</option>
                     </select>
                   </div>
+
+                  {/* Currency Fields - Only show when isExtrato is true */}
+                  {isExtrato && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="source-currency">
+                          Moeda de Origem
+                        </label>
+                        <select
+                          id="source-currency"
+                          value={sourceCurrency}
+                          onChange={e => setSourceCurrency(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                          aria-label="Source currency"
+                        >
+                          {currencies.map(currency => (
+                            <option key={currency} value={currency}>{currency}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-currency">
+                          Moeda de Destino
+                        </label>
+                        <select
+                          id="target-currency"
+                          value={targetCurrency}
+                          onChange={e => setTargetCurrency(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                          aria-label="Target currency"
+                        >
+                          {currencies.map(currency => (
+                            <option key={currency} value={currency}>{currency}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="original-language">

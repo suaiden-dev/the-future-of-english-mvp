@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     if (documentType) updateData.tipo_trad = documentType;
     if (isBankStatement !== undefined) updateData.is_bank_statement = isBankStatement;
     if (sourceLanguage) updateData.idioma_raiz = sourceLanguage;
-    if (targetLanguage) updateData.target_language = targetLanguage;
+    if (targetLanguage) updateData.idioma_destino = targetLanguage;
     if (clientName) updateData.client_name = clientName;
 
     // Atualizar documento na tabela documents

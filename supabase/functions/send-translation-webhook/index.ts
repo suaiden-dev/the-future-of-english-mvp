@@ -163,15 +163,20 @@ Deno.serve(async (req: Request) => {
       idioma_raiz,
       idioma_destino,
       is_bank_statement, 
-      client_name 
+      client_name,
+      source_currency,
+      target_currency
     } = parsedBody;
     
-    // Debug logs para idiomas
-    console.log("=== LANGUAGE DEBUG ===");
+    // Debug logs para idiomas e moedas
+    console.log("=== LANGUAGE & CURRENCY DEBUG ===");
     console.log("source_language:", source_language);
     console.log("target_language:", target_language);
     console.log("idioma_raiz:", idioma_raiz);
     console.log("idioma_destino:", idioma_destino);
+    console.log("source_currency:", source_currency);
+    console.log("target_currency:", target_currency);
+    console.log("is_bank_statement:", is_bank_statement);
     
     let payload;
 
@@ -210,6 +215,9 @@ Deno.serve(async (req: Request) => {
         target_language: record.target_language || target_language || record.idioma_destino || idioma_destino,
         is_bank_statement: record.is_bank_statement || is_bank_statement || false,
         client_name: record.client_name || client_name || null,
+        // Campos de moeda para bank statements
+        source_currency: record.source_currency || source_currency || null,
+        target_currency: record.target_currency || target_currency || null,
         // Adicionar informações sobre o tipo de arquivo
         isPdf: (record.mimetype || record.metadata?.mimetype || "application/octet-stream") === 'application/pdf',
         fileExtension: path.split('.').pop()?.toLowerCase(),
@@ -264,6 +272,9 @@ Deno.serve(async (req: Request) => {
         target_language: target_language || idioma_destino,
         is_bank_statement: is_bank_statement || false,
         client_name: client_name || null,
+        // Campos de moeda para bank statements
+        source_currency: source_currency || null,
+        target_currency: target_currency || null,
         // Adicionar informações sobre o tipo de arquivo
         isPdf: mimetype === 'application/pdf',
         fileExtension: filename.split('.').pop()?.toLowerCase(),

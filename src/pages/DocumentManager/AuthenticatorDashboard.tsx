@@ -223,15 +223,15 @@ export default function AuthenticatorDashboard() {
           user_id: document.user_id,
           filename: document.filename,
           file_url: document.file_url,
-          translated_file_url: document.translated_file_url,
-          source_language: document.source_language,
-          target_language: document.target_language,
+          translated_file_url: document.translated_file_url || document.file_url, // Usar arquivo original se não há tradução
+          source_language: document.source_language || (document as any).idioma_raiz || 'Portuguese',
+          target_language: document.target_language || (document as any).idioma_destino || 'English',
           pages: document.pages,
-          total_cost: document.total_cost,
+          total_cost: document.total_cost || (document as any).valor || 0,
           status: 'pending',
           is_bank_statement: document.is_bank_statement,
           verification_code: document.verification_code,
-          translation_status: document.translation_status
+          translation_status: document.translation_status || 'completed'
         })
         .select()
         .single();
@@ -286,7 +286,7 @@ export default function AuthenticatorDashboard() {
       original_document_id: doc.id,
       user_id: doc.user_id,
       filename: doc.filename,
-      translated_file_url: doc.translated_file_url,
+      translated_file_url: doc.translated_file_url || doc.file_url || '', // ✅ Fix: usar arquivo original se não há tradução
       source_language: doc.source_language || 'portuguese', // ✅ Fix: garantir valor não-nulo
       target_language: doc.target_language || 'english', // ✅ Fix: garantir valor não-nulo
       pages: doc.pages,
@@ -342,12 +342,62 @@ export default function AuthenticatorDashboard() {
       const verificationId = doc.verification_id || doc.id;
       
       // Buscar verification_code do documento original
-      const { data: originalDoc, error: fetchError } = await supabase
-        .from('documents_to_be_verified')
-        .select('verification_code')
-        .eq('id', verificationId)
-        .single();
-      if (fetchError || !originalDoc) throw new Error('Não foi possível obter o verification_code do documento original.');
+      let originalDoc;
+      let fetchError;
+      let finalVerificationId = verificationId;
+      
+      if (doc.verification_id) {
+        // Documento já está na tabela documents_to_be_verified
+        const { data, error } = await supabase
+          .from('documents_to_be_verified')
+          .select('verification_code')
+          .eq('id', verificationId)
+          .single();
+        originalDoc = data;
+        fetchError = error;
+      } else {
+        // Documento existe apenas na tabela documents - precisa criar entrada em documents_to_be_verified
+        const { data: docData, error: docError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('id', doc.id)
+          .single();
+          
+        if (docError || !docData) {
+          throw new Error('Não foi possível obter dados do documento original.');
+        }
+        
+        // Criar entrada na tabela documents_to_be_verified
+        const { data: newVerifiedDoc, error: createError } = await supabase
+          .from('documents_to_be_verified')
+          .insert({
+            user_id: docData.user_id,
+            filename: docData.filename,
+            pages: docData.pages,
+            total_cost: docData.total_cost || docData.valor || 0,
+            status: 'pending',
+            verification_code: docData.verification_code,
+            source_language: docData.idioma_raiz,
+            target_language: docData.idioma_destino,
+            is_bank_statement: docData.is_bank_statement || false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select('id, verification_code')
+          .single();
+          
+        if (createError || !newVerifiedDoc) {
+          throw new Error('Não foi possível criar entrada na tabela de verificação.');
+        }
+        
+        finalVerificationId = newVerifiedDoc.id;
+        originalDoc = newVerifiedDoc;
+        fetchError = null;
+      }
+      
+      if (fetchError || !originalDoc) {
+        throw new Error('Não foi possível obter o verification_code do documento original.');
+      }
       
       // Dados do autenticador
       const authData = {
@@ -367,7 +417,7 @@ export default function AuthenticatorDashboard() {
       
       // Inserir na tabela translated_documents com dados do autenticador
       const { error: insertError } = await supabase.from('translated_documents').insert({
-        original_document_id: verificationId,
+        original_document_id: finalVerificationId, // Usar o ID da tabela documents_to_be_verified
         user_id: doc.user_id,
         filename: state.file.name,
         translated_file_url: publicUrl,
@@ -383,13 +433,33 @@ export default function AuthenticatorDashboard() {
       if (insertError) throw insertError;
       
       // Atualizar status do documento original para 'completed' com dados do autenticador
-      await supabase
-        .from('documents_to_be_verified')
-        .update({ 
-          status: 'completed',
-          ...authData
-        })
-        .eq('id', verificationId);
+      if (doc.verification_id) {
+        // Documento estava na tabela documents_to_be_verified
+        await supabase
+          .from('documents_to_be_verified')
+          .update({ 
+            status: 'completed',
+            ...authData
+          })
+          .eq('id', doc.verification_id);
+      } else {
+        // Documento foi criado em documents_to_be_verified, atualizar ambas as tabelas
+        await supabase
+          .from('documents_to_be_verified')
+          .update({ 
+            status: 'completed',
+            ...authData
+          })
+          .eq('id', finalVerificationId);
+          
+        await supabase
+          .from('documents')
+          .update({ 
+            status: 'completed',
+            ...authData
+          })
+          .eq('id', doc.id);
+      }
       
       // Remover o documento da lista após sucesso
       setDocuments(docs => docs.filter(d => d.id !== doc.id));

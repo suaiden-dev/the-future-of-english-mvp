@@ -66,9 +66,47 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
     try {
       console.log('🔍 Buscando documento traduzido para:', { 
         user_id: document.user_id, 
-        filename: document.filename 
+        filename: document.filename,
+        document_type: document.document_type
       });
 
+      // Para documentos de autenticador, usar uma abordagem diferente
+      if (document.document_type === 'authenticator') {
+        console.log('🔄 Processando documento de autenticador...');
+        
+        // Primeiro buscar na tabela translated_documents por user_id e filename
+        const { data: translatedDocs, error: translatedError } = await supabase
+          .from('translated_documents')
+          .select('translated_file_url, filename, original_document_id')
+          .eq('user_id', document.user_id)
+          .eq('filename', document.filename)
+          .order('created_at', { ascending: false });
+
+        if (translatedError) {
+          console.error('❌ Erro ao buscar documentos traduzidos (autenticador):', translatedError);
+        } else if (translatedDocs && translatedDocs.length > 0) {
+          console.log('✅ Documento traduzido encontrado (autenticador):', translatedDocs[0]);
+          setTranslatedDoc(translatedDocs[0]);
+          return;
+        }
+        
+        // Se não encontrar, usar a URL do próprio documento se existir
+        if (document.translated_file_url) {
+          console.log('✅ Usando URL do documento de autenticador:', document.translated_file_url);
+          setTranslatedDoc({
+            translated_file_url: document.translated_file_url,
+            filename: document.filename
+          });
+          return;
+        }
+        
+        console.log('ℹ️ Nenhum arquivo traduzido encontrado para documento de autenticador');
+        return;
+      }
+
+      // Para documentos de pagamento, usar a lógica original
+      console.log('🔄 Processando documento de pagamento...');
+      
       // Primeiro, buscar o document_id na tabela documents_to_be_verified usando o filename
       const { data: verifiedDoc, error: verifiedError } = await supabase
         .from('documents_to_be_verified')
