@@ -207,44 +207,113 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
         console.log('DEBUG: Registro criado na tabela payments com sucesso:', paymentRecord.id);
       }
       
-      // Enviar notificação de pagamento
+      // Enviar notificação de pagamento para admins
       try {
-        console.log('DEBUG: Enviando notificação de pagamento');
+        console.log('DEBUG: Enviando notificação de pagamento Stripe para admins');
         
-        // Buscar dados do usuário
+        // Buscar dados do usuário que fez o pagamento
         const { data: user, error: userError } = await supabase
           .from('profiles')
           .select('name, email')
           .eq('id', userId)
           .single();
         
-        if (!userError && user) {
-          const notificationPayload = {
-            user_name: user.name || 'User',
-            user_email: user.email || '',
-            notification_type: 'Payment Notification',
-            timestamp: new Date().toISOString(),
-            amount: parseFloat(totalPrice || '0'),
-            currency: 'USD',
-            payment_id: session.id,
-            document_id: documentId,
-            filename: filename
-          };
-          
-          const webhookResponse = await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(notificationPayload)
-          });
-          
-          if (webhookResponse.ok) {
-            console.log('SUCCESS: Notificação de pagamento enviada');
-          } else {
-            console.error('WARNING: Falha ao enviar notificação de pagamento:', webhookResponse.status);
+        // Buscar emails dos admins
+        const { data: adminProfiles } = await supabase
+          .from('profiles')
+          .select('email')
+          .in('role', ['admin', 'finance', 'lush-admin']);
+
+        if (!userError && user && adminProfiles && adminProfiles.length > 0) {
+          // Enviar notificação para cada admin
+          for (const admin of adminProfiles) {
+            const notificationPayload = {
+              user_name: user.name || 'Unknown User',
+              user_email: admin.email,
+              notification_type: 'Payment Stripe',
+              timestamp: new Date().toISOString(),
+              filename: filename || 'Unknown Document',
+              document_id: documentId,
+              status: 'pagamento aprovado automaticamente'
+            };
+            
+            try {
+              const webhookResponse = await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(notificationPayload)
+              });
+              
+              if (webhookResponse.ok) {
+                console.log(`SUCCESS: Notificação Stripe enviada para admin: ${admin.email}`);
+              } else {
+                console.error(`WARNING: Falha ao enviar notificação Stripe para ${admin.email}:`, webhookResponse.status);
+              }
+            } catch (adminNotificationError) {
+              console.error(`ERROR: Erro ao enviar notificação para admin ${admin.email}:`, adminNotificationError);
+            }
           }
         }
       } catch (notificationError) {
-        console.error('WARNING: Erro ao enviar notificação de pagamento:', notificationError);
+        console.error('WARNING: Erro ao enviar notificações de pagamento Stripe:', notificationError);
+        // Não falhar o processo por causa da notificação
+      }
+      
+      // Notificar autenticadores sobre documento pendente (Stripe = aprovação automática)
+      try {
+        console.log('DEBUG: Enviando notificação para autenticadores sobre documento pendente');
+        
+        // Buscar todos os autenticadores
+        const { data: authenticators, error: authError } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .eq('role', 'authenticator');
+
+        if (!authError && authenticators && authenticators.length > 0) {
+          // Buscar dados do usuário que fez o pagamento
+          const { data: user } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('id', userId)
+            .single();
+
+          // Enviar notificação para cada autenticador
+          for (const authenticator of authenticators) {
+            const authNotificationPayload = {
+              user_name: authenticator.name || authenticator.email || 'Authenticator',
+              user_email: authenticator.email,
+              notification_type: 'Authenticator Pending Documents Notification',
+              timestamp: new Date().toISOString(),
+              filename: filename || 'Unknown Document',
+              document_id: documentId,
+              status: 'pending_authentication',
+              client_name: user?.name || 'Unknown Client',
+              client_email: user?.email || 'unknown@email.com'
+            };
+            
+            try {
+              const authWebhookResponse = await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(authNotificationPayload)
+              });
+              
+              if (authWebhookResponse.ok) {
+                console.log(`SUCCESS: Notificação para autenticador enviada: ${authenticator.email}`);
+              } else {
+                console.error(`WARNING: Falha ao enviar notificação para autenticador ${authenticator.email}:`, authWebhookResponse.status);
+              }
+            } catch (authNotificationError) {
+              console.error(`ERROR: Erro ao enviar notificação para autenticador ${authenticator.email}:`, authNotificationError);
+            }
+          }
+          
+          console.log(`SUCCESS: Notificações enviadas para ${authenticators.length} autenticadores`);
+        } else {
+          console.log('INFO: Nenhum autenticador encontrado para notificar');
+        }
+      } catch (authNotificationError) {
+        console.error('WARNING: Erro ao enviar notificações para autenticadores:', authNotificationError);
         // Não falhar o processo por causa da notificação
       }
       

@@ -36,6 +36,14 @@ class FileStorage {
   async storeFile(file: File, metadata?: any): Promise<string> {
     console.log('Storing file in IndexedDB:', file.name, 'Size:', file.size);
     
+    // Executar limpeza antes de armazenar novo arquivo
+    try {
+      await this.cleanupOldFiles();
+    } catch (cleanupError) {
+      console.warn('Failed to cleanup old files:', cleanupError);
+      // Continue mesmo se a limpeza falhar
+    }
+    
     const db = await this.openDB();
     const transaction = db.transaction([this.storeName], 'readwrite');
     const store = transaction.objectStore(this.storeName);
@@ -135,6 +143,38 @@ class FileStorage {
         reject(request.error);
       };
     });
+  }
+
+  async cleanupOldFiles(): Promise<void> {
+    console.log('🧹 Starting IndexedDB cleanup...');
+    
+    const files = await this.getAllFiles();
+    const now = Date.now();
+    const maxAge = 24 * 60 * 60 * 1000; // 24 horas
+    const maxFiles = 5; // Manter no máximo 5 arquivos
+    
+    // Remover arquivos mais antigos que 24 horas
+    const oldFiles = files.filter(file => (now - file.timestamp) > maxAge);
+    for (const file of oldFiles) {
+      await this.deleteFile(file.id);
+      console.log(`🗑️ Removed old file: ${file.file.name} (${Math.round((now - file.timestamp) / 1000 / 60)} minutes old)`);
+    }
+    
+    // Se ainda há mais que o máximo, remover os mais antigos
+    const remainingFiles = files.filter(file => (now - file.timestamp) <= maxAge);
+    if (remainingFiles.length > maxFiles) {
+      // Ordenar por timestamp (mais antigos primeiro)
+      remainingFiles.sort((a, b) => a.timestamp - b.timestamp);
+      const filesToRemove = remainingFiles.slice(0, remainingFiles.length - maxFiles);
+      
+      for (const file of filesToRemove) {
+        await this.deleteFile(file.id);
+        console.log(`🗑️ Removed excess file: ${file.file.name}`);
+      }
+    }
+    
+    const finalCount = await this.getAllFiles();
+    console.log(`✅ Cleanup complete. Files: ${files.length} → ${finalCount.length}`);
   }
 
   async clearAllFiles(): Promise<void> {

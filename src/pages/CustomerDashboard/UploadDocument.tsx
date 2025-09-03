@@ -5,10 +5,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { fileStorage } from '../../utils/fileStorage';
 import { generateUniqueFileName } from '../../utils/fileUtils';
 import { useI18n } from '../../contexts/I18nContext';
+import { PaymentMethodModal } from '../../components/PaymentMethodModal';
+import { ZellePaymentModal } from '../../components/ZellePaymentModal';
+import { useNavigate } from 'react-router-dom';
 
 export default function UploadDocument() {
   const { user } = useAuth();
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pages, setPages] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
@@ -23,6 +27,11 @@ export default function UploadDocument() {
   const [idiomaDestino, setIdiomaDestino] = useState('English');
   const [sourceCurrency, setSourceCurrency] = useState('USD');
   const [targetCurrency, setTargetCurrency] = useState('BRL');
+  
+  // Estados para os modais de pagamento
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showZelleModal, setShowZelleModal] = useState(false);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -251,14 +260,92 @@ export default function UploadDocument() {
       }
 
       console.log('DEBUG: Documento criado no banco:', newDocument.id);
+      
+      // Armazenar o ID do documento para usar nos modais de pagamento
+      setCurrentDocumentId(newDocument.id);
+      
+      // Mostrar modal de seleção de método de pagamento
+      setShowPaymentModal(true);
 
+    } catch (err: any) {
+      console.error('ERROR: Erro ao preparar documento:', err);
+      setError(err.message || 'Erro ao preparar documento');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Função para redirecionar para checkout Zelle COM UPLOAD
+  const handleZelleRedirect = async (amount: number) => {
+    if (!selectedFile || !user || !currentDocumentId) return;
+    
+    try {
+      setIsUploading(true);
+      setError(null);
+      
+      console.log('🚀 Uploading document for Zelle payment...');
+      
+      // Fazer upload do arquivo para o Storage
+      const fileName = generateUniqueFileName(selectedFile.name, user.id);
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, selectedFile);
+
+      if (uploadError) {
+        console.error('❌ Storage upload error:', uploadError);
+        throw new Error('Falha ao fazer upload do documento');
+      }
+
+      // Obter URL público
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
+      console.log('✅ Document uploaded successfully:', publicUrl);
+
+      // Atualizar o documento no banco com file_url
+      const { error: updateError } = await supabase
+        .from('documents')
+        .update({ file_url: publicUrl })
+        .eq('id', currentDocumentId);
+
+      if (updateError) {
+        console.error('❌ Database update error:', updateError);
+        throw new Error('Falha ao atualizar documento no banco');
+      }
+
+      console.log('✅ Document updated in database with file_url');
+
+      // Agora redirecionar para Zelle checkout
+      const params = new URLSearchParams({
+        document_id: currentDocumentId,
+        amount: amount.toString(),
+        filename: selectedFile.name,
+        pages: pages?.toString() || '1'
+      });
+      
+      navigate(`/zelle-checkout?${params.toString()}`);
+      
+    } catch (err: any) {
+      console.error('❌ Error preparing Zelle payment:', err);
+      setError(err.message || 'Erro ao preparar pagamento Zelle');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDirectStripePayment = async () => {
+    
+    try {
+      setIsUploading(true);
+      setError(null);
+      
       if (isMobile) {
         // Mobile: Tentar usar IndexedDB primeiro, se falhar usar upload direto
         try {
-          console.log('DEBUG: Mobile - tentando usar IndexedDB');
           const fileId = await fileStorage.storeFile(selectedFile, {
             documentType: 'Certificado',
-            certification: true, // Always certified now
+            certification: true,
             notarization: tipoTrad === 'Certified',
             pageCount: pages,
             isBankStatement: isExtrato,
@@ -269,46 +356,38 @@ export default function UploadDocument() {
             targetCurrency: isExtrato ? targetCurrency : null
           });
           
-          console.log('DEBUG: Mobile - IndexedDB funcionou, usando fileId:', fileId);
-          await handleDirectPayment(fileId, { documentId: newDocument.id });
+          await handleDirectPayment(fileId, { documentId: currentDocumentId });
         } catch (indexedDBError) {
-          console.log('DEBUG: Mobile - IndexedDB falhou, usando upload direto:', indexedDBError);
-          
           // Fallback: Upload direto para Supabase Storage
           const filePath = generateUniqueFileName(selectedFile.name, user.id);
-          console.log('DEBUG: Mobile - Upload path sanitizado:', filePath);
           const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
           if (uploadError) throw uploadError;
           
-          // Payload para mobile com upload direto
           const payload = {
             pages,
-            isCertified: true, // Always certified now
+            isCertified: true,
             isNotarized: tipoTrad === 'Certified',
             isBankStatement: isExtrato,
-            filePath, // Caminho do arquivo no Supabase Storage
+            filePath,
             userId: user.id,
-            userEmail: user.email, // Adicionar email do usuário
+            userEmail: user.email,
             filename: selectedFile?.name,
             originalLanguage: idiomaRaiz,
             targetLanguage: idiomaDestino,
-            documentType: 'Certificado', // Enviar "Certificado" no payload
-            isMobile: true, // Mobile
-            documentId: newDocument.id, // Adicionar documentId
+            documentType: 'Certificado',
+            isMobile: true,
+            documentId: currentDocumentId,
             sourceCurrency: isExtrato ? sourceCurrency : null,
             targetCurrency: isExtrato ? targetCurrency : null
           };
-          console.log('Payload mobile com upload direto enviado para checkout:', payload);
           
-          // Chama o pagamento direto com payload customizado
           await handleDirectPayment('', payload);
         }
       } else {
         // Desktop: Salvar arquivo no IndexedDB primeiro
-        console.log('DEBUG: Desktop - salvando arquivo no IndexedDB');
         const fileId = await fileStorage.storeFile(selectedFile, {
           documentType: 'Certificado',
-          certification: true, // Always certified now
+          certification: true,
           notarization: tipoTrad === 'Certified',
           pageCount: pages,
           isBankStatement: isExtrato,
@@ -319,14 +398,11 @@ export default function UploadDocument() {
           targetCurrency: isExtrato ? targetCurrency : null
         });
         
-        console.log('DEBUG: Arquivo salvo no IndexedDB com ID:', fileId);
-        
-        // Ir direto para o pagamento com Stripe
-        await handleDirectPayment(fileId, { documentId: newDocument.id });
+        await handleDirectPayment(fileId, { documentId: currentDocumentId });
       }
       
     } catch (err: any) {
-      console.error('ERROR: Erro ao processar pagamento:', err);
+      console.error('ERROR: Erro ao processar pagamento Stripe:', err);
       setError(err.message || 'Erro ao processar pagamento');
     } finally {
       setIsUploading(false);
@@ -500,7 +576,7 @@ export default function UploadDocument() {
                     <>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="source-currency">
-                          Moeda de Origem
+                          4.1. Source Currency (Original Document)
                         </label>
                         <select
                           id="source-currency"
@@ -517,7 +593,7 @@ export default function UploadDocument() {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-currency">
-                          Moeda de Destino
+                          4.2. Target Currency (Translation To)
                         </label>
                         <select
                           id="target-currency"
@@ -756,6 +832,37 @@ export default function UploadDocument() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Seleção de Método de Pagamento */}
+      <PaymentMethodModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSelectStripe={() => {
+          setShowPaymentModal(false);
+          handleDirectStripePayment();
+        }}
+        onSelectZelle={() => {
+          setShowPaymentModal(false);
+          handleZelleRedirect(calcularValor(pages, isExtrato));
+        }}
+        amount={calcularValor(pages, isExtrato)}
+      />
+
+      {/* Modal de Pagamento Zelle */}
+      {currentDocumentId && (
+        <ZellePaymentModal
+          isOpen={showZelleModal}
+          onClose={() => setShowZelleModal(false)}
+          amount={calcularValor(pages, isExtrato)}
+          documentId={currentDocumentId}
+          userId={user?.id || ''}
+          documentDetails={{
+            filename: selectedFile?.name || '',
+            pages: pages,
+            translationType: tipoTrad
+          }}
+        />
+      )}
     </div>
   );
 } 

@@ -3,6 +3,8 @@ import { Upload, XCircle, FileText, CheckCircle, AlertCircle, Info, Shield, Doll
 import { supabase } from '../../lib/supabase';
 import { fileStorage } from '../../utils/fileStorage';
 import { generateUniqueFileName } from '../../utils/fileUtils';
+import { PaymentMethodModal } from '../../components/PaymentMethodModal';
+import { ZellePaymentModal } from '../../components/ZellePaymentModal';
 
 interface DocumentUploadModalProps {
   isOpen: boolean;
@@ -24,6 +26,11 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
   const [tipoTrad, setTipoTrad] = useState<'Certified'>('Certified');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
+  
+  // Estados para os modais de pagamento
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showZelleModal, setShowZelleModal] = useState(false);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   
   const translationTypes = [
     { value: 'Certified', label: 'Certified' },
@@ -229,13 +236,65 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
     setIsUploading(true);
     
     try {
+      // Criar documento no banco primeiro
+      console.log('DEBUG: Criando documento no banco antes do pagamento');
+      const { data: newDocument, error: createError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: userId,
+          filename: selectedFile.name,
+          pages: pages,
+          status: 'draft',
+          total_cost: calculateValue(pages, isExtrato),
+          verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+          is_authenticated: true,
+          upload_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          tipo_trad: tipoTrad,
+          idioma_raiz: idiomaRaiz,
+          idioma_destino: 'English',
+          is_bank_statement: isExtrato,
+          current_folder_id: currentFolderId || null
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('ERROR: Erro ao criar documento no banco:', createError);
+        throw new Error('Erro ao criar documento no banco de dados');
+      }
+
+      console.log('DEBUG: Documento criado no banco:', newDocument.id);
+      
+      // Armazenar o ID do documento para usar nos modais de pagamento
+      setCurrentDocumentId(newDocument.id);
+      
+      // Mostrar modal de seleção de método de pagamento
+      setShowPaymentModal(true);
+
+    } catch (err: any) {
+      console.error('ERROR: Erro ao preparar documento:', err);
+      setError(err.message || 'Erro ao preparar documento');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Função para processar pagamento com Stripe
+  const handleStripePayment = async () => {
+    if (!selectedFile || !currentDocumentId) return;
+    
+    try {
+      setIsUploading(true);
+      setError(null);
+      
       if (isMobile) {
-        // Mobile: SEMPRE tentar usar IndexedDB primeiro (igual ao desktop)
+        // Mobile: Tentar usar IndexedDB primeiro
         try {
-          console.log('DEBUG: Mobile - tentando usar IndexedDB (igual ao desktop)');
           const fileId = await fileStorage.storeFile(selectedFile, {
             documentType: tipoTrad,
-            certification: true, // Always certified now
+            certification: true,
             notarization: tipoTrad === 'Certified',
             pageCount: pages,
             isBankStatement: isExtrato,
@@ -244,51 +303,36 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
             currentFolderId
           });
           
-          console.log('DEBUG: Mobile - IndexedDB funcionou, usando fileId:', fileId);
           await handleDirectPayment(fileId);
         } catch (indexedDBError) {
-          console.log('DEBUG: Mobile - IndexedDB falhou, tentando abordagem alternativa:', indexedDBError);
+          // Fallback: Upload direto para Supabase Storage
+          const filePath = generateUniqueFileName(selectedFile.name, userId);
+          const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
+          if (uploadError) throw uploadError;
           
-          // Fallback: Tentar usar localStorage ou sessionStorage como alternativa
-          try {
-            console.log('DEBUG: Mobile - Tentando usar localStorage como fallback');
-            
-            // Criar um ID único para o arquivo
-            const fallbackFileId = 'mobile_fallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            
-            // Salvar informações básicas do arquivo no localStorage
-            const fileInfo = {
-              name: selectedFile.name,
-              type: selectedFile.type,
-              size: selectedFile.size,
-              lastModified: selectedFile.lastModified,
-              documentType: tipoTrad,
-              certification: true, // Always certified now
-              notarization: tipoTrad === 'Certified',
-              pageCount: pages,
-              isBankStatement: isExtrato,
-              originalLanguage: idiomaRaiz,
-              userId,
-              currentFolderId
-            };
-            
-            localStorage.setItem(fallbackFileId, JSON.stringify(fileInfo));
-            console.log('DEBUG: Mobile - Arquivo salvo no localStorage como fallback:', fallbackFileId);
-            
-            // Usar o fallbackFileId como se fosse um fileId normal
-            await handleDirectPayment(fallbackFileId);
-            
-          } catch (fallbackError) {
-            console.error('ERROR: Mobile - Todas as opções de armazenamento falharam:', fallbackError);
-            throw new Error('Não foi possível salvar o arquivo no dispositivo. Tente novamente ou use um dispositivo diferente.');
-          }
+          const payload = {
+            pages,
+            isCertified: true,
+            isNotarized: tipoTrad === 'Certified',
+            isBankStatement: isExtrato,
+            filePath,
+            userId: userId,
+            userEmail: userEmail,
+            filename: selectedFile?.name,
+            originalLanguage: idiomaRaiz,
+            targetLanguage: 'English',
+            documentType: 'Certificado',
+            isMobile: true,
+            documentId: currentDocumentId
+          };
+          
+          await handleDirectPayment('', payload);
         }
       } else {
         // Desktop: Usar IndexedDB
-        console.log('DEBUG: Desktop - usando IndexedDB');
         const fileId = await fileStorage.storeFile(selectedFile, {
           documentType: tipoTrad,
-          certification: true, // Always certified now
+          certification: true,
           notarization: tipoTrad === 'Certified',
           pageCount: pages,
           isBankStatement: isExtrato,
@@ -297,11 +341,11 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
           currentFolderId
         });
         
-        console.log('DEBUG: Desktop - IndexedDB funcionou, usando fileId:', fileId);
         await handleDirectPayment(fileId);
       }
+      
     } catch (err: any) {
-      console.error('ERROR: Erro ao processar pagamento:', err);
+      console.error('ERROR: Erro ao processar pagamento Stripe:', err);
       setError(err.message || 'Erro ao processar pagamento');
     } finally {
       setIsUploading(false);
@@ -650,6 +694,38 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
           </div>
         </div>
       </div>
+
+      {/* Modal de Seleção de Método de Pagamento */}
+      <PaymentMethodModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSelectStripe={() => {
+          setShowPaymentModal(false);
+          handleStripePayment();
+        }}
+        onSelectZelle={() => {
+          setShowPaymentModal(false);
+          setShowZelleModal(true);
+        }}
+        amount={calculateValue(pages, isExtrato)}
+      />
+
+      {/* Modal de Pagamento Zelle */}
+      {currentDocumentId && (
+        <ZellePaymentModal
+          isOpen={showZelleModal}
+          onClose={() => setShowZelleModal(false)}
+          amount={calculateValue(pages, isExtrato)}
+          documentId={currentDocumentId}
+          userId={userId}
+          documentDetails={{
+            filename: selectedFile?.name || '',
+            pages: pages,
+            translationType: tipoTrad
+          }}
+        />
+      )}
+
       <style>{`
         .animate-fade-in { animation: fadeIn 0.2s ease; }
         .animate-slide-up { animation: slideUp 0.3s cubic-bezier(.4,2,.6,1); }

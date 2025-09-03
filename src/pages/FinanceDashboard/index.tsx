@@ -5,9 +5,10 @@ import { PaymentStatsCards } from './PaymentStatsCards';
 import { FinanceCharts } from './FinanceCharts';
 import ReportsTable from './ReportsTable';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
+import { ZelleReceiptsAdmin } from '../../components/ZelleReceiptsAdmin';
 import { DateRange } from '../../components/DateRangeFilter';
 import { Document } from '../../App';
-import { Home, CreditCard, FileText } from 'lucide-react';
+import { Home, CreditCard, FileText, Receipt } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface FinanceDashboardProps {
@@ -18,7 +19,7 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'reports'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'reports' | 'zelle-receipts'>('overview');
   const [dateRange] = useState<DateRange>({
     startDate: null,
     endDate: null,
@@ -32,6 +33,8 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
       setActiveTab('payments');
     } else if (hash === '#reports') {
       setActiveTab('reports');
+    } else if (hash === '#zelle-receipts') {
+      setActiveTab('zelle-receipts');
     } else {
       // Se não há hash específico, vai para Overview (padrão)
       setActiveTab('overview');
@@ -42,7 +45,7 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
     setSelectedDocument(null);
   };
 
-  const handleTabChange = (tab: 'overview' | 'payments' | 'reports') => {
+  const handleTabChange = (tab: 'overview' | 'payments' | 'reports' | 'zelle-receipts') => {
     setActiveTab(tab);
     // Atualizar a URL para refletir a aba ativa
     if (tab === 'overview') {
@@ -55,6 +58,7 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'zelle-receipts', label: 'Zelle Receipts', icon: Receipt },
     { id: 'reports', label: 'Reports', icon: FileText },
   ];
 
@@ -90,7 +94,7 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabChange(tab.id as 'overview' | 'payments' | 'reports')}
+                  onClick={() => handleTabChange(tab.id as 'overview' | 'payments' | 'reports' | 'zelle-receipts')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-tfe-blue-500 text-tfe-blue-600'
@@ -123,6 +127,12 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
             </div>
           )}
 
+          {activeTab === 'zelle-receipts' && (
+            <div className="space-y-4 sm:space-y-6 w-full">
+              <ZelleReceiptsAdmin />
+            </div>
+          )}
+
           {activeTab === 'reports' && (
             <div className="space-y-4 sm:space-y-6 w-full">
               <ReportsTable />
@@ -130,10 +140,17 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
           )}
         </div>
       </div>
-      <DocumentDetailsModal 
-        document={selectedDocument}
-        onClose={handleCloseModal}
-      />
+      {selectedDocument && (
+        <DocumentDetailsModal 
+          document={{
+            ...selectedDocument,
+            status: (selectedDocument.status === 'pending' || selectedDocument.status === 'processing' || selectedDocument.status === 'completed') 
+              ? selectedDocument.status 
+              : 'pending'
+          } as Document}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 }

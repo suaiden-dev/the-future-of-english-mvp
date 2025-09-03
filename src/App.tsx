@@ -23,6 +23,7 @@ import ResetPassword from './pages/ResetPassword';
 import DocumentManager from './pages/DocumentManager';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentCancelled } from './pages/PaymentCancelled';
+import { ZelleCheckout } from './pages/ZelleCheckout';
 import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, LogOut, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, CheckCircle } from 'lucide-react';
 
 import { Page } from './types/Page';
@@ -327,6 +328,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+          <Route path="/zelle-checkout" element={<ZelleCheckout />} />
           
           {/* Dashboard routes for regular users */}
           <Route path="/dashboard/*" element={user && user.role === 'user' ? (

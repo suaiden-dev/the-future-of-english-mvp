@@ -15,6 +15,7 @@ interface ExtendedDocument extends Omit<Document, 'client_name' | 'payment_metho
   source_language?: string;
   target_language?: string;
   payment_method?: string | null;
+  payment_status?: string | null;
   client_name?: string | null;
 }
 
@@ -55,10 +56,10 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
         console.error('Error loading verified documents:', verifiedError);
       }
 
-      // Buscar dados de pagamentos para obter payment_method
+      // Buscar dados de pagamentos para obter payment_method e status
       const { data: paymentsData, error: paymentsError } = await supabase
-        .from('stripe_sessions')
-        .select('document_id, payment_method, status, amount, currency');
+        .from('payments')
+        .select('document_id, payment_method, status, amount, currency, created_at');
 
       if (paymentsError) {
         console.error('Error loading payments data:', paymentsError);
@@ -68,6 +69,11 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
       const documentsWithCorrectStatus = mainDocuments?.map(doc => {
         const verifiedDoc = verifiedDocuments?.find(vDoc => vDoc.filename === doc.filename);
         const paymentInfo = paymentsData?.find(payment => payment.document_id === doc.id);
+        
+        // Debug log para verificar client_name
+        if (verifiedDoc?.client_name) {
+          console.log(`[DocumentsTable] Cliente encontrado: ${verifiedDoc.client_name} para arquivo: ${doc.filename}`, { verifiedDoc });
+        }
         
         // Se existe em documents_to_be_verified, usar dados de lá
         if (verifiedDoc) {
@@ -84,7 +90,8 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
             source_language: verifiedDoc.source_language,
             target_language: verifiedDoc.target_language,
             payment_method: paymentInfo?.payment_method || doc.payment_method || null,
-            client_name: doc.client_name || null,
+            payment_status: paymentInfo?.status || (verifiedDoc.authenticated_by_name ? 'completed' : null),
+            client_name: verifiedDoc.client_name || doc.client_name || null,
           };
         } else {
           // Se não existe em documents_to_be_verified, usar dados originais
@@ -95,6 +102,7 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
             user_phone: doc.profiles?.phone || null,
             document_type: 'regular' as const,
             payment_method: paymentInfo?.payment_method || doc.payment_method || null,
+            payment_status: paymentInfo?.status || null,
             client_name: doc.client_name || null,
           };
         }
@@ -156,12 +164,37 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
     });
   }, [extendedDocuments, searchTerm, statusFilter, dateFilter]);
 
+  // Define a cor de fundo e texto com base no status de pagamento
+  const getPaymentStatusColor = (paymentStatus: string | null | undefined) => {
+    switch (paymentStatus) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'pending_verification': return 'bg-orange-100 text-orange-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      case 'refunded': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Formata o texto do status de pagamento
+  const getPaymentStatusText = (paymentStatus: string | null | undefined) => {
+    switch (paymentStatus) {
+      case 'completed': return 'Paid';
+      case 'pending': return 'Pending';
+      case 'pending_verification': return 'Pending Verification';
+      case 'failed': return 'Failed';
+      case 'refunded': return 'Refunded';
+      default: return 'Unknown';
+    }
+  };
+
   // Define a cor de fundo e texto com base no status do documento
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'processing': return 'bg-blue-100 text-blue-800';
+      case 'pending_manual_review': return 'bg-orange-100 text-orange-800';
       case 'failed': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -285,7 +318,12 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{doc.filename}</p>
-                    <p className="text-xs text-gray-500 truncate">{doc.user_name || doc.user_email || 'Unknown user'}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {doc.authenticated_by_name && doc.client_name && doc.client_name !== 'Cliente Padrão'
+                        ? `${doc.client_name} (${doc.authenticated_by_name})`
+                        : doc.user_name || doc.user_email || 'Unknown user'
+                      }
+                    </p>
                   </div>
                   <span className={`ml-2 flex-shrink-0 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(doc.status || 'pending')}`}>
                     {doc.status || 'pending'}
@@ -301,10 +339,12 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
                     <p className="font-medium text-gray-900 truncate">
                       {doc.payment_method ? (
                         doc.payment_method === 'card' ? '💳 Card' :
+                          doc.payment_method === 'stripe' ? '💳 Stripe' :
                           doc.payment_method === 'bank_transfer' ? '🏦 Bank' :
                             doc.payment_method === 'paypal' ? '📱 PayPal' :
-                              doc.payment_method === 'upload' ? '📋 Upload' :
-                                doc.payment_method
+                              doc.payment_method === 'zelle' ? '💰 Zelle' :
+                                doc.payment_method === 'upload' ? '📋 Upload' :
+                                  doc.payment_method
                       ) : 'N/A'}
                     </p>
                   </div>
@@ -372,7 +412,10 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
                     <td className="px-3 py-3 text-xs">
                       <div>
                         <div className="font-medium text-gray-900 truncate">
-                          {doc.user_name || 'N/A'}
+                          {doc.authenticated_by_name && doc.client_name && doc.client_name !== 'Cliente Padrão'
+                            ? `${doc.client_name} (${doc.authenticated_by_name})`
+                            : doc.user_name || 'N/A'
+                          }
                         </div>
                         <div className="text-gray-500 truncate">
                           {doc.user_email || 'No email'}
@@ -405,8 +448,10 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
                       {doc.payment_method ? (
                         <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                           {doc.payment_method === 'card' ? '💳 Card' :
+                            doc.payment_method === 'stripe' ? '💳 Stripe' :
                             doc.payment_method === 'bank_transfer' ? '🏦 Bank' :
                             doc.payment_method === 'paypal' ? '📱 PayPal' :
+                            doc.payment_method === 'zelle' ? '💰 Zelle' :
                             doc.payment_method === 'upload' ? '📋 Upload' :
                               doc.payment_method}
                         </span>
@@ -417,8 +462,8 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
                     
                     {/* Payment Status */}
                     <td className="px-3 py-3 text-xs">
-                      <span className="inline-flex px-2 py-1 font-medium rounded-full bg-green-100 text-green-800">
-                        Paid
+                      <span className={`inline-flex px-2 py-1 font-medium rounded-full ${getPaymentStatusColor(doc.payment_status)}`}>
+                        {getPaymentStatusText(doc.payment_status)}
                       </span>
                     </td>
                     

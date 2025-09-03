@@ -666,7 +666,7 @@ export default function AuthenticatorUpload() {
                     <>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="source-currency">
-                          5a. Source Currency (Original Document)
+                          5.1. Source Currency (Original Document)
                         </label>
                         <select
                           id="source-currency"
@@ -683,7 +683,7 @@ export default function AuthenticatorUpload() {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-currency">
-                          5b. Target Currency (Translation To)
+                          5.2. Target Currency (Translation To)
                         </label>
                         <select
                           id="target-currency"

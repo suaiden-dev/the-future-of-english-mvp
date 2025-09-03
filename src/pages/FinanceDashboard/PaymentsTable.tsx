@@ -137,238 +137,115 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
     });
   }, []);
 
-  // Função para carregar documentos dos autenticadores
-  const loadAuthenticatorDocuments = async (startDate: string | null, endDate: string | null): Promise<MappedPayment[]> => {
-    try {
-      console.log('🔍 Carregando documentos de autenticadores (incluindo não aprovados)...');
-      
-      // Buscar documentos da tabela documents_to_be_verified (uploads iniciais dos autenticadores)
-      let documentsQuery = supabase
-        .from('documents_to_be_verified')
-        .select(`
-          id,
-          filename,
-          total_cost,
-          created_at,
-          user_id,
-          source_language,
-          target_language,
-          status,
-          authenticated_by_name,
-          authenticated_by_email,
-          authentication_date
-        `);
-
-      // Aplicar filtros de data se existirem
-      if (startDate) {
-        documentsQuery = documentsQuery.gte('created_at', startDate);
-      }
-      if (endDate) {
-        documentsQuery = documentsQuery.lte('created_at', endDate);
-      }
-
-      const { data: allDocs, error: docsError } = await documentsQuery.order('created_at', { ascending: false });
-
-      if (docsError) {
-        console.error('❌ Erro ao buscar documentos:', docsError);
-        return [];
-      }
-
-      if (!allDocs || allDocs.length === 0) {
-        return [];
-      }
-
-      console.log('📋 Documentos encontrados:', allDocs.length);
-
-      // Para cada documento, buscar informações adicionais
-      const documentPromises = allDocs.map(async (doc: any) => {
-        try {
-          // Buscar dados do uploader para verificar se é autenticador
-          const { data: uploaderProfile } = await supabase
-            .from('profiles')
-            .select('id, name, email, role')
-            .eq('id', doc.user_id)
-            .single();
-
-          // Verificar se é um upload de authenticator
-          if (!uploaderProfile || uploaderProfile.role !== 'authenticator') {
-            return null;
-          }
-
-          // Buscar dados do cliente (user_id do documento)
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('id, name, email')
-            .eq('id', doc.user_id)
-            .single();
-
-          // Verificar se já existe na tabela translated_documents (documento aprovado)
-          const { data: translatedDoc } = await supabase
-            .from('translated_documents')
-            .select('id, user_id')
-            .eq('original_document_id', doc.id)
-            .single();
-
-          // Buscar payment_method na tabela documents - simplificar a busca
-          let paymentMethod = 'upload';
-          try {
-            const { data: documentsInfo } = await supabase
-              .from('documents')
-              .select('payment_method')
-              .eq('user_id', doc.user_id)
-              .eq('filename', doc.filename)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-            
-            if (documentsInfo?.payment_method) {
-              paymentMethod = documentsInfo.payment_method;
-            }
-          } catch (err) {
-            // Se não encontrar, manter como 'upload'
-            console.log('📝 Documento não encontrado na tabela documents, usando payment_method padrão');
-          }
-
-          // Determinar o status baseado se foi aprovado ou não
-          const isApproved = !!translatedDoc;
-          const paymentStatus = isApproved ? 'completed' : 'pending';
-          const clientUserId = translatedDoc?.user_id || doc.user_id;
-
-          // Criar um objeto similar ao MappedPayment
-          return {
-            // Campos obrigatórios do PaymentWithRelations
-            id: translatedDoc?.id || doc.id, // Usar ID do documento traduzido se existir, senão do original
-            user_id: clientUserId,
-            document_id: doc.id,
-            amount: doc.total_cost || 0,
-            currency: 'USD',
-            status: paymentStatus, // 'completed' se aprovado, 'pending' se não
-            payment_method: paymentMethod,
-            payment_date: translatedDoc ? doc.created_at : null, // Data de pagamento só se aprovado
-            stripe_session_id: null,
-            created_at: doc.created_at,
-            profiles: userProfile,
-            documents: null,
-            // Campos específicos do MappedPayment
-            user_email: userProfile?.email || null,
-            user_name: userProfile?.name || null,
-            client_name: uploaderProfile.name || null, // Nome do autenticador
-            document_filename: doc.filename,
-            document_status: doc.status || null,
-            idioma_raiz: null,
-            tipo_trad: null,
-            authenticated_by_name: doc.authenticated_by_name,
-            authenticated_by_email: doc.authenticated_by_email,
-            authentication_date: doc.authentication_date,
-            source_language: doc.source_language,
-            target_language: doc.target_language,
-          } as MappedPayment;
-        } catch (err) {
-          console.error('❌ Erro ao processar documento:', doc.id, err);
-          return null;
-        }
-      });
-
-      // Aguardar todas as promises e filtrar nulls
-      const documentsWithData = (await Promise.all(documentPromises)).filter(Boolean);
-      console.log('✅ Documentos de autenticadores processados:', documentsWithData.length);
-      return documentsWithData as MappedPayment[];
-
-    } catch (error) {
-      console.error('❌ Erro ao carregar documentos de autenticadores:', error);
-      return [];
-    }
-  };
-
   // Effect to load payments whenever dateFilter, filterStatus, or searchTerm changes
   const loadPayments = useCallback(async () => {
     setLoading(true);
     setError(null);
     setPayments([]); // Clear payments on new load
 
-    const startDateParam = dateFilter?.startDate ? dateFilter.startDate.toISOString() : null;
-    const endDateParam = dateFilter?.endDate ? dateFilter.endDate.toISOString() : null;
-
     try {
-      console.log('🔍 Loading payments...', { dateFilter, filterStatus, searchTerm });
+      console.log('� Loading payments with correct logic...', { dateFilter, filterStatus, searchTerm });
 
-      let query = supabase
-        .from('payments')
-        .select(`
-          *,
-          profiles:profiles!payments_user_id_fkey(email, name),
-          documents:documents!payments_document_id_fkey(filename, status, client_name, idioma_raiz, tipo_trad, verification_code)
-        `)
+      // Buscar todos os documentos da tabela principal (como no Admin Dashboard)
+      const { data: mainDocuments, error: mainError } = await supabase
+        .from('documents')
+        .select('*, profiles:profiles!documents_user_id_fkey(name, email, phone)')
         .order('created_at', { ascending: false });
 
-      // Apply date filters
-      if (startDateParam) {
-        query = query.gte('created_at', startDateParam);
-      }
-      if (endDateParam) {
-        query = query.lte('created_at', endDateParam);
-      }
-      // Apply payment status filter - only for payments table, not for authenticator documents
-      if (filterStatus !== 'all') {
-        query = query.eq('status', filterStatus);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('❌ Error loading payments:', error);
-        setError('Failed to load payments.');
+      if (mainError) {
+        console.error('Error loading documents:', mainError);
         return;
       }
 
-      // Buscar dados da tabela documents_to_be_verified para status atualizados e informações de autenticação
-      let verifiedQuery = supabase
+      // Buscar documentos da tabela documents_to_be_verified
+      const { data: verifiedDocuments, error: verifiedDocError } = await supabase
         .from('documents_to_be_verified')
-        .select('id, filename, status, authenticated_by_name, authenticated_by_email, authentication_date, source_language, target_language');
-      
-      const { data: verifiedData, error: verifiedError } = await verifiedQuery;
-      
-      if (verifiedError) {
-        console.error('❌ Error loading verified documents:', verifiedError);
+        .select('*, profiles:profiles!documents_to_be_verified_user_id_fkey(name, email, phone)')
+        .order('created_at', { ascending: false });
+
+      if (verifiedDocError) {
+        console.error('Error loading verified documents:', verifiedDocError);
       }
 
-      console.log('📊 Raw data received:', data);
+      // Buscar dados de pagamentos
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      const mappedPayments: MappedPayment[] = data?.map(payment => {
-        // Buscar status atualizado e informações de autenticação da tabela documents_to_be_verified usando filename
-        const verifiedDoc = verifiedData?.find(v => v.filename === payment.documents?.filename);
-        const actualDocumentStatus = verifiedDoc ? verifiedDoc.status : payment.documents?.status;
+      if (paymentsError) {
+        console.error('Error loading payments data:', paymentsError);
+      }
 
-        return {
-          ...payment,
-          user_email: payment.profiles?.email || null,
-          user_name: payment.profiles?.name || null,
-          client_name: payment.documents?.client_name || null,
-          document_filename: payment.documents?.filename || null,
-          document_status: actualDocumentStatus || null,
-          idioma_raiz: payment.documents?.idioma_raiz || null,
-          tipo_trad: payment.documents?.tipo_trad || null,
-          // Informações de autenticação
-          authenticated_by_name: verifiedDoc?.authenticated_by_name || null,
-          authenticated_by_email: verifiedDoc?.authenticated_by_email || null,
-          authentication_date: verifiedDoc?.authentication_date || null,
-          // Translation info from documents_to_be_verified
-          source_language: verifiedDoc?.source_language || null,
-          target_language: verifiedDoc?.target_language || null,
-        };
-      }) || [];
+      // Usar a mesma lógica da StatsCards e AdminDashboard: priorizar documents_to_be_verified
+      const documentsWithFinancialData: MappedPayment[] = mainDocuments?.map(doc => {
+        const verifiedDoc = verifiedDocuments?.find(vDoc => vDoc.filename === doc.filename);
+        const paymentInfo = paymentsData?.find(payment => payment.document_id === doc.id);
+        
+        // Só incluir documentos que têm informação financeira (payment ou custo)
+        const hasFinancialData = paymentInfo || (verifiedDoc && verifiedDoc.total_cost);
+        if (!hasFinancialData) {
+          return null; // Não incluir documentos sem dados financeiros
+        }
 
-      // Buscar também documentos dos autenticadores (translated_documents)
-      const authenticatorDocuments = await loadAuthenticatorDocuments(startDateParam, endDateParam);
+        // Se existe em documents_to_be_verified, usar dados de lá
+        if (verifiedDoc) {
+          return {
+            id: paymentInfo?.id || `auth-${verifiedDoc.id}`,
+            user_id: doc.user_id,
+            document_id: doc.id,
+            session_id: paymentInfo?.session_id || null,
+            payment_intent_id: paymentInfo?.payment_intent_id || null,
+            amount: paymentInfo?.amount || verifiedDoc.total_cost || 0,
+            currency: paymentInfo?.currency || 'usd',
+            status: paymentInfo?.status || ((!paymentInfo && verifiedDoc?.authenticated_by_name) ? 'completed' : (verifiedDoc.status === 'approved' ? 'completed' : 'pending')),
+            payment_method: paymentInfo?.payment_method || 'authenticator',
+            created_at: paymentInfo?.created_at || verifiedDoc.created_at || doc.created_at,
+            updated_at: paymentInfo?.updated_at || verifiedDoc.updated_at || doc.updated_at,
+            
+            // Dados do usuário
+            user_email: verifiedDoc.profiles?.email || doc.profiles?.email || null,
+            user_name: verifiedDoc.profiles?.name || doc.profiles?.name || null,
+            
+            // Dados do documento
+            document_filename: doc.filename,
+            document_status: verifiedDoc.status,
+            client_name: verifiedDoc.client_name,
+            idioma_raiz: verifiedDoc.source_language,
+            tipo_trad: verifiedDoc.target_language,
+            
+            // Dados de autenticação
+            authenticated_by_name: verifiedDoc.authenticated_by_name,
+            authenticated_by_email: verifiedDoc.authenticated_by_email,
+            authentication_date: verifiedDoc.authentication_date,
+            source_language: verifiedDoc.source_language,
+            target_language: verifiedDoc.target_language,
+          };
+        } else if (paymentInfo) {
+          // Se só tem payment, usar dados do payment
+          return {
+            ...paymentInfo,
+            user_email: doc.profiles?.email || null,
+            user_name: doc.profiles?.name || null,
+            document_filename: doc.filename,
+            document_status: doc.status,
+            client_name: doc.client_name,
+            idioma_raiz: doc.idioma_raiz,
+            tipo_trad: doc.tipo_trad,
+            authenticated_by_name: null,
+            authenticated_by_email: null,
+            authentication_date: null,
+            source_language: doc.idioma_raiz,
+            target_language: doc.tipo_trad,
+          };
+        }
+        
+        return null;
+      }).filter(Boolean) || [];
+
+      console.log('✅ Documents with financial data:', documentsWithFinancialData.length);
       
-      // Combinar os dados
-      const allPayments = [...mappedPayments, ...authenticatorDocuments];
-      
-      console.log('✅ Payments mapped:', mappedPayments.length);
-      console.log('✅ Authenticator documents:', authenticatorDocuments.length);
-      console.log('✅ Total combined:', allPayments.length);
-
-      setPayments(allPayments);
+      setPayments(documentsWithFinancialData);
 
     } catch (err) {
       console.error('💥 Error loading payments:', err);
@@ -589,7 +466,9 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
     const csvContent = [
       ['User/Client Name', 'User Email', 'Document ID', 'Document Filename', 'Amount', 'Currency', 'Payment Method', 'Payment ID', 'Session ID', 'Payment Status', 'Document Status', 'Authenticator Name', 'Authenticator Email', 'Authentication Date', 'Payment Date', 'Created At'],
       ...filteredPayments.map(payment => [
-        payment.client_name || payment.user_name || '',
+        payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
+          ? `${payment.client_name} (${payment.authenticated_by_name})`
+          : payment.user_name || '',
         payment.user_email || '',
         payment.document_id,
         payment.document_filename || '',
@@ -722,7 +601,10 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900 truncate">
-                          {payment.client_name || payment.user_name || 'Unknown'}
+                          {payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
+                            ? `${payment.client_name} (${payment.authenticated_by_name})`
+                            : payment.user_name || 'Unknown'
+                          }
                         </div>
                         <div className="text-xs text-gray-500 truncate">
                           {payment.user_email || 'No email'}
@@ -845,7 +727,10 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                     <tr key={payment.id} className="hover:bg-gray-50">
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {payment.client_name || payment.user_name || 'Unknown'}
+                          {payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
+                            ? `${payment.client_name} (${payment.authenticated_by_name})`
+                            : payment.user_name || 'Unknown'
+                          }
                         </div>
                         <div className="text-sm text-gray-500">
                           {payment.user_email || 'No email'}
@@ -856,7 +741,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                           {payment.document_filename || 'Unknown'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {payment.document_id.substring(0, 8)}...
+                          {payment.document_id ? `${payment.document_id.substring(0, 8)}...` : 'No document ID'}
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">

@@ -53,6 +53,18 @@ export default function AuthenticatorDashboard() {
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
   
+  // Estados para modais de confirmação
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [modalDocumentId, setModalDocumentId] = useState('');
+  const [modalDocumentName, setModalDocumentName] = useState('');
+  
+  // Debug do estado do modal
+  useEffect(() => {
+    console.log('[AuthenticatorDashboard] Estado showApprovalModal:', showApprovalModal);
+    console.log('[AuthenticatorDashboard] Estado showCorrectionModal:', showCorrectionModal);
+  }, [showApprovalModal, showCorrectionModal]);
+  
   // Estatísticas separadas
   const [stats, setStats] = useState({
     pending: 0,
@@ -200,6 +212,41 @@ export default function AuthenticatorDashboard() {
     fetchDocuments();
   }, []);
 
+  // Função para abrir modal de confirmação de aprovação
+  function showApprovalConfirmation(id: string) {
+    const document = documents.find(doc => doc.id === id);
+    if (!document) {
+      console.log('[AuthenticatorDashboard] Documento não encontrado:', id);
+      return;
+    }
+    
+    console.log('[AuthenticatorDashboard] Abrindo modal de confirmação para:', document.filename);
+    console.log('[AuthenticatorDashboard] Estado atual showApprovalModal ANTES:', showApprovalModal);
+    
+    setModalDocumentId(id);
+    setModalDocumentName(document.filename);
+    
+    console.log('[AuthenticatorDashboard] Definindo showApprovalModal como true');
+    setShowApprovalModal(true);
+    
+    // Verificar estado depois de um pequeno delay
+    setTimeout(() => {
+      console.log('[AuthenticatorDashboard] Estado showApprovalModal APÓS timeout:', showApprovalModal);
+    }, 100);
+    
+    // Forçar re-render (teste)
+    console.log('[AuthenticatorDashboard] Forçando re-render...');
+  }
+
+  // Função para abrir modal de confirmação de envio de correção
+  function showSendCorrectionConfirmation(doc: Document) {
+    console.log('[AuthenticatorDashboard] Abrindo modal de correção para:', doc.filename);
+    
+    setModalDocumentId(doc.id);
+    setModalDocumentName(doc.filename);
+    setShowCorrectionModal(true);
+  }
+
   async function handleApprove(id: string) {
     if (!currentUser) return;
     
@@ -327,6 +374,7 @@ export default function AuthenticatorDashboard() {
   async function handleCorrectionUpload(doc: Document) {
     const state = uploadStates[doc.id];
     if (!state || !state.file) return;
+    
     setUploadStates(prev => ({ ...prev, [doc.id]: { ...state, uploading: true, error: null, success: false } }));
     try {
       // Upload para Supabase Storage
@@ -544,6 +592,29 @@ export default function AuthenticatorDashboard() {
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center gap-3">
             <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-tfe-blue-700" /> Documents to Authenticate
           </h2>
+          
+          {/* Instructions for Authenticators */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4" />
+              Authentication Instructions
+            </h3>
+            <div className="space-y-2 text-sm text-blue-800">
+              <div className="flex items-start gap-2">
+                <span className="font-medium min-w-fit">• View Original:</span>
+                <span>Document is being translated. Wait 1-2 minutes and refresh the page to view the translated document.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-medium min-w-fit">• View Original (persistent):</span>
+                <span>If the "View Original" button persists for a long time, the automatic AI translation failed and only the original document will be shown.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-medium min-w-fit">• View PDF:</span>
+                <span>Translation was successful. Please verify the document for any errors before approval.</span>
+              </div>
+            </div>
+          </div>
+          
           {loading && <p className="text-tfe-blue-700 text-base sm:text-lg">Loading documents...</p>}
           {error && <p className="text-tfe-red-500 text-base sm:text-lg">Error: {error}</p>}
           
@@ -714,7 +785,7 @@ export default function AuthenticatorDashboard() {
                         <button
                           className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-4 py-3 font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
                           disabled={!uploadStates[doc.id]?.file || uploadStates[doc.id]?.uploading}
-                          onClick={() => handleCorrectionUpload(doc)}
+                          onClick={() => showSendCorrectionConfirmation(doc)}
                         >
                           {uploadStates[doc.id]?.uploading ? (
                             <div className="flex items-center justify-center gap-2">
@@ -745,7 +816,10 @@ export default function AuthenticatorDashboard() {
                       </div>
                     ) : (
                       <div className="flex gap-2">
-                        <button onClick={() => handleApprove(doc.id)} className="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded text-xs hover:bg-green-700 transition-colors font-medium">
+                        <button onClick={() => {
+                          console.log('Botão Approve clicado para documento:', doc.id);
+                          showApprovalConfirmation(doc.id);
+                        }} className="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded text-xs hover:bg-green-700 transition-colors font-medium">
                           <CheckCircle className="w-3 h-3" />Approve
                         </button>
                         <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex-1 flex items-center justify-center gap-1 bg-tfe-red-600 text-white px-3 py-2 rounded text-xs hover:bg-tfe-red-700 transition-colors font-medium">
@@ -887,7 +961,10 @@ export default function AuthenticatorDashboard() {
                             <button
                               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-3 py-2 font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm hover:shadow-md"
                               disabled={!uploadStates[doc.id]?.file || uploadStates[doc.id]?.uploading}
-                              onClick={() => handleCorrectionUpload(doc)}
+                              onClick={() => {
+                                console.log('Botão Send Correction (versão 2) clicado para documento:', doc.id);
+                                showSendCorrectionConfirmation(doc);
+                              }}
                             >
                               {uploadStates[doc.id]?.uploading ? (
                                 <div className="flex items-center justify-center gap-2">
@@ -918,7 +995,10 @@ export default function AuthenticatorDashboard() {
                           </div>
                       ) : (
                           <div className="flex gap-2">
-                            <button onClick={() => handleApprove(doc.id)} className="flex items-center gap-1 bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors font-medium">
+                            <button onClick={() => {
+                              console.log('Botão Approve (versão 1) clicado para documento:', doc.id);
+                              showApprovalConfirmation(doc.id);
+                            }} className="flex items-center gap-1 bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors font-medium">
                               <CheckCircle className="w-3 h-3" />Approve
                             </button>
                             <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex items-center gap-1 bg-tfe-red-600 text-white px-3 py-1 rounded text-xs hover:bg-tfe-red-700 transition-colors font-medium">
@@ -1026,6 +1106,185 @@ export default function AuthenticatorDashboard() {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmação de aprovação */}
+      {showApprovalModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            maxWidth: '400px',
+            width: '100%',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              margin: '0 auto 1rem',
+              width: '48px',
+              height: '48px',
+              backgroundColor: '#dcfce7',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <CheckCircle style={{ width: '24px', height: '24px', color: '#16a34a' }} />
+            </div>
+            
+            <h3 style={{ fontSize: '18px', fontWeight: '500', color: '#111827', marginBottom: '8px' }}>
+              Confirm Approval
+            </h3>
+            
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
+              Are you sure you want to approve the document "{modalDocumentName}"? This action cannot be undone.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  console.log('[AuthenticatorDashboard] Cancelando aprovação');
+                  setShowApprovalModal(false);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={() => {
+                  console.log('[AuthenticatorDashboard] Confirmando aprovação');
+                  setShowApprovalModal(false);
+                  handleApprove(modalDocumentId);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: 'white',
+                  backgroundColor: '#16a34a',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de envio de correção */}
+      {showCorrectionModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            maxWidth: '400px',
+            width: '100%',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              margin: '0 auto 1rem',
+              width: '48px',
+              height: '48px',
+              backgroundColor: '#dbeafe',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <UploadIcon style={{ width: '24px', height: '24px', color: '#2563eb' }} />
+            </div>
+            
+            <h3 style={{ fontSize: '18px', fontWeight: '500', color: '#111827', marginBottom: '8px' }}>
+              Confirm Send Correction
+            </h3>
+            
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
+              Are you sure you want to send the correction for the document "{modalDocumentName}"? This action cannot be undone.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  console.log('[AuthenticatorDashboard] Cancelando envio de correção');
+                  setShowCorrectionModal(false);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={() => {
+                  console.log('[AuthenticatorDashboard] Confirmando envio de correção');
+                  setShowCorrectionModal(false);
+                  const doc = documents.find(d => d.id === modalDocumentId);
+                  if (doc) {
+                    handleCorrectionUpload(doc);
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: 'white',
+                  backgroundColor: '#2563eb',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Send Correction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de informações do usuário */}
       {userModalOpen && (
