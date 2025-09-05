@@ -1,17 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, CheckCircle, Clock, DollarSign, TrendingUp, Users, AlertCircle, CreditCard, FileBarChart, UserCheck, UserX } from 'lucide-react';
-import { Document } from '../../App';
+import { useState, useEffect } from 'react';
+import { DollarSign, Users, CreditCard, UserCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { DateRange } from '../../components/DateRangeFilter';
 
 interface StatsCardsProps {
-  documents: Document[];
   dateRange?: DateRange;
 }
 
-export function StatsCards({ documents, dateRange }: StatsCardsProps) {
-  const [paymentStats, setPaymentStats] = useState<any>(null);
-  const [translationStats, setTranslationStats] = useState<any>(null);
+export function StatsCards({ dateRange }: StatsCardsProps) {
   const [enhancedStats, setEnhancedStats] = useState<any>(null);
   const [userTypeBreakdown, setUserTypeBreakdown] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +97,7 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
       // Calcular estatísticas manualmente
       const allPayments = paymentsData || [];
       
-      // Estatísticas de pagamentos
+      // Estatísticas de pagamentos (calculadas mas não utilizadas no momento)
       const calculatedPaymentStats = {
         total_payments: allPayments.length,
         total_amount: allPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
@@ -110,19 +106,41 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
         failed_payments: allPayments.filter(p => p.status === 'failed').length
       };
       
-
-      setPaymentStats(calculatedPaymentStats);
+      // Calcular revenue corretamente:
+      // User Uploads: usar dados da tabela payments
+      // Authenticator Uploads: usar dados da tabela documents
       
-      // Estatísticas de documentos/traduções
-      const calculatedTranslationStats = {
-        total_documents: allDocs.length,
-        completed_translations: allDocs.filter(d => d.status === 'completed').length,
-        pending_translations: allDocs.filter(d => d.status === 'pending').length,
-        total_revenue: allDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0)
-      };
+      // Revenue de usuários regulares (User Uploads) - usar tabela payments
+      const regularRevenue = paymentsData?.reduce((sum, payment) => {
+        // Verificar se o pagamento é de um usuário regular (não autenticador)
+        const userDoc = documentsData?.find(doc => doc.id === payment.document_id);
+        if (userDoc && userDoc.profiles?.role === 'user') {
+          return sum + (payment.amount || 0);
+        }
+        return sum;
+      }, 0) || 0;
       
-
-      setTranslationStats(calculatedTranslationStats);
+      // Revenue de autenticadores (Authenticator Uploads) - usar tabela documents
+      const authenticatorRevenue = documentsData?.reduce((sum, doc) => {
+        if (doc.profiles?.role === 'authenticator') {
+          return sum + (doc.total_cost || 0);
+        }
+        return sum;
+      }, 0) || 0;
+      
+      const totalRevenue = authenticatorRevenue + regularRevenue;
+      
+      console.log('🔍 Debug - StatsCards total_revenue:', totalRevenue);
+      console.log('🔍 Debug - User Uploads revenue (from payments table):', regularRevenue);
+      console.log('🔍 Debug - Authenticator Uploads revenue (from documents table):', authenticatorRevenue);
+      
+      // Estatísticas de tradução calculadas mas não utilizadas no momento
+      // const calculatedTranslationStats = {
+      //   total_documents: allDocs.length,
+      //   completed_translations: allDocs.filter(d => d.status === 'completed').length,
+      //   pending_translations: allDocs.filter(d => d.status === 'pending').length,
+      //   total_revenue: totalRevenue
+      // };
       
       // Separar por tipo de usuário
       const userDocs = allDocs.filter(d => d.profiles?.role === 'user');
@@ -131,19 +149,19 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
       // Estatísticas aprimoradas com separação por tipo de usuário
       const calculatedEnhancedStats = {
         total_documents: allDocs.length,
-        total_revenue: allDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
+        total_revenue: totalRevenue, // Usar o totalRevenue calculado com a nova lógica
         
         // User uploads
         user_uploads_total: userDocs.length,
         user_uploads_completed: userDocs.filter(d => d.status === 'completed').length,
         user_uploads_pending: userDocs.filter(d => d.status === 'pending').length,
-        user_uploads_revenue: userDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
+        user_uploads_revenue: regularRevenue, // Revenue de usuários regulares (tabela payments)
         
         // Authenticator uploads  
         authenticator_uploads_total: authenticatorDocs.length,
         authenticator_uploads_completed: authenticatorDocs.filter(d => d.status === 'completed').length,
         authenticator_uploads_pending: authenticatorDocs.filter(d => d.status === 'pending').length,
-        authenticator_uploads_revenue: authenticatorDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
+        authenticator_uploads_revenue: authenticatorRevenue, // Revenue de autenticadores (tabela documents)
         
         // Status breakdown
         total_completed: allDocs.filter(d => d.status === 'completed').length,
@@ -164,8 +182,8 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
           pending_documents: userDocs.filter(d => d.status === 'pending').length,
           processing_documents: userDocs.filter(d => d.status === 'processing').length,
           rejected_documents: userDocs.filter(d => d.status === 'rejected').length,
-          total_revenue: userDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
-          avg_revenue_per_doc: userDocs.length > 0 ? userDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0) / userDocs.length : 0
+          total_revenue: regularRevenue, // Revenue de usuários regulares (tabela payments)
+          avg_revenue_per_doc: userDocs.length > 0 ? regularRevenue / userDocs.length : 0
         },
         {
           user_type: "Authenticators", 
@@ -174,19 +192,19 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
           pending_documents: authenticatorDocs.filter(d => d.status === 'pending').length,
           processing_documents: authenticatorDocs.filter(d => d.status === 'processing').length,
           rejected_documents: authenticatorDocs.filter(d => d.status === 'rejected').length,
-          total_revenue: authenticatorDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0),
-          avg_revenue_per_doc: authenticatorDocs.length > 0 ? authenticatorDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0) / authenticatorDocs.length : 0
+          total_revenue: authenticatorRevenue, // Revenue de autenticadores (tabela documents)
+          avg_revenue_per_doc: authenticatorDocs.length > 0 ? authenticatorRevenue / authenticatorDocs.length : 0
         }
       ];
       
       setUserTypeBreakdown(calculatedBreakdown);
 
       // Debug dos valores calculados
-      console.log('🔍 Enhanced Stats:', enhancedStats);
-      console.log('🔍 Payment Stats:', paymentStats);
-      console.log('🔍 User Docs Revenue:', userDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0));
-      console.log('🔍 Auth Docs Revenue:', authenticatorDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0));
-      console.log('🔍 Total Docs Revenue:', allDocs.reduce((sum, d) => sum + (d.total_cost || 0), 0));
+      console.log('🔍 Enhanced Stats:', calculatedEnhancedStats);
+      console.log('🔍 Payment Stats:', calculatedPaymentStats);
+      console.log('🔍 User Uploads Revenue (from payments table):', regularRevenue);
+      console.log('🔍 Authenticator Uploads Revenue (from documents table):', authenticatorRevenue);
+      console.log('🔍 Total Revenue (corrected):', totalRevenue);
 
     } catch (error) {
       console.error('💥 Erro geral ao carregar estatísticas:', error);
@@ -287,7 +305,7 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
   return (
     <div className="space-y-3 sm:space-y-4 lg:space-y-6 mb-4 sm:mb-6 lg:mb-8 w-full">
       {/* Main Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 w-full">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
@@ -314,7 +332,7 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
             <Users className="w-4 h-4 text-gray-600 flex-shrink-0" />
             <h3 className="text-sm sm:text-base font-semibold text-gray-900">User Performance</h3>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 w-full">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 w-full">
             {userTypeBreakdown.map((breakdown, index) => (
               <div key={index} className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">

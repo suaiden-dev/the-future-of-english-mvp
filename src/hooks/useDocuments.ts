@@ -206,6 +206,7 @@ export function useTranslatedDocuments(userId?: string) {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [realtime, setRealtime] = useState<any>(null);
 
   const fetchDocuments = async () => {
     if (!userId) {
@@ -236,9 +237,42 @@ export function useTranslatedDocuments(userId?: string) {
       
       if (translatedError) throw translatedError;
       
+      // Buscar documentos completed na tabela documents_to_be_verified
+      const { data: verifiedDocs, error: verifiedError } = await supabase
+        .from('documents_to_be_verified')
+        .select('filename, status')
+        .eq('user_id', userId)
+        .eq('status', 'completed');
+      
+      if (verifiedError) {
+        console.error('[useTranslatedDocuments] Erro ao buscar documentos verificados:', verifiedError);
+      }
+      
+      console.log('[useTranslatedDocuments] DEBUG - Documentos pending/processing encontrados:', pendingDocs?.length || 0);
+      console.log('[useTranslatedDocuments] DEBUG - Documentos verificados encontrados:', verifiedDocs?.length || 0);
+      console.log('[useTranslatedDocuments] DEBUG - Documentos traduzidos encontrados:', translatedDocs?.length || 0);
+      console.log('[useTranslatedDocuments] DEBUG - Documentos verificados:', verifiedDocs);
+      
+      // Filtrar documentos processing que já foram aprovados
+      const filteredPendingDocs = (pendingDocs || []).filter(doc => {
+        // Se o documento está processing, verificar se não foi aprovado
+        if (doc.status === 'processing') {
+          const isApproved = verifiedDocs?.some(verified => {
+            const match = verified.filename === doc.filename && verified.status === 'completed';
+            console.log(`[useTranslatedDocuments] DEBUG - Comparando: ${verified.filename} === ${doc.filename} && ${verified.status} === 'completed' = ${match}`);
+            return match;
+          });
+          console.log(`[useTranslatedDocuments] DEBUG - Doc ${doc.filename} (${doc.id}): isApproved = ${isApproved}`);
+          return !isApproved; // Só incluir se NÃO foi aprovado
+        }
+        return true; // Incluir documentos pending normalmente
+      });
+      
+      console.log('[useTranslatedDocuments] DEBUG - Documentos filtrados:', filteredPendingDocs?.length || 0);
+      
       // Combinar e ordenar por data de criação
       const allDocs = [
-        ...(pendingDocs || []).map(doc => ({ ...doc, source: 'documents' })),
+        ...filteredPendingDocs.map(doc => ({ ...doc, source: 'documents' })),
         ...(translatedDocs || []).map(doc => ({ ...doc, source: 'translated_documents' }))
       ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
@@ -252,9 +286,68 @@ export function useTranslatedDocuments(userId?: string) {
     }
   };
 
+  const setupRealtime = () => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel('translated_documents')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'documents',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('[useTranslatedDocuments] Documento atualizado na tabela documents:', payload);
+          // Refetch para garantir que temos os dados mais recentes
+          fetchDocuments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'translated_documents',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('[useTranslatedDocuments] Documento atualizado na tabela translated_documents:', payload);
+          // Refetch para garantir que temos os dados mais recentes
+          fetchDocuments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'documents_to_be_verified',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('[useTranslatedDocuments] Documento atualizado na tabela documents_to_be_verified:', payload);
+          // Refetch para garantir que temos os dados mais recentes
+          fetchDocuments();
+        }
+      )
+      .subscribe();
+
+    setRealtime(channel);
+  };
+
   useEffect(() => {
     fetchDocuments();
-  }, [userId]); // Removido fetchDocuments da dependência para evitar loop infinito
+    setupRealtime();
+
+    return () => {
+      if (realtime) {
+        supabase.removeChannel(realtime);
+      }
+    };
+  }, [userId]);
 
   return {
     documents,

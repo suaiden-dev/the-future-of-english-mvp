@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, CurrencyDollar, Clock, Shield, CheckCircle, ArrowRight, Star, Globe, ChatCircle, CaretDown, CaretUp, Phone, Envelope, Download, Upload, Eye, Lock } from '@phosphor-icons/react';
+import { FileText, CurrencyDollar, Clock, Shield, CheckCircle, ArrowRight, Star, Globe, CaretDown, CaretUp, Envelope, Download, Upload, Eye, Lock } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Footer } from '../components/Footer';
 import { useI18n } from '../contexts/I18nContext';
@@ -102,43 +102,6 @@ export function Translations() {
         t('pricing.bankStatements.features.support', 'Priority support')
       ],
       popular: false
-    }
-  ];
-
-  const documentTypes = [
-    {
-      category: t('documentTypes.categories.personal', 'Personal Documents'),
-      documents: [
-        t('documentTypes.personal.birthCertificates', 'Birth Certificates'),
-        t('documentTypes.personal.marriageCertificates', 'Marriage Certificates'), 
-        t('documentTypes.personal.divorceDecrees', 'Divorce Decrees'),
-        t('documentTypes.personal.deathCertificates', 'Death Certificates'),
-        t('documentTypes.personal.passportPages', 'Passport Pages'),
-        t('documentTypes.personal.driversLicenses', 'Driver\'s Licenses'),
-        t('documentTypes.personal.nationalIdCards', 'National ID Cards')
-      ]
-    },
-    {
-      category: t('documentTypes.categories.academic', 'Academic Documents'),
-      documents: [
-        t('documentTypes.academic.transcripts', 'Academic Transcripts'),
-        t('documentTypes.academic.diplomas', 'Diplomas & Degrees'),
-        t('documentTypes.academic.certificates', 'School Certificates'),
-        t('documentTypes.academic.courseDescriptions', 'Course Descriptions'),
-        t('documentTypes.academic.references', 'Academic References'),
-        t('documentTypes.academic.certifications', 'Professional Certifications')
-      ]
-    },
-    {
-      category: t('documentTypes.categories.legalMedical', 'Legal & Medical'),
-      documents: [
-        t('documentTypes.legalMedical.policeClearances', 'Police Clearances'),
-        t('documentTypes.legalMedical.medicalRecords', 'Medical Records'),
-        t('documentTypes.legalMedical.vaccinationRecords', 'Vaccination Records'),
-        t('documentTypes.legalMedical.employmentRecords', 'Employment Records'),
-        t('documentTypes.legalMedical.bankStatements', 'Bank Statements'),
-        t('documentTypes.legalMedical.legalDocuments', 'Legal Documents')
-      ]
     }
   ];
 
@@ -587,38 +550,14 @@ export function Translations() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div 
-              className="bg-slate-50 p-8 rounded-2xl shadow-lg text-center cursor-pointer hover:bg-slate-100 transition-all duration-300 border border-slate-100"
-              onClick={() => window.location.href = 'tel:+13237883117'}
-            >
-              <div className="w-16 h-16 bg-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Phone className="w-8 h-8 text-slate-700" weight="fill" />
-              </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-2">{t('contact.phone.title', 'Phone')}</h3>
-              <p className="text-slate-600">(000) 000-0000</p>
-              <p className="text-sm text-slate-500 mt-2">{t('contact.phone.hours', 'Mon-Fri: 9AM-6PM EST')}</p>
-            </div>
-            
-            <div className="bg-slate-50 p-8 rounded-2xl shadow-lg text-center border border-slate-100">
+          <div className="flex justify-center">
+            <div className="bg-slate-50 p-8 rounded-2xl shadow-lg text-center border border-slate-100 max-w-sm w-full">
               <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Envelope className="w-8 h-8 text-red-600" weight="fill" />
               </div>
               <h3 className="text-xl font-semibold text-slate-800 mb-2">{t('contact.email.title', 'Email')}</h3>
               <p className="text-slate-600">contato@lushamerica.com</p>
               <p className="text-sm text-slate-500 mt-2">{t('contact.email.support', '24/7 support')}</p>
-            </div>
-            
-            <div 
-              className="bg-slate-50 p-8 rounded-2xl shadow-lg text-center cursor-pointer hover:bg-slate-100 transition-all duration-300 border border-slate-100"
-              onClick={() => window.open('https://wa.me/13237883117?text=Hello%20The%20Future%20of%20English,%20I%20would%20like%20to%20know%20more%20about%20the%20visa%20consulting%20service.', '_blank')}
-            >
-              <div className="w-16 h-16 bg-gradient-to-br from-slate-200 to-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <ChatCircle className="w-8 h-8 text-slate-700" weight="fill" />
-              </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-2">{t('contact.whatsapp.title', 'WhatsApp')}</h3>
-              <p className="text-slate-600">(000) 000-0000</p>
-              <p className="text-sm text-slate-500 mt-2">{t('contact.whatsapp.description', 'Instant messaging')}</p>
             </div>
           </div>
         </div>

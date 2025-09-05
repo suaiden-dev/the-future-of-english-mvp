@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 // Assuming `Document` is defined as a type/interface in App.ts or a shared types file
 // For this example, I'll define a minimal Document interface here.
 import { supabase } from '../../lib/supabase';
-import { Eye, Download, Filter, Calendar } from 'lucide-react';
+import { Eye, Download, Filter } from 'lucide-react';
 import { DateRange } from '../../components/DateRangeFilter'; // Assuming this path is correct
+import { GoogleStyleDatePicker } from '../../components/GoogleStyleDatePicker';
 import { DocumentDetailsModal } from './DocumentDetailsModal'; // Assuming this path is correct
 
   // Extended Document interface for the modal
@@ -45,7 +46,7 @@ interface PaymentWithRelations {
   payment_method: string | null;
   payment_date: string | null;
   created_at: string;
-  profiles: { email: string | null; name: string | null } | null;
+  profiles: { email: string | null; name: string | null; role: string | null } | null;
   documents: { 
     filename: string | null; 
     status: Document['status'] | null;
@@ -60,6 +61,7 @@ interface PaymentWithRelations {
 interface MappedPayment extends PaymentWithRelations {
   user_email: string | null;
   user_name: string | null;
+  user_role: string | null; // Role do usuário (user, authenticator, admin, finance)
   client_name: string | null;
   document_filename: string | null;
   document_status: Document['status'] | null; // Adding document status here
@@ -85,6 +87,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all'); // payment status filter
+  const [filterRole, setFilterRole] = useState<string>('all'); // user role filter
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [dateFilter, setDateFilter] = useState<DateRange>(initialDateRange || {
     startDate: null,
@@ -94,48 +97,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  // Memoized function for date range presets
-  const updateDateFilter = useCallback((preset: string) => {
-    const now = new Date();
-    // Reset time to start of day for consistent range calculations
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    let newStartDate: Date | null = null;
-    let newEndDate: Date | null = now; // Default end date to now
-
-    switch (preset) {
-      case '7d':
-        newStartDate = new Date(startOfToday);
-        newStartDate.setDate(startOfToday.getDate() - 7);
-        break;
-      case '30d':
-        newStartDate = new Date(startOfToday);
-        newStartDate.setDate(startOfToday.getDate() - 30);
-        break;
-      case '3m':
-        newStartDate = new Date(startOfToday);
-        newStartDate.setMonth(startOfToday.getMonth() - 3);
-        break;
-      case '6m':
-        newStartDate = new Date(startOfToday);
-        newStartDate.setMonth(startOfToday.getMonth() - 6);
-        break;
-      case 'year':
-        newStartDate = new Date(now.getFullYear(), 0, 1); // Start of current year
-        break;
-      case 'all':
-      default:
-        newStartDate = null;
-        newEndDate = null;
-        preset = 'all'; // Ensure preset is 'all' if default
-    }
-
-    setDateFilter({
-      startDate: newStartDate,
-      endDate: newEndDate,
-      preset
-    });
-  }, []);
+  // Date filter is now managed by parent component (FinanceDashboard)
 
   // Effect to load payments whenever dateFilter, filterStatus, or searchTerm changes
   const loadPayments = useCallback(async () => {
@@ -146,11 +108,41 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
     try {
       console.log('� Loading payments with correct logic...', { dateFilter, filterStatus, searchTerm });
 
+      // Aplicar filtros de data se fornecidos
+      let startDateParam = null;
+      let endDateParam = null;
+      
+      if (dateFilter?.startDate) {
+        // Para data de início, usar início do dia (00:00:00)
+        const startDate = new Date(dateFilter.startDate);
+        startDate.setHours(0, 0, 0, 0);
+        startDateParam = startDate.toISOString();
+      }
+      
+      if (dateFilter?.endDate) {
+        // Para data de fim, usar fim do dia (23:59:59)
+        const endDate = new Date(dateFilter.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        endDateParam = endDate.toISOString();
+      }
+      
+      console.log('🔍 Date filter params:', { startDateParam, endDateParam });
+
       // Buscar todos os documentos da tabela principal (como no Admin Dashboard)
-      const { data: mainDocuments, error: mainError } = await supabase
+      let mainDocumentsQuery = supabase
         .from('documents')
-        .select('*, profiles:profiles!documents_user_id_fkey(name, email, phone)')
+        .select('*, profiles:profiles!documents_user_id_fkey(name, email, phone, role)')
         .order('created_at', { ascending: false });
+
+      // Aplicar filtros de data
+      if (startDateParam) {
+        mainDocumentsQuery = mainDocumentsQuery.gte('created_at', startDateParam);
+      }
+      if (endDateParam) {
+        mainDocumentsQuery = mainDocumentsQuery.lte('created_at', endDateParam);
+      }
+
+      const { data: mainDocuments, error: mainError } = await mainDocumentsQuery;
 
       if (mainError) {
         console.error('Error loading documents:', mainError);
@@ -158,92 +150,195 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       }
 
       // Buscar documentos da tabela documents_to_be_verified
-      const { data: verifiedDocuments, error: verifiedDocError } = await supabase
+      let verifiedDocumentsQuery = supabase
         .from('documents_to_be_verified')
-        .select('*, profiles:profiles!documents_to_be_verified_user_id_fkey(name, email, phone)')
+        .select('*, profiles:profiles!documents_to_be_verified_user_id_fkey(name, email, phone, role)')
         .order('created_at', { ascending: false });
+
+      // Aplicar filtros de data
+      if (startDateParam) {
+        verifiedDocumentsQuery = verifiedDocumentsQuery.gte('created_at', startDateParam);
+      }
+      if (endDateParam) {
+        verifiedDocumentsQuery = verifiedDocumentsQuery.lte('created_at', endDateParam);
+      }
+
+      const { data: verifiedDocuments, error: verifiedDocError } = await verifiedDocumentsQuery;
 
       if (verifiedDocError) {
         console.error('Error loading verified documents:', verifiedDocError);
       }
 
       // Buscar dados de pagamentos
-      const { data: paymentsData, error: paymentsError } = await supabase
+      let paymentsQuery = supabase
         .from('payments')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Aplicar filtros de data
+      if (startDateParam) {
+        paymentsQuery = paymentsQuery.gte('created_at', startDateParam);
+      }
+      if (endDateParam) {
+        paymentsQuery = paymentsQuery.lte('created_at', endDateParam);
+      }
+
+      const { data: paymentsData, error: paymentsError } = await paymentsQuery;
 
       if (paymentsError) {
         console.error('Error loading payments data:', paymentsError);
       }
 
-      // Usar a mesma lógica da StatsCards e AdminDashboard: priorizar documents_to_be_verified
-      const documentsWithFinancialData: MappedPayment[] = mainDocuments?.map(doc => {
-        const verifiedDoc = verifiedDocuments?.find(vDoc => vDoc.filename === doc.filename);
-        const paymentInfo = paymentsData?.find(payment => payment.document_id === doc.id);
-        
-        // Só incluir documentos que têm informação financeira (payment ou custo)
-        const hasFinancialData = paymentInfo || (verifiedDoc && verifiedDoc.total_cost);
-        if (!hasFinancialData) {
-          return null; // Não incluir documentos sem dados financeiros
-        }
+      console.log('🔍 Debug - Payments data loaded:', paymentsData?.length || 0);
+      console.log('🔍 Debug - Sample payments:', paymentsData?.slice(0, 3));
+      console.log('🔍 Debug - Main documents sample:', mainDocuments?.slice(0, 3).map(doc => ({
+        id: doc.id,
+        filename: doc.filename,
+        payment_method: doc.payment_method,
+        total_cost: doc.total_cost,
+        status: doc.status
+      })));
+      console.log('🔍 Debug - Verified documents sample:', verifiedDocuments?.slice(0, 3).map(doc => ({
+        id: doc.id,
+        filename: doc.filename,
+        payment_method: doc.payment_method,
+        total_cost: doc.total_cost,
+        status: doc.status
+      })));
 
-        // Se existe em documents_to_be_verified, usar dados de lá
-        if (verifiedDoc) {
-          return {
-            id: paymentInfo?.id || `auth-${verifiedDoc.id}`,
-            user_id: doc.user_id,
-            document_id: doc.id,
-            session_id: paymentInfo?.session_id || null,
-            payment_intent_id: paymentInfo?.payment_intent_id || null,
-            amount: paymentInfo?.amount || verifiedDoc.total_cost || 0,
-            currency: paymentInfo?.currency || 'usd',
-            status: paymentInfo?.status || ((!paymentInfo && verifiedDoc?.authenticated_by_name) ? 'completed' : (verifiedDoc.status === 'approved' ? 'completed' : 'pending')),
-            payment_method: paymentInfo?.payment_method || 'authenticator',
-            created_at: paymentInfo?.created_at || verifiedDoc.created_at || doc.created_at,
-            updated_at: paymentInfo?.updated_at || verifiedDoc.updated_at || doc.updated_at,
-            
-            // Dados do usuário
-            user_email: verifiedDoc.profiles?.email || doc.profiles?.email || null,
-            user_name: verifiedDoc.profiles?.name || doc.profiles?.name || null,
-            
-            // Dados do documento
-            document_filename: doc.filename,
-            document_status: verifiedDoc.status,
+      // Processar documentos de autenticadores (documents_to_be_verified)
+      // Para autenticadores, o payment_method está na tabela documents
+      const authenticatorPayments: MappedPayment[] = verifiedDocuments?.map(verifiedDoc => {
+        const mainDoc = mainDocuments?.find(doc => doc.filename === verifiedDoc.filename);
+        
+        return {
+          id: `auth-${verifiedDoc.id}`,
+          user_id: verifiedDoc.user_id,
+          document_id: verifiedDoc.id,
+          stripe_session_id: null,
+          amount: verifiedDoc.total_cost || 0,
+          currency: 'usd',
+          status: 'completed', // Para autenticadores, status sempre é completed
+          payment_method: mainDoc?.payment_method || null, // Para autenticadores, buscar na tabela documents
+          payment_date: verifiedDoc.authentication_date || verifiedDoc.created_at,
+          created_at: verifiedDoc.created_at,
+          
+          // Dados do usuário
+          user_email: verifiedDoc.profiles?.email || null,
+          user_name: verifiedDoc.profiles?.name || null,
+          user_role: verifiedDoc.profiles?.role || null,
+          
+          // Dados do documento
+          document_filename: verifiedDoc.filename,
+          document_status: verifiedDoc.status,
+          client_name: verifiedDoc.client_name,
+          idioma_raiz: verifiedDoc.source_language,
+          tipo_trad: verifiedDoc.target_language,
+          
+          // Dados de autenticação
+          authenticated_by_name: verifiedDoc.authenticated_by_name,
+          authenticated_by_email: verifiedDoc.authenticated_by_email,
+          authentication_date: verifiedDoc.authentication_date,
+          source_language: verifiedDoc.source_language,
+          target_language: verifiedDoc.target_language,
+          
+          // Campos obrigatórios da interface
+          profiles: verifiedDoc.profiles,
+          documents: {
+            filename: verifiedDoc.filename,
+            status: verifiedDoc.status,
             client_name: verifiedDoc.client_name,
             idioma_raiz: verifiedDoc.source_language,
             tipo_trad: verifiedDoc.target_language,
+            verification_code: verifiedDoc.verification_code
+          }
+        };
+      }) || [];
+
+      // Processar documentos de usuários regulares (role: user)
+      // Para usuários regulares, o payment_method está na tabela payments
+      const regularPayments: MappedPayment[] = [];
+      
+      if (mainDocuments) {
+        for (const doc of mainDocuments) {
+          // Verificar se já foi processado como autenticador
+          const alreadyProcessed = authenticatorPayments.some(auth => auth.document_filename === doc.filename);
+          if (alreadyProcessed) {
+            continue;
+          }
+
+          // Buscar pagamento na tabela payments para usuários regulares
+          const paymentInfo = paymentsData?.find(payment => payment.user_id === doc.user_id);
+          
+          // Só incluir se tem informação financeira
+          if (!paymentInfo && !doc.total_cost) {
+            continue;
+          }
+
+          regularPayments.push({
+            id: paymentInfo?.id || `doc-${doc.id}`,
+            user_id: doc.user_id,
+            document_id: doc.id,
+            stripe_session_id: paymentInfo?.stripe_session_id || null,
+            amount: paymentInfo?.amount || doc.total_cost || 0,
+            currency: paymentInfo?.currency || 'usd',
+            status: paymentInfo?.status || 'pending', // Para usuários regulares, buscar na tabela payments
+            payment_method: paymentInfo?.payment_method || null, // Para usuários regulares, buscar na tabela payments
+            payment_date: paymentInfo?.payment_date || doc.created_at,
+            created_at: paymentInfo?.created_at || doc.created_at,
             
-            // Dados de autenticação
-            authenticated_by_name: verifiedDoc.authenticated_by_name,
-            authenticated_by_email: verifiedDoc.authenticated_by_email,
-            authentication_date: verifiedDoc.authentication_date,
-            source_language: verifiedDoc.source_language,
-            target_language: verifiedDoc.target_language,
-          };
-        } else if (paymentInfo) {
-          // Se só tem payment, usar dados do payment
-          return {
-            ...paymentInfo,
+            // Dados do usuário
             user_email: doc.profiles?.email || null,
             user_name: doc.profiles?.name || null,
+            user_role: doc.profiles?.role || null,
+            
+            // Dados do documento
             document_filename: doc.filename,
             document_status: doc.status,
             client_name: doc.client_name,
             idioma_raiz: doc.idioma_raiz,
             tipo_trad: doc.tipo_trad,
+            
+            // Dados de autenticação (não aplicável para documentos regulares)
             authenticated_by_name: null,
             authenticated_by_email: null,
             authentication_date: null,
             source_language: doc.idioma_raiz,
             target_language: doc.tipo_trad,
-          };
+            
+            // Campos obrigatórios da interface
+            profiles: doc.profiles,
+            documents: {
+              filename: doc.filename,
+              status: doc.status,
+              client_name: doc.client_name,
+              idioma_raiz: doc.idioma_raiz,
+              tipo_trad: doc.tipo_trad,
+              verification_code: doc.verification_code
+            }
+          });
         }
-        
-        return null;
-      }).filter(Boolean) || [];
+      }
+
+      // Combinar ambos os tipos de pagamentos
+      const documentsWithFinancialData: MappedPayment[] = [...authenticatorPayments, ...regularPayments];
 
       console.log('✅ Documents with financial data:', documentsWithFinancialData.length);
+      console.log('🔍 Debug - Sample payment data:', documentsWithFinancialData.slice(0, 3).map(p => ({
+        user_name: p.user_name,
+        payment_method: p.payment_method,
+        amount: p.amount,
+        id: p.id
+      })));
+      
+      // Debug: Calcular total para comparar com StatsCards
+      const totalAmount = documentsWithFinancialData.reduce((sum, p) => sum + p.amount, 0);
+      console.log('🔍 Debug - Total amount in PaymentsTable:', totalAmount);
+      console.log('🔍 Debug - All amounts:', documentsWithFinancialData.map(p => ({ 
+        user: p.user_name, 
+        amount: p.amount, 
+        type: p.id.startsWith('auth-') ? 'authenticator' : 'regular' 
+      })));
       
       setPayments(documentsWithFinancialData);
 
@@ -253,18 +348,21 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
     } finally {
       setLoading(false);
     }
-  }, [dateFilter, filterStatus]); // Removed searchTerm from here, as filtering is done client-side
+  }, [dateFilter, filterStatus, filterRole]); // Removed searchTerm from here, as filtering is done client-side
 
   useEffect(() => {
     loadPayments();
   }, [loadPayments]); // Rerun effect when `loadPayments` (memoized) changes
 
-  // Client-side filtering for search term and status
+  // Client-side filtering for search term, status, and role
   const filteredPayments = useMemo(() => {
     if (!payments) return [];
     return payments.filter(payment => {
       // Filter by status first
       const matchesStatus = filterStatus === 'all' || payment.status === filterStatus;
+      
+      // Filter by role
+      const matchesRole = filterRole === 'all' || payment.user_role === filterRole;
       
       // Then filter by search term
       const matchesSearch = searchTerm === '' ||
@@ -275,9 +373,9 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
         payment.stripe_session_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         payment.id.toLowerCase().includes(searchTerm.toLowerCase()); // Allow searching payment ID
 
-      return matchesStatus && matchesSearch;
+      return matchesStatus && matchesRole && matchesSearch;
     });
-  }, [payments, searchTerm, filterStatus]);
+  }, [payments, searchTerm, filterStatus, filterRole]);
 
 
   const handleViewDocument = useCallback(async (payment: MappedPayment) => {
@@ -466,7 +564,9 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
     const csvContent = [
       ['User/Client Name', 'User Email', 'Document ID', 'Document Filename', 'Amount', 'Currency', 'Payment Method', 'Payment ID', 'Session ID', 'Payment Status', 'Document Status', 'Authenticator Name', 'Authenticator Email', 'Authentication Date', 'Payment Date', 'Created At'],
       ...filteredPayments.map(payment => [
-        payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
+        payment.user_role === 'authenticator' && payment.client_name && payment.client_name !== 'Cliente Padrão'
+          ? `${payment.client_name} (${payment.user_name})`
+          : payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
           ? `${payment.client_name} (${payment.authenticated_by_name})`
           : payment.user_name || '',
         payment.user_email || '',
@@ -523,9 +623,9 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
 
       {/* Filters */}
       <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
           {/* Search */}
-          <div className="sm:col-span-2 lg:col-span-2">
+          <div className="sm:col-span-2">
             <input
               type="text"
               placeholder="Search by name, email, filename, ID..."
@@ -553,23 +653,27 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
             </select>
           </div>
 
-          {/* Period Filter */}
+          {/* Role Filter */}
           <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-gray-400 hidden sm:block" aria-hidden="true" />
+            <Filter className="w-4 h-4 text-gray-400 hidden sm:block" aria-hidden="true" />
             <select
-              value={dateFilter?.preset || 'all'}
-              onChange={(e) => updateDateFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm" // Changed ring color
-              aria-label="Filter by date range"
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              aria-label="Filter by user role"
             >
-              <option value="all">All Time</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="3m">Last 3 months</option>
-              <option value="6m">Last 6 months</option>
-              <option value="year">This year</option>
+              <option value="all">All User Roles</option>
+              <option value="user">User</option>
+              <option value="authenticator">Authenticator</option>
             </select>
           </div>
+
+          {/* Google Style Date Range Filter */}
+          <GoogleStyleDatePicker
+            dateRange={dateFilter}
+            onDateRangeChange={setDateFilter}
+            className="w-full"
+          />
         </div>
       </div>
 
@@ -601,7 +705,9 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900 truncate">
-                          {payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
+                          {payment.user_role === 'authenticator' && payment.client_name && payment.client_name !== 'Cliente Padrão'
+                            ? `${payment.client_name} (${payment.user_name})`
+                            : payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
                             ? `${payment.client_name} (${payment.authenticated_by_name})`
                             : payment.user_name || 'Unknown'
                           }
@@ -640,10 +746,15 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                         <div className="font-medium text-gray-900">
                           {payment.payment_method ? (
                             payment.payment_method === 'card' ? '💳 Card' :
+                              payment.payment_method === 'stripe' ? '💳 Stripe' :
                               payment.payment_method === 'bank_transfer' ? '🏦 Bank' :
-                                payment.payment_method === 'paypal' ? '📱 PayPal' :
-                                payment.payment_method === 'upload' ? '📋 Upload' :
-                                  payment.payment_method
+                              payment.payment_method === 'transfer' ? '🏦 Bank' :
+                              payment.payment_method === 'zelle' ? '💰 Zelle' :
+                              payment.payment_method === 'cash' ? '💵 Cash' :
+                              payment.payment_method === 'paypal' ? '📱 PayPal' :
+                              payment.payment_method === 'upload' ? '📋 Upload' :
+                              payment.payment_method === 'other' ? '🔧 Other' :
+                                payment.payment_method
                           ) : 'N/A'}
                         </div>
                       </div>
@@ -681,36 +792,54 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
           </div>
 
           {/* Desktop: Table View */}
-          <div className="hidden sm:block overflow-x-auto w-full">
-            <table className="min-w-full divide-y divide-gray-200"> {/* Added min-w-full */}
+          <div className="hidden sm:block overflow-x-auto w-full relative">
+            <div className="absolute top-0 right-0 bg-gradient-to-l from-white to-transparent w-8 h-full pointer-events-none z-10"></div>
+            <table 
+              className="min-w-full divide-y divide-gray-200" 
+              style={{ 
+                minWidth: '100%', 
+                tableLayout: 'fixed',
+                width: '100%'
+              }}
+            >
+              <colgroup>
+                <col style={{ width: '25%', minWidth: '25%', maxWidth: '25%' }} />
+                <col style={{ width: '23%', minWidth: '23%', maxWidth: '23%' }} />
+                <col style={{ width: '6%', minWidth: '6%', maxWidth: '6%' }} />
+                <col style={{ width: '7%', minWidth: '7%', maxWidth: '7%' }} />
+                <col style={{ width: '6%', minWidth: '6%', maxWidth: '6%' }} />
+                <col style={{ width: '7%', minWidth: '7%', maxWidth: '7%' }} />
+                <col style={{ width: '16%', minWidth: '16%', maxWidth: '16%' }} />
+                <col style={{ width: '5%', minWidth: '5%', maxWidth: '5%' }} />
+                <col style={{ width: '5%', minWidth: '5%', maxWidth: '5%' }} />
+              </colgroup>
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     USER/CLIENT
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Document
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Payment Method
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment Status
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    TRANSLATIONS
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Translations
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    AUTHENTICATOR
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Authenticator
                   </th>
-
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Details
                   </th>
                 </tr>
@@ -725,79 +854,105 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                 ) : (
                   filteredPayments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
+                      <td className="px-2 py-4">
+                        <div className="text-sm font-medium text-gray-900 truncate" title={payment.user_role === 'authenticator' && payment.client_name && payment.client_name !== 'Cliente Padrão'
+                            ? `${payment.client_name} (${payment.user_name})`
+                            : payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
                             ? `${payment.client_name} (${payment.authenticated_by_name})`
-                            : payment.user_name || 'Unknown'
-                          }
+                            : payment.user_name || 'Unknown'}>
+                          {payment.user_role === 'authenticator' && payment.client_name && payment.client_name !== 'Cliente Padrão'
+                            ? `${payment.client_name} (${payment.user_name})`
+                            : payment.authenticated_by_name && payment.client_name && payment.client_name !== 'Cliente Padrão'
+                            ? `${payment.client_name} (${payment.authenticated_by_name})`
+                            : payment.user_name || 'Unknown'}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-xs text-gray-500 truncate" title={payment.user_email || 'No email'}>
                           {payment.user_email || 'No email'}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                      <td className="px-2 py-4">
+                        <div className="text-sm text-gray-900 truncate" title={payment.document_filename || 'Unknown'}>
                           {payment.document_filename || 'Unknown'}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {payment.document_id ? `${payment.document_id.substring(0, 8)}...` : 'No document ID'}
+                        <div className="text-xs text-gray-500 truncate">
+                          {payment.document_id ? `${payment.document_id.substring(0, 8)}...` : 'No ID'}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-2 py-4">
                         <div className="text-sm font-medium text-gray-900">
                           ${payment.amount.toFixed(2)}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-xs text-gray-500">
                           {payment.currency}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                                                    {payment.payment_method ? (
-                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                              {payment.payment_method === 'card' ? '💳 Credit Card' :
-                                payment.payment_method === 'bank_transfer' ? '🏦 Bank Transfer' :
+                      <td className="px-2 py-4">
+                        <div className="text-xs text-gray-900">
+                          {payment.payment_method ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                              {payment.payment_method === 'card' ? '💳 Card' :
+                                payment.payment_method === 'stripe' ? '💳 Stripe' :
+                                payment.payment_method === 'bank_transfer' ? '🏦 Bank' :
+                                payment.payment_method === 'transfer' ? '🏦 Bank' :
+                                payment.payment_method === 'zelle' ? '💰 Zelle' :
+                                payment.payment_method === 'cash' ? '💵 Cash' :
                                 payment.payment_method === 'paypal' ? '📱 PayPal' :
                                 payment.payment_method === 'upload' ? '📋 Upload' :
+                                payment.payment_method === 'other' ? '🔧 Other' :
                                   payment.payment_method}
                             </span>
                           ) : (
-                            <span className="text-gray-400">N/A</span>
+                            <span className="text-gray-400 text-xs">N/A</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
+                      <td className="px-2 py-4">
+                        <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
                           {payment.status}
                         </span>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.document_status)}`}>
+                      <td className="px-2 py-4">
+                        <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(payment.document_status)}`}>
                           {payment.document_status || 'N/A'}
                         </span>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                      <td className="px-2 py-4">
+                        <div className="text-sm text-gray-900 truncate" title={payment.authenticated_by_name || 'N/A'}>
                           {payment.authenticated_by_name || 'N/A'}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {payment.authenticated_by_email || 'No authenticator'}
+                        <div className="text-xs text-gray-500 truncate">
+                          {payment.authenticated_by_email || 'No auth'}
                         </div>
                       </td>
-
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
+                      <td className="px-2 py-4 text-sm text-gray-900">
+                        {(() => {
+                          // Tentar diferentes campos de data em ordem de prioridade
+                          const dateToShow = payment.payment_date || 
+                                           payment.authentication_date || 
+                                           payment.created_at;
+                          
+                          if (dateToShow) {
+                            try {
+                              return new Date(dateToShow).toLocaleDateString('pt-BR', { 
+                                day: '2-digit', 
+                                month: '2-digit' 
+                              });
+                            } catch (error) {
+                              console.error('Error formatting date:', error);
+                              return '-';
+                            }
+                          }
+                          return '-';
+                        })()}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-2 py-4 text-sm font-medium">
                         <button
                           onClick={() => handleViewDocument(payment)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1" // Changed color
+                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
                           title={`Details for document ${payment.document_filename}`}
                           aria-label={`Details for document ${payment.document_filename}`}
                         >
                           <Eye className="w-4 h-4" />
-                          <span className="hidden sm:inline">Details</span>
                         </button>
                       </td>
                     </tr>

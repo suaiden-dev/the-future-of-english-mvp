@@ -80,7 +80,7 @@ export function CustomerDashboard({
   const hasCompletedDocuments = documents.some(doc => doc.status === 'completed');
 
   const handleUploadClick = () => {
-    setIsUploadModalOpen(true);
+    navigate('/dashboard/upload');
   };
 
   const handleCloseUploadModal = () => {

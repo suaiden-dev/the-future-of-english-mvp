@@ -6,7 +6,6 @@ import { FinanceCharts } from './FinanceCharts';
 import ReportsTable from './ReportsTable';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
 import { ZelleReceiptsAdmin } from '../../components/ZelleReceiptsAdmin';
-import { DateRange } from '../../components/DateRangeFilter';
 import { Document } from '../../App';
 import { Home, CreditCard, FileText, Receipt } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -20,11 +19,6 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
   const location = useLocation();
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'reports' | 'zelle-receipts'>('overview');
-  const [dateRange] = useState<DateRange>({
-    startDate: null,
-    endDate: null,
-    preset: 'all'
-  });
 
   // Detectar se o usuário veio de um link específico da sidebar
   useEffect(() => {
@@ -55,6 +49,7 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
     }
   };
 
+
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'payments', label: 'Payments', icon: CreditCard },
@@ -64,7 +59,7 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="p-3 sm:p-4 lg:p-6 w-full max-w-none">
+      <div className="p-3 sm:p-4 lg:p-6 w-full max-w-none overflow-x-hidden">
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Finance Dashboard</h1>
           <p className="text-sm sm:text-base lg:text-lg text-gray-600 mt-1 sm:mt-2">Monitor payments, track translations, and generate business reports</p>
@@ -114,16 +109,16 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
         <div className="w-full">
           {activeTab === 'overview' && (
             <div className="space-y-4 sm:space-y-6 w-full">
-              <StatsCards documents={documents} dateRange={dateRange} />
-              <FinanceCharts dateRange={dateRange} />
-              <PaymentsTable initialDateRange={dateRange} />
+              <StatsCards />
+              <FinanceCharts />
+              <PaymentsTable />
             </div>
           )}
 
           {activeTab === 'payments' && (
             <div className="space-y-4 sm:space-y-6 w-full">
-              <PaymentStatsCards dateRange={dateRange} />
-              <PaymentsTable initialDateRange={dateRange} />
+              <PaymentStatsCards />
+              <PaymentsTable />
             </div>
           )}
 
