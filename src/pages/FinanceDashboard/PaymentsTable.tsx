@@ -96,6 +96,8 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
   });
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Date filter is now managed by parent component (FinanceDashboard)
 
@@ -376,6 +378,17 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       return matchesStatus && matchesRole && matchesSearch;
     });
   }, [payments, searchTerm, filterStatus, filterRole]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPayments = filteredPayments.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, filterRole, dateFilter]);
 
 
   const handleViewDocument = useCallback(async (payment: MappedPayment) => {
@@ -694,13 +707,13 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
         <>
           {/* Mobile: Cards View */}
           <div className="block sm:hidden">
-            {filteredPayments.length === 0 ? (
+            {paginatedPayments.length === 0 ? (
               <div className="px-4 py-12 text-center text-gray-500">
                 No payments found matching your criteria.
               </div>
             ) : (
               <div className="space-y-3 p-3 sm:p-4">
-                {filteredPayments.map((payment) => (
+                {paginatedPayments.map((payment) => (
                   <div key={payment.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
@@ -845,14 +858,14 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredPayments.length === 0 ? (
+                {paginatedPayments.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                       No payments found matching your criteria.
                     </td>
                   </tr>
                 ) : (
-                  filteredPayments.map((payment) => (
+                  paginatedPayments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-gray-50">
                       <td className="px-2 py-4">
                         <div className="text-sm font-medium text-gray-900 truncate" title={payment.user_role === 'authenticator' && payment.client_name && payment.client_name !== 'Cliente Padrão'
@@ -965,9 +978,68 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
           {filteredPayments.length > 0 && (
             <div className="px-3 sm:px-4 lg:px-6 py-3 border-t border-gray-200 bg-gray-50">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-500">
-                <span>Showing {filteredPayments.length} of {payments.length} payments</span>
+                <span>
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length} payments
+                  {filteredPayments.length !== payments.length && ` (filtered from ${payments.length} total)`}
+                </span>
                 <span className="font-medium text-green-600">Total: ${filteredPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
               </div>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`px-3 py-1 text-sm border rounded-md ${
+                              currentPage === pageNum
+                                ? 'bg-blue-500 text-white border-blue-500'
+                                : 'border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                  
+                  <div className="text-sm text-gray-500">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>

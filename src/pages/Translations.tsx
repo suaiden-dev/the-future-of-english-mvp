@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FileText, CurrencyDollar, Clock, Shield, CheckCircle, ArrowRight, Star, Globe, CaretDown, CaretUp, Envelope, Download, Upload, Eye, Lock } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Footer } from '../components/Footer';
+import { Chatbot } from '../components/Chatbot';
 import { useI18n } from '../contexts/I18nContext';
 
 export function Translations() {
@@ -564,6 +565,7 @@ export function Translations() {
       </section>
       
       <Footer />
+      <Chatbot />
     </div>
   );
 }

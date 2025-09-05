@@ -1,4 +1,4 @@
-import { FacebookLogo, InstagramLogo, LinkedinLogo, TwitterLogo, Envelope, Phone, MapPin, WhatsappLogo } from '@phosphor-icons/react';
+import { Envelope, MapPin } from '@phosphor-icons/react';
 import { useI18n } from '../contexts/I18nContext';
 
 export function Footer() {
@@ -30,22 +30,6 @@ export function Footer() {
             <p className="text-gray-300 mb-6 leading-relaxed">
               {t('footer.description', 'Transforming dreams into reality through specialized mentorship for study scholarships in the United States.')}
             </p>
-            
-            {/* Social Media Icons */}
-            <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-tfe-red-600 transition-colors">
-                <FacebookLogo className="w-5 h-5" weight="fill" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-tfe-red-600 transition-colors">
-                <InstagramLogo className="w-5 h-5" weight="fill" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-tfe-red-600 transition-colors">
-                <LinkedinLogo className="w-5 h-5" weight="fill" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-tfe-red-600 transition-colors">
-                <TwitterLogo className="w-5 h-5" weight="fill" />
-              </a>
-            </div>
           </div>
 
           {/* Our Services */}
@@ -79,24 +63,10 @@ export function Footer() {
               </div>
               
               <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-tfe-red-400" weight="fill" />
-                <a href="tel:+13237883117" className="text-gray-300 hover:text-white transition-colors">
-                  (000) 000-0000
-                </a>
-              </div>
-              
-              <div className="flex items-center gap-3">
                 <MapPin className="w-5 h-5 text-tfe-red-400" weight="fill" />
                 <span className="text-gray-300">
                   {t('footer.contact.location', 'United States')}
                 </span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <WhatsappLogo className="w-5 h-5 text-tfe-red-400" weight="fill" />
-                <a href="https://wa.me/13237883117?text=Hello%20The%20Future%20of%20English,%20I%20would%20like%20to%20know%20more%20about%20the%20visa%20consulting%20service." className="text-gray-300 hover:text-white transition-colors">
-                  WhatsApp
-                </a>
               </div>
             </div>
           </div>

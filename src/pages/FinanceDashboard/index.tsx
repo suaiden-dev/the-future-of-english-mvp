@@ -3,11 +3,11 @@ import { StatsCards } from './StatsCards';
 import { PaymentsTable } from './PaymentsTable';
 import { PaymentStatsCards } from './PaymentStatsCards';
 import { FinanceCharts } from './FinanceCharts';
-import ReportsTable from './ReportsTable';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
 import { ZelleReceiptsAdmin } from '../../components/ZelleReceiptsAdmin';
+import { Chatbot } from '../../components/Chatbot';
 import { Document } from '../../App';
-import { Home, CreditCard, FileText, Receipt } from 'lucide-react';
+import { Home, CreditCard, Receipt } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface FinanceDashboardProps {
@@ -18,15 +18,13 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'reports' | 'zelle-receipts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'zelle-receipts'>('overview');
 
   // Detectar se o usuário veio de um link específico da sidebar
   useEffect(() => {
     const hash = location.hash;
     if (hash === '#payments') {
       setActiveTab('payments');
-    } else if (hash === '#reports') {
-      setActiveTab('reports');
     } else if (hash === '#zelle-receipts') {
       setActiveTab('zelle-receipts');
     } else {
@@ -39,7 +37,7 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
     setSelectedDocument(null);
   };
 
-  const handleTabChange = (tab: 'overview' | 'payments' | 'reports' | 'zelle-receipts') => {
+  const handleTabChange = (tab: 'overview' | 'payments' | 'zelle-receipts') => {
     setActiveTab(tab);
     // Atualizar a URL para refletir a aba ativa
     if (tab === 'overview') {
@@ -54,7 +52,6 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'zelle-receipts', label: 'Zelle Receipts', icon: Receipt },
-    { id: 'reports', label: 'Reports', icon: FileText },
   ];
 
   return (
@@ -89,7 +86,7 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabChange(tab.id as 'overview' | 'payments' | 'reports' | 'zelle-receipts')}
+                  onClick={() => handleTabChange(tab.id as 'overview' | 'payments' | 'zelle-receipts')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-tfe-blue-500 text-tfe-blue-600'
@@ -128,11 +125,6 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
             </div>
           )}
 
-          {activeTab === 'reports' && (
-            <div className="space-y-4 sm:space-y-6 w-full">
-              <ReportsTable />
-            </div>
-          )}
         </div>
       </div>
       {selectedDocument && (
@@ -146,6 +138,7 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
           onClose={handleCloseModal}
         />
       )}
+      <Chatbot />
     </div>
   );
 }

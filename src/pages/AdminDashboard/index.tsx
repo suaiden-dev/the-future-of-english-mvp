@@ -6,6 +6,7 @@ import { ZelleReceiptsAdmin } from '../../components/ZelleReceiptsAdmin';
 import { Document } from '../../App';
 import { Home, Receipt } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { DateRange } from '../../components/DateRangeFilter';
 
 interface AdminDashboardProps {
   documents: Document[];
@@ -14,6 +15,11 @@ interface AdminDashboardProps {
 export function AdminDashboard({ documents }: AdminDashboardProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'zelle-receipts'>('overview');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: null,
+    endDate: null,
+    preset: 'all'
+  });
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -101,10 +107,12 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
         <div className="w-full">
           {activeTab === 'overview' && (
             <div className="space-y-4 sm:space-y-6 w-full">
-              <StatsCards documents={documents} />
+              <StatsCards documents={documents} dateRange={dateRange} />
               <DocumentsTable 
                 documents={documents}
                 onViewDocument={handleViewDocument}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
               />
             </div>
           )}

@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { FileText, CheckCircle, Clock, DollarSign, Users, AlertCircle } from 'lucide-react';
 import { Document } from '../../App';
 import { supabase } from '../../lib/supabase';
+import { DateRange } from '../../components/DateRangeFilter';
 
 interface StatsCardsProps {
   documents: Document[];
+  dateRange?: DateRange;
 }
 
-export function StatsCards({ documents }: StatsCardsProps) {
+export function StatsCards({ documents, dateRange }: StatsCardsProps) {
   const [extendedStats, setExtendedStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   

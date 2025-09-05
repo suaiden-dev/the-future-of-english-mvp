@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FileText, Eye, Download } from 'lucide-react';
+import { FileText, Eye, Download, Filter } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Document } from '../../App';
+import { DateRange } from '../../components/DateRangeFilter';
+import { GoogleStyleDatePicker } from '../../components/GoogleStyleDatePicker';
 
 // Interface estendida para incluir dados de tabelas relacionadas
 interface ExtendedDocument extends Omit<Document, 'client_name' | 'payment_method'> {
@@ -17,40 +19,87 @@ interface ExtendedDocument extends Omit<Document, 'client_name' | 'payment_metho
   payment_method?: string | null;
   payment_status?: string | null;
   client_name?: string | null;
+  display_name?: string | null; // Nome formatado para exibição na coluna USER/CLIENT
+  user_role?: string | null; // Role do usuário para filtros
 }
 
 // Propriedades do componente
 interface DocumentsTableProps {
   documents: Document[]; // Mantido para conformidade, embora os dados sejam buscados internamente
   onViewDocument: (document: Document) => void;
+  dateRange?: DateRange;
+  onDateRangeChange?: (dateRange: DateRange) => void;
 }
 
-export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
+export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }: DocumentsTableProps) {
   const [extendedDocuments, setExtendedDocuments] = useState<ExtendedDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [internalDateRange, setInternalDateRange] = useState<DateRange>(dateRange || {
+    startDate: null,
+    endDate: null,
+    preset: 'all'
+  });
 
   // Função para buscar e combinar dados de ambas as tabelas de documentos
   const loadExtendedDocuments = useCallback(async () => {
     setLoading(true);
     try {
+      // Aplicar filtros de data se fornecidos
+      let startDateParam = null;
+      let endDateParam = null;
+      
+      if (internalDateRange?.startDate) {
+        // Para data de início, usar início do dia (00:00:00)
+        const startDate = new Date(internalDateRange.startDate);
+        startDate.setHours(0, 0, 0, 0);
+        startDateParam = startDate.toISOString();
+      }
+      
+      if (internalDateRange?.endDate) {
+        // Para data de fim, usar fim do dia (23:59:59)
+        const endDate = new Date(internalDateRange.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        endDateParam = endDate.toISOString();
+      }
+
       // Buscar documentos da tabela principal com perfis de usuário
-      const { data: mainDocuments, error: mainError } = await supabase
+      let mainDocumentsQuery = supabase
         .from('documents')
         .select('*, profiles:profiles!documents_user_id_fkey(name, email, phone)')
         .order('created_at', { ascending: false });
+
+      // Aplicar filtros de data
+      if (startDateParam) {
+        mainDocumentsQuery = mainDocumentsQuery.gte('created_at', startDateParam);
+      }
+      if (endDateParam) {
+        mainDocumentsQuery = mainDocumentsQuery.lte('created_at', endDateParam);
+      }
+
+      const { data: mainDocuments, error: mainError } = await mainDocumentsQuery;
 
       if (mainError) {
         console.error('Error loading documents:', mainError);
       }
 
       // Buscar documentos da tabela documents_to_be_verified
-      const { data: verifiedDocuments, error: verifiedError } = await supabase
+      let verifiedDocumentsQuery = supabase
         .from('documents_to_be_verified')
         .select('*, profiles:profiles!documents_to_be_verified_user_id_fkey(name, email, phone)')
         .order('created_at', { ascending: false });
+
+      // Aplicar filtros de data
+      if (startDateParam) {
+        verifiedDocumentsQuery = verifiedDocumentsQuery.gte('created_at', startDateParam);
+      }
+      if (endDateParam) {
+        verifiedDocumentsQuery = verifiedDocumentsQuery.lte('created_at', endDateParam);
+      }
+
+      const { data: verifiedDocuments, error: verifiedError } = await verifiedDocumentsQuery;
 
       if (verifiedError) {
         console.error('Error loading verified documents:', verifiedError);
@@ -65,10 +114,27 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
         console.error('Error loading payments data:', paymentsError);
       }
 
+      // Buscar perfis de usuários para verificar roles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, role');
+
+      if (profilesError) {
+        console.error('Error loading profiles data:', profilesError);
+      }
+
+      console.log('🔍 Profiles data loaded:', profilesData?.length || 0);
+      console.log('🔍 Sample profiles:', profilesData?.slice(0, 5));
+
       // Usar a mesma lógica da StatsCards: priorizar documents_to_be_verified
       const documentsWithCorrectStatus = mainDocuments?.map(doc => {
         const verifiedDoc = verifiedDocuments?.find(vDoc => vDoc.filename === doc.filename);
         const paymentInfo = paymentsData?.find(payment => payment.document_id === doc.id);
+        
+        // Verificar se o usuário tem role 'authenticator'
+        const userProfile = profilesData?.find(profile => profile.id === doc.user_id);
+        const userRole = userProfile?.role || 'user'; // Default para 'user' se não encontrar
+        const isAuthenticator = userRole === 'authenticator';
         
         // Debug log para verificar client_name
         if (verifiedDoc?.client_name) {
@@ -90,8 +156,17 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
             source_language: verifiedDoc.source_language,
             target_language: verifiedDoc.target_language,
             payment_method: paymentInfo?.payment_method || doc.payment_method || null,
-            payment_status: paymentInfo?.status || (verifiedDoc.authenticated_by_name ? 'completed' : null),
+            // Para autenticadores, sempre mostrar 'completed' (Paid)
+            payment_status: isAuthenticator ? 'completed' : (paymentInfo?.status || (verifiedDoc.authenticated_by_name ? 'completed' : null)),
             client_name: verifiedDoc.client_name || doc.client_name || null,
+            // Para exibição na coluna USER/CLIENT: se for autenticador, usar client_name + (user_name)
+            display_name: isAuthenticator && verifiedDoc.client_name && verifiedDoc.client_name !== 'Cliente Padrão'
+              ? `${verifiedDoc.client_name} (${verifiedDoc.profiles?.name || doc.profiles?.name || 'N/A'})`
+              : verifiedDoc.authenticated_by_name && verifiedDoc.client_name && verifiedDoc.client_name !== 'Cliente Padrão'
+              ? `${verifiedDoc.client_name} (${verifiedDoc.authenticated_by_name})`
+              : verifiedDoc.profiles?.name || doc.profiles?.name || null,
+            // Adicionar role do usuário para filtros
+            user_role: userRole,
           };
         } else {
           // Se não existe em documents_to_be_verified, usar dados originais
@@ -102,8 +177,15 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
             user_phone: doc.profiles?.phone || null,
             document_type: 'regular' as const,
             payment_method: paymentInfo?.payment_method || doc.payment_method || null,
-            payment_status: paymentInfo?.status || null,
+            // Para autenticadores, sempre mostrar 'completed' (Paid)
+            payment_status: isAuthenticator ? 'completed' : (paymentInfo?.status || null),
             client_name: doc.client_name || null,
+            // Para exibição na coluna USER/CLIENT: se for autenticador, usar client_name + (user_name)
+            display_name: isAuthenticator && doc.client_name && doc.client_name !== 'Cliente Padrão'
+              ? `${doc.client_name} (${doc.profiles?.name || 'N/A'})`
+              : doc.profiles?.name || null,
+            // Adicionar role do usuário para filtros
+            user_role: userRole,
           };
         }
       }) || [];
@@ -115,54 +197,63 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [internalDateRange]);
+
+  // Sincronizar dateRange externo com interno
+  useEffect(() => {
+    if (dateRange) {
+      setInternalDateRange(dateRange);
+    }
+  }, [dateRange]);
 
   useEffect(() => {
     loadExtendedDocuments();
   }, [loadExtendedDocuments]);
 
-  // Aplica os filtros de busca, status e data
+  // Aplica os filtros de busca, status e role
   const filteredDocuments = useMemo(() => {
-    return extendedDocuments.filter(doc => {
+    const filtered = extendedDocuments.filter(doc => {
       // Filtro de busca textual
       const matchesSearch = searchTerm === '' ||
         doc.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doc.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doc.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.user_id.toLowerCase().includes(searchTerm.toLowerCase());
+        doc.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.display_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Filtro de status
       const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
 
-      // Filtro de data
-      let matchesDate = true;
-      if (dateFilter !== 'all') {
-        const docDate = new Date(doc.created_at || '');
-        const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-        switch (dateFilter) {
-          case '7d':
-            matchesDate = docDate >= new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
-            break;
-          case '30d':
-            matchesDate = docDate >= new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
-            break;
-          case '3m':
-            matchesDate = docDate >= new Date(startOfToday.getTime() - 90 * 24 * 60 * 60 * 1000);
-            break;
-          case '6m':
-            matchesDate = docDate >= new Date(startOfToday.getTime() - 180 * 24 * 60 * 60 * 1000);
-            break;
-          case 'year':
-            matchesDate = docDate.getFullYear() === now.getFullYear();
-            break;
+      // Filtro de role - usar o role real do usuário
+      let matchesRole = true;
+      if (roleFilter !== 'all') {
+        const userRole = doc.user_role || 'user'; // Default para 'user' se não tiver role
+        
+        // Debug log detalhado para todos os documentos quando filtro user está ativo
+        if (roleFilter === 'user') {
+          console.log(`[Role Filter Debug - USER] Document: ${doc.filename}, user_role: ${userRole}, matchesRole: ${userRole === 'user'}`);
+          console.log(`  - user_name: ${doc.user_name}`);
+          console.log(`  - user_email: ${doc.user_email}`);
+        }
+        
+        if (roleFilter === 'authenticator') {
+          matchesRole = userRole === 'authenticator';
+        } else if (roleFilter === 'user') {
+          matchesRole = userRole === 'user';
         }
       }
 
-      return matchesSearch && matchesStatus && matchesDate;
+      return matchesSearch && matchesStatus && matchesRole;
     });
-  }, [extendedDocuments, searchTerm, statusFilter, dateFilter]);
+    
+    // Debug log para mostrar quantos documentos foram filtrados
+    if (roleFilter === 'user') {
+      console.log(`[Role Filter Debug] Total documents: ${extendedDocuments.length}, Filtered for 'user': ${filtered.length}`);
+    }
+    
+    return filtered;
+  }, [extendedDocuments, searchTerm, statusFilter, roleFilter]);
 
   // Define a cor de fundo e texto com base no status de pagamento
   const getPaymentStatusColor = (paymentStatus: string | null | undefined) => {
@@ -265,40 +356,63 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
       </div>
 
       {/* Filtros */}
-      <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+          {/* Search */}
           <div className="sm:col-span-2">
             <input
               type="text"
-              placeholder="Search by name, email, filename..."
+              placeholder="Search by name, email, filename, client..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+              aria-label="Search documents"
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
-          >
-            <option value="all">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="failed">Failed</option>
-          </select>
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
-          >
-            <option value="all">All Time</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="3m">Last 3 months</option>
-            <option value="6m">Last 6 months</option>
-            <option value="year">This year</option>
-          </select>
+
+          {/* Status Filter */}
+          <div className="flex items-center space-x-2">
+            <Filter className="w-4 h-4 text-gray-400 hidden sm:block" aria-hidden="true" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              aria-label="Filter by document status"
+            >
+              <option value="all">All Status</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+              <option value="processing">Processing</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+
+          {/* Role Filter */}
+          <div className="flex items-center space-x-2">
+            <Filter className="w-4 h-4 text-gray-400 hidden sm:block" aria-hidden="true" />
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              aria-label="Filter by user role"
+            >
+              <option value="all">All User Roles</option>
+              <option value="user">User</option>
+              <option value="authenticator">Authenticator</option>
+            </select>
+          </div>
+
+          {/* Google Style Date Range Filter */}
+          <GoogleStyleDatePicker
+            dateRange={internalDateRange}
+            onDateRangeChange={(newDateRange) => {
+              setInternalDateRange(newDateRange);
+              if (onDateRangeChange) {
+                onDateRangeChange(newDateRange);
+              }
+            }}
+            className="w-full"
+          />
         </div>
       </div>
 
@@ -319,10 +433,7 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{doc.filename}</p>
                     <p className="text-xs text-gray-500 truncate">
-                      {doc.authenticated_by_name && doc.client_name && doc.client_name !== 'Cliente Padrão'
-                        ? `${doc.client_name} (${doc.authenticated_by_name})`
-                        : doc.user_name || doc.user_email || 'Unknown user'
-                      }
+                      {doc.display_name || doc.user_name || doc.user_email || 'Unknown user'}
                     </p>
                   </div>
                   <span className={`ml-2 flex-shrink-0 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(doc.status || 'pending')}`}>
@@ -412,10 +523,7 @@ export function DocumentsTable({ onViewDocument }: DocumentsTableProps) {
                     <td className="px-3 py-3 text-xs">
                       <div>
                         <div className="font-medium text-gray-900 truncate">
-                          {doc.authenticated_by_name && doc.client_name && doc.client_name !== 'Cliente Padrão'
-                            ? `${doc.client_name} (${doc.authenticated_by_name})`
-                            : doc.user_name || 'N/A'
-                          }
+                          {doc.display_name || doc.user_name || 'N/A'}
                         </div>
                         <div className="text-gray-500 truncate">
                           {doc.user_email || 'No email'}
