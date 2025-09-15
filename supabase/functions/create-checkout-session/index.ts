@@ -1,5 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import Stripe from 'https://esm.sh/stripe@14.21.0';
 
+// Definição dos cabeçalhos CORS para reutilização
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -7,120 +10,137 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
-// Função para calcular o preço baseado nos critérios do modal de upload
-function calculatePrice(pages: number, isCertified: boolean, isNotarized: boolean, isBankStatement: boolean): number {
-  let pricePerPage = 0;
-  
-  // Calcular preço baseado no tipo de tradução e se é extrato bancário
-  if (isBankStatement) {
-    // Preços para extratos bancários
-    if (isCertified) {
-      pricePerPage = 25; // Certificado + extrato bancário
-    } else if (isNotarized) {
-      pricePerPage = 35; // Notorizado + extrato bancário
-    }
-  } else {
-    // Preços normais
-    if (isCertified) {
-      pricePerPage = 15; // Certificado normal
-    } else if (isNotarized) {
-      pricePerPage = 20; // Notorizado normal
-    }
-  }
-  
-  return pricePerPage * pages;
+// Interface para tipar o corpo da requisição
+interface RequestBody {
+  pages: number;
+  isCertified: boolean;
+  isNotarized: boolean;
+  isBankStatement: boolean;
+  fileId?: string;
+  filePath?: string;
+  isMobile: boolean;
+  userId: string;
+  userEmail: string;
+  filename: string;
+  fileSize?: number;
+  fileType?: string;
+  originalLanguage?: string;
+  targetLanguage?: string;
+  documentType?: string;
+  documentId?: string;
+  clientName?: string;
+  sourceCurrency?: string;
+  targetCurrency?: string;
 }
 
-// Function to generate service description
-function generateServiceDescription(pages: number, isCertified: boolean, isNotarized: boolean, isBankStatement: boolean): string {
-  const services = [];
-  
-  if (isCertified) services.push('Certified');
-  if (isNotarized) services.push('Notarized');
+// Função para calcular o preço baseado nos critérios
+function calculatePrice(pages: number, isNotarized: boolean, isBankStatement: boolean): number {
+  let basePrice = isNotarized ? 20 : 15; // $20 para Notarized, $15 para Certified
+  let bankFee = isBankStatement ? 10 : 0; // $10 taxa adicional para extratos bancários
+  return pages * (basePrice + bankFee);
+}
+
+// Função para gerar a descrição do serviço
+function generateServiceDescription(pages: number, isNotarized: boolean, isBankStatement: boolean): string {
+  const services = [isNotarized ? 'Notarized' : 'Certified'];
   if (isBankStatement) services.push('Bank Statement');
   
-  const serviceText = services.length > 0 ? ` (${services.join(', ')})` : '';
+  const serviceText = ` (${services.join(', ')})`;
   return `Document Translation - ${pages} page${pages > 1 ? 's' : ''}${serviceText}`;
 }
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight requests
+  // O manuseio de preflight (OPTIONS) deve ser a primeira coisa na função
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Verificar método HTTP
+    // Validar método HTTP
     if (req.method !== 'POST') {
       throw new Error('Method not allowed');
     }
 
-    // Obter dados do corpo da requisição
-    const { 
-      pages, 
-      isCertified, 
-      isNotarized, 
-      isBankStatement, 
-      fileId, 
+    // Obter dados do corpo da requisição e aplicar tipagem
+    const {
+      pages,
+      isCertified,
+      isNotarized,
+      isBankStatement,
+      fileId,
       filePath,
       isMobile,
       userId,
-      userEmail, // Adicionar email do usuário
+      userEmail,
       filename,
       fileSize,
       fileType,
       originalLanguage,
-      documentId // Adicionar documentId
-    } = await req.json();
+      targetLanguage,
+      documentType,
+      documentId,
+      clientName,
+      sourceCurrency,
+      targetCurrency
+    } = await req.json() as RequestBody;
 
     console.log('DEBUG: Dados recebidos:', {
-      pages, isCertified, isNotarized, isBankStatement, fileId, filePath, isMobile, userId, userEmail, filename, fileSize, fileType, originalLanguage
+      pages, isCertified, isNotarized, isBankStatement, fileId, filePath, isMobile, userId, userEmail, filename, fileSize, fileType, originalLanguage, targetLanguage, documentType, clientName, sourceCurrency, targetCurrency
     });
 
-    // Validações
+    console.log('DEBUG: VERIFICAÇÃO CRÍTICA - CAMPOS IMPORTANTES:');
+    console.log('DEBUG: documentType type:', typeof documentType, 'value:', documentType);
+    console.log('DEBUG: targetLanguage type:', typeof targetLanguage, 'value:', targetLanguage);
+    console.log('DEBUG: sourceCurrency type:', typeof sourceCurrency, 'value:', sourceCurrency);
+    console.log('DEBUG: targetCurrency type:', typeof targetCurrency, 'value:', targetCurrency);
+    console.log('DEBUG: isNotarized type:', typeof isNotarized, 'value:', isNotarized);
+
+    // Validações de entrada
     if (!pages || pages < 1) {
       throw new Error('Número de páginas inválido');
     }
     if (!userId) {
       throw new Error('ID do usuário é obrigatório');
     }
+    if (!userEmail) {
+      throw new Error('Email do usuário é obrigatório');
+    }
     
     // Validação específica para mobile vs desktop
-    if (isMobile) {
-      if (!filePath && !fileId) {
-        throw new Error('Caminho do arquivo ou ID do arquivo é obrigatório para dispositivos móveis');
-      }
-    } else {
-      if (!fileId) {
-        throw new Error('ID do arquivo é obrigatório para desktop');
-      }
+    const fileIdentifier = isMobile ? (filePath || fileId) : fileId;
+    if (!fileIdentifier) {
+      throw new Error('ID ou caminho do arquivo é obrigatório');
+    }
+    
+    // Obter chaves de API das variáveis de ambiente com validação
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!stripeSecretKey) {
+      throw new Error('STRIPE_SECRET_KEY não configurada');
+    }
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.warn('Variáveis de ambiente do Supabase não configuradas. A sessão não será salva no banco de dados.');
     }
 
-    // Usar fileId para desktop ou filePath para mobile
-    const fileIdentifier = isMobile ? (filePath || fileId) : fileId;
-
-    // Calcular preço
-    const totalPrice = calculatePrice(pages, isCertified, isNotarized, isBankStatement);
-    const serviceDescription = generateServiceDescription(pages, isCertified, isNotarized, isBankStatement);
+    // Calcular preço e descrição
+    const totalPrice = calculatePrice(pages, isNotarized, isBankStatement);
+    const serviceDescription = generateServiceDescription(pages, isNotarized, isBankStatement);
 
     console.log('DEBUG: Preço calculado:', totalPrice);
     console.log('DEBUG: Descrição do serviço:', serviceDescription);
 
-    // Obter chave secreta do Stripe das variáveis de ambiente
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    if (!stripeSecretKey) {
-      throw new Error('STRIPE_SECRET_KEY não configurada');
-    }
-
-    // Importar Stripe dinamicamente
-    const stripe = new (await import('https://esm.sh/stripe@14.21.0')).default(stripeSecretKey, {
-      apiVersion: '2024-12-18.acacia',
+    // Inicializar o cliente Stripe
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2024-04-10', // Usar uma versão de API válida e recente
+      httpClient: Stripe.createFetchHttpClient(),
     });
 
-    // Create Stripe Checkout session
+    // Criar sessão de Checkout do Stripe
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      customer_email: userEmail, // Pré-preencher email do usuário
+      customer_email: userEmail,
       line_items: [
         {
           price_data: {
@@ -128,57 +148,111 @@ Deno.serve(async (req: Request) => {
             product_data: {
               name: 'Document Translation',
               description: serviceDescription,
-              metadata: {
-                fileId: fileIdentifier,
-                userId,
-                userEmail, // Adicionar email nos metadados
-                filename,
-                pages: pages.toString(),
-                isCertified: (isCertified || false).toString(),
-                isNotarized: (isNotarized || false).toString(),
-                isBankStatement: (isBankStatement || false).toString(),
-                isMobile: (isMobile || false).toString(),
-                fileSize: fileSize?.toString() || '',
-                fileType: fileType || '',
-                originalLanguage: originalLanguage || '',
-                documentId: documentId || '', // Adicionar documentId aos metadados
-              },
             },
-            unit_amount: Math.round(totalPrice * 100), // Stripe uses cents
+            unit_amount: Math.round(totalPrice * 100), // Stripe usa centavos
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
       success_url: `${req.headers.get('origin')}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get('origin')}/payment-cancelled`,
-      locale: 'en', // Force English language
+      cancel_url: `${req.headers.get('origin')}/payment-cancelled?document_id=${documentId || ''}`,
+      locale: 'en',
       billing_address_collection: 'auto',
-      currency: 'usd', // Force USD currency
-      payment_method_options: {
-        card: {
-          request_three_d_secure: 'automatic',
-        },
-      },
       metadata: {
         fileId: fileIdentifier,
         userId,
-        userEmail, // Adicionar email nos metadados
-        filename,
+        userEmail,
+        filename: filename || '',
         pages: pages.toString(),
         isCertified: (isCertified || false).toString(),
         isNotarized: (isNotarized || false).toString(),
         isBankStatement: (isBankStatement || false).toString(),
-        totalPrice: totalPrice.toString(),
         isMobile: (isMobile || false).toString(),
         fileSize: fileSize?.toString() || '',
         fileType: fileType || '',
         originalLanguage: originalLanguage || '',
-        documentId: documentId || '', // Adicionar documentId aos metadados
+        targetLanguage: targetLanguage || '',
+        documentType: documentType || '',
+        documentId: documentId || '',
+        clientName: clientName || '',
+        sourceCurrency: sourceCurrency || '',
+        targetCurrency: targetCurrency || '',
+        totalPrice: totalPrice.toString(),
       },
     });
 
     console.log('DEBUG: Sessão do Stripe criada:', session.id);
+
+    // Inserir dados da sessão na tabela do Supabase se as chaves estiverem disponíveis
+    if (supabaseUrl && supabaseServiceKey) {
+      try {
+        const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        });
+        
+        const metadataToSave = {
+          fileId: fileIdentifier,
+          userId,
+          userEmail,
+          filename,
+          pages,
+          isCertified,
+          isNotarized,
+          isBankStatement,
+          totalPrice,
+          isMobile,
+          fileSize,
+          fileType,
+          originalLanguage,
+          targetLanguage,
+          documentType,
+          documentId,
+          clientName,
+          sourceCurrency,
+          targetCurrency,
+        };
+
+        console.log('DEBUG: Tentando inserir na tabela stripe_sessions...');
+        console.log('DEBUG: Dados a serem inseridos:', {
+          session_id: session.id,
+          document_id: documentId || null,
+          user_id: userId,
+          metadata: metadataToSave,
+          payment_status: 'pending',
+          amount: totalPrice,
+          currency: 'usd'
+        });
+
+        const { data: insertData, error: insertError } = await supabaseClient
+          .from('stripe_sessions')
+          .insert({
+            session_id: session.id,
+            document_id: documentId || null,
+            user_id: userId,
+            metadata: metadataToSave,
+            payment_status: 'pending',
+            amount: totalPrice,
+            currency: 'usd'
+          })
+          .select();
+
+        if (insertError) {
+          console.error('ERROR: Erro ao inserir na tabela stripe_sessions:', insertError);
+          console.error('DEBUG: Detalhes do erro stripe_sessions:', JSON.stringify(insertError, null, 2));
+          console.error('DEBUG: Código do erro stripe_sessions:', insertError.code);
+          console.error('DEBUG: Mensagem do erro stripe_sessions:', insertError.message);
+        } else {
+          console.log('DEBUG: Sessão inserida na tabela stripe_sessions com sucesso:', session.id);
+          console.log('DEBUG: Dados inseridos stripe_sessions:', JSON.stringify(insertData, null, 2));
+        }
+      } catch (dbError) {
+        console.error('WARNING: Erro crítico ao tentar salvar sessão no banco de dados:', dbError);
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
@@ -200,9 +274,10 @@ Deno.serve(async (req: Request) => {
         error: error.message || 'Erro interno do servidor' 
       }),
       {
+        // É crucial incluir os cabeçalhos CORS também nas respostas de erro
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       }
     );
   }
-}); 
+});

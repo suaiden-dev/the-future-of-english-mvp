@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { User, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../contexts/I18nContext';
+import { Chatbot } from '../components/Chatbot';
 
 const Login: React.FC = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -30,14 +33,14 @@ const Login: React.FC = () => {
     setError('');
     
     if (!formData.email.trim() || !formData.password.trim()) {
-      setError('📝 Please fill in all fields');
+      setError(t('errors.validationError'));
       return;
     }
     
     // Validar formato do email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('📧 Please enter a valid email address');
+      setError(t('errors.validationError'));
       return;
     }
     
@@ -87,10 +90,10 @@ const Login: React.FC = () => {
             <User className="h-8 w-8 text-white" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Welcome Back
+            {t('auth.login')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to access your translation dashboard
+            {t('auth.signIn')} {t('common.to')} {t('dashboard.overview')}
           </p>
         </div>
         
@@ -98,7 +101,7 @@ const Login: React.FC = () => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                {t('auth.email')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -111,7 +114,7 @@ const Login: React.FC = () => {
                   autoComplete="email"
                   required
                   className="appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 sm:text-sm transition-colors"
-                  placeholder="Enter your email address"
+                  placeholder={t('auth.email')}
                   value={formData.email}
                   onChange={handleChange}
                 />
@@ -119,7 +122,7 @@ const Login: React.FC = () => {
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -132,7 +135,7 @@ const Login: React.FC = () => {
                   autoComplete="current-password"
                   required
                   className="appearance-none rounded-lg relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-tfe-blue-500 focus:border-tfe-blue-500 sm:text-sm transition-colors"
-                  placeholder="Enter your password"
+                  placeholder={t('auth.password')}
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -146,7 +149,7 @@ const Login: React.FC = () => {
                   <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  Forgot your password?
+                  {t('auth.forgotPassword')}
                 </button>
               </div>
             </div>
@@ -175,12 +178,12 @@ const Login: React.FC = () => {
                 {isLoading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Signing in...
+                    {t('common.loading')}
                   </div>
                 ) : (
                   <div className="flex items-center">
                     <User className="w-4 h-4 mr-2" />
-                    Sign In
+                    {t('auth.signIn')}
                   </div>
                 )}
               </button>
@@ -190,7 +193,7 @@ const Login: React.FC = () => {
         
         <div className="text-center">
           <p className="text-sm text-gray-600 mb-4">
-            Don't have an account?
+            {t('auth.dontHaveAccount')}
           </p>
           <button 
             onClick={() => navigate('/register')}
@@ -199,10 +202,11 @@ const Login: React.FC = () => {
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
-            Create Account
+            {t('auth.register')}
           </button>
         </div>
       </div>
+      <Chatbot />
     </div>
   );
 };

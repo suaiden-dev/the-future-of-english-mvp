@@ -1,0 +1,643 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "view": "Ver",
+    "upload": "Subir",
+    "download": "Descargar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "close": "Cerrar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "confirm": "Confirmar",
+    "yes": "Sí",
+    "no": "No",
+    "error": "Error",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "info": "Información",
+    "to": "para",
+    "user": "Usuario"
+  },
+  "navigation": {
+    "home": "Inicio",
+    "dashboard": "Panel",
+    "documents": "Documentos",
+    "translations": "Traducciones",
+    "profile": "Perfil",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión",
+    "login": "Iniciar sesión",
+    "register": "Registrarse"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "register": "Registrarse",
+    "forgotPassword": "Olvidé mi contraseña",
+    "resetPassword": "Restablecer contraseña",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "signIn": "Iniciar sesión",
+    "signUp": "Registrarse",
+    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    "dontHaveAccount": "¿No tienes una cuenta?",
+    "passwordResetSent": "Correo de restablecimiento enviado",
+    "passwordResetSuccess": "Contraseña restablecida exitosamente",
+    "firstNameRequired": "El nombre es obligatorio",
+    "emailRequired": "El correo electrónico es obligatorio",
+    "phoneRequired": "El número de teléfono es obligatorio",
+    "invalidEmail": "Por favor ingrese un correo electrónico válido",
+    "invalidPhone": "Por favor ingrese un número de teléfono válido",
+    "passwordRequired": "La contraseña es obligatoria",
+    "passwordsDoNotMatch": "Las contraseñas no coinciden",
+    "registrationFailed": "Registro fallido. Por favor inténtelo de nuevo.",
+    "emailAlreadyRegistered": "Este correo electrónico ya está registrado. Intente iniciar sesión.",
+    "passwordTooShort": "La contraseña debe tener al menos 6 caracteres."
+  },
+  "dashboard": {
+    "welcome": "Bienvenido",
+    "welcomeBack": "Bienvenido de vuelta",
+    "overview": "Vista General",
+    "statistics": {
+      "title": "Tus Estadísticas",
+      "description": "Resumen de tu actividad de traducción de documentos",
+      "welcome": {
+        "title": "¡Bienvenido a tu Panel!",
+        "description": "Sube tu primer documento para comenzar a seguir el progreso y estadísticas de tus traducciones."
+      },
+      "cards": {
+        "totalDocuments": "Total de Documentos",
+        "inProgress": "En Progreso",
+        "completed": "Completados",
+        "totalSpent": "Total Gastado",
+        "thisMonth": "Este Mes",
+        "successRate": "Tasa de Éxito",
+        "descriptions": {
+          "pagesTotal": "páginas en total",
+          "pendingProgress": "pendiente,",
+          "inProgressText": "en progreso",
+          "readyDownload": "Listos para descargar",
+          "avgPerDocument": "promedio por documento",
+          "documentsUploaded": "Documentos subidos",
+          "completionRate": "Tasa de finalización"
+        }
+      },
+      "features": {
+        "perPage": "Por página",
+        "turnaround": "Plazo",
+        "accepted": "Aceptado",
+        "translation": "Traducción"
+      }
+    },
+    "recentActivity": {
+      "title": "Actividad Reciente",
+      "description": "Tu actividad reciente de documentos aparecerá aquí cuando comiences a subir documentos.",
+      "noActivity": {
+        "title": "Sin Actividad Reciente",
+        "description": "Tu actividad reciente de documentos aparecerá aquí cuando comiences a subir documentos."
+      },
+      "status": {
+        "pending": "Pendiente",
+        "processing": "En Proceso",
+        "inProgress": "En Progreso",
+        "completed": "Completado",
+        "approved": "Aprobado",
+        "rejected": "Rechazado",
+        "unknown": "Desconocido"
+      },
+      "actions": {
+        "download": "Descargar",
+        "view": "Ver"
+      },
+      "loading": "Cargando estado..."
+    },
+    "quickActions": {
+      "title": "Acciones Rápidas",
+      "description": "Tareas comunes y atajos",
+      "actions": {
+        "upload": {
+          "title": "Subir Documento",
+          "description": "Iniciar un nuevo proyecto de traducción"
+        },
+        "download": {
+          "title": "Descargar Traducciones",
+          "description": "Acceder a documentos completados"
+        },
+        "verify": {
+          "title": "Verificar Documento",
+          "description": "Verificar autenticidad del documento"
+        },
+        "translations": {
+          "title": "Servicios de Traducción",
+          "description": "Conoce más sobre nuestros servicios"
+        },
+        "contact": {
+          "title": "Contactar Soporte",
+          "description": "Obtener ayuda y soporte"
+        }
+      },
+      "stats": {
+        "pricing": "Precios",
+        "perPage": "por página",
+        "turnaround": "Plazo",
+        "deliveryTime": "tiempo de entrega"
+      },
+      "features": {
+        "title": "✨ Lo que obtienes:",
+        "list": {
+          "uscisAccepted": "Traducciones aceptadas por USCIS",
+          "officialCertification": "Certificación oficial y autenticación",
+          "digitalVerification": "Sistema de verificación digital",
+          "support": "Soporte al cliente 24/7"
+        }
+      },
+      "help": {
+        "title": "¿Necesitas Ayuda?",
+        "description": "Consulta nuestras Preguntas Frecuentes o contacta a soporte para asistencia con tus necesidades de traducción.",
+        "buttons": {
+          "viewFaq": "Ver FAQ",
+          "contactSupport": "Contactar Soporte"
+        }
+      }
+    },
+    "totalDocuments": "Total de Documentos",
+    "pendingDocuments": "Documentos Pendientes",
+    "completedDocuments": "Documentos Completados",
+    "processingDocuments": "Documentos en Procesamiento",
+    "uploadDescription": "Sube tus documentos para servicios de traducción profesional. Todas las traducciones están certificadas y son aceptadas por USCIS y autoridades de EE.UU.",
+    "notifications": {
+      "translationReady": "¡Tu traducción está lista!",
+      "download": "Descargar",
+      "close": "Cerrar notificación"
+    }
+  },
+  "documents": {
+    "uploadDocument": "Subir Documento",
+    "documentName": "Nombre del Documento",
+    "documentType": "Tipo de Documento",
+    "documentStatus": "Estado del Documento",
+    "uploadDate": "Fecha de Subida",
+    "completionDate": "Fecha de Finalización",
+    "documentSize": "Tamaño del Documento",
+    "documentLanguage": "Idioma del Documento",
+    "originalLanguage": "Idioma Original",
+    "targetLanguage": "Idioma de Destino",
+    "translationProgress": "Progreso de la Traducción",
+    "pending": "Pendiente",
+    "processing": "En Procesamiento",
+    "completed": "Completado",
+    "cancelled": "Cancelado",
+    "draft": "Borrador"
+  },
+  "folders": {
+    "createFolder": "Crear Carpeta",
+    "folderName": "Nombre de la Carpeta",
+    "folderColor": "Color de la Carpeta",
+    "parentFolder": "Carpeta Padre",
+    "noParent": "Sin carpeta padre",
+    "folderCreated": "Carpeta creada exitosamente",
+    "folderUpdated": "Carpeta actualizada exitosamente",
+    "folderDeleted": "Carpeta eliminada exitosamente"
+  },
+  "notifications": {
+    "notifications": "Notificaciones",
+    "noNotifications": "Sin notificaciones",
+    "markAllAsRead": "Marcar todas como leídas",
+    "unreadCount": "{{count}} no leída",
+    "unreadCount_plural": "{{count}} no leídas"
+  },
+  "payments": {
+    "payment": "Pago",
+    "paymentMethod": "Método de Pago",
+    "paymentStatus": "Estado del Pago",
+    "paymentAmount": "Monto del Pago",
+    "paymentDate": "Fecha del Pago",
+    "paymentSuccess": "Pago realizado exitosamente",
+    "paymentCancelled": "Pago cancelado",
+    "paymentFailed": "Fallo en el pago"
+  },
+  "errors": {
+    "somethingWentWrong": "Algo salió mal",
+    "tryAgain": "Inténtalo de nuevo",
+    "networkError": "Error de conexión",
+    "unauthorized": "No autorizado",
+    "forbidden": "Acceso denegado",
+    "notFound": "No encontrado",
+    "validationError": "Error de validación",
+    "fileTooLarge": "Archivo demasiado grande",
+    "invalidFileType": "Tipo de archivo inválido"
+  },
+  "language": {
+    "portuguese": "Portugués",
+    "spanish": "Español",
+    "english": "Inglés",
+    "selectLanguage": "Seleccionar Idioma"
+  },
+  "company": {
+    "name": "THE FUTURE OF ENGLISH"
+  },
+  "hero": {
+    "title1": "Transforma Tu",
+    "title2": "Futuro con",
+    "description": "Mentoría especializada para encontrar la mejor escuela y asegurar tu oportunidad de beca con nuestra comprobada tasa de éxito del 95%.",
+    "startTranslation": "Iniciar Traducción",
+    "verifyDocument": "Verificar Documento",
+    "successRate": "tasa de éxito del 95%",
+    "startNow": "Quiero Empezar Ahora",
+    "talkToSpecialist": "Hablar con Especialista",
+    "personalized": "100% Personalizado",
+    "fastResults": "Resultados Rápidos"
+  },
+  "stats": {
+    "uscisAcceptance": "Aceptación USCIS",
+    "avgTurnaround": "Tiempo Promedio",
+    "documentsTranslated": "Documentos Traducidos",
+    "languagesSupported": "Idiomas Soportados"
+  },
+  "pricing": {
+    "title": "Precios Simples y Transparentes",
+    "description": "Servicios de traducción profesional con precios competitivos y calidad garantizada",
+    "perPage": "por página",
+    "mostPopular": "Más Popular",
+    "chooseBankStatements": "Elegir Estados de Cuenta Bancarios",
+    "getStartedNow": "Comenzar Ahora",
+    "note": "* Los precios son por página estándar (250 palabras). Los documentos complejos pueden requerir tarifas adicionales.",
+    "certifiedTranslation": {
+      "name": "Traducción Certificada",
+      "description": "Traducción certificada oficial con autenticación legal",
+      "features": {
+        "turnaround": "Plazo de 24-48 horas",
+        "notarization": "Notarización oficial",
+        "authentication": "Autenticación legal",
+        "uscis": "Aceptado por USCIS",
+        "verification": "Código de verificación digital",
+        "delivery": "Entrega por correo electrónico",
+        "support": "Soporte prioritario"
+      }
+    },
+    "bankStatements": {
+      "name": "Estados de Cuenta Bancarios",
+      "description": "Traducción especializada para documentos financieros con verificación mejorada",
+      "features": {
+        "turnaround": "Plazo de 24-48 horas",
+        "expertise": "Experiencia en documentos financieros",
+        "verification": "Proceso de verificación mejorado",
+        "uscis": "Aceptado por USCIS",
+        "digitalCode": "Código de verificación digital",
+        "delivery": "Entrega por correo electrónico",
+        "support": "Soporte prioritario"
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "Cómo Funciona Nuestro Proceso de Traducción",
+    "description": "Proceso de traducción de documentos simple, seguro y profesional en 4 pasos fáciles",
+    "steps": {
+      "upload": {
+        "title": "Subir Documento",
+        "description": "Sube tu documento de forma segura a nuestra plataforma. Soportamos PDF, JPG, PNG y otros formatos comunes."
+      },
+      "quote": {
+        "title": "Obtener Presupuesto",
+        "description": "Cálculo automático basado en el número de páginas y tipo de documento. Precios transparentes sin tarifas ocultas."
+      },
+      "payment": {
+        "title": "Pago Seguro",
+        "description": "Procesamiento de pago seguro con confirmación instantánea. Aceptamos todas las principales tarjetas de crédito y PayPal."
+      },
+      "receive": {
+        "title": "Recibir Traducción",
+        "description": "Recibe tu traducción certificada con código de verificación. Entrega por correo electrónico o copia física disponible."
+      }
+    }
+  },
+  "features": {
+    "title": "¿Por Qué Elegir Nuestros Servicios de Traducción?",
+    "description": "Calidad profesional con aceptación garantizada por las autoridades estadounidenses",
+    "certified": {
+      "title": "Certificado",
+      "description": "Todas las traducciones están certificadas por profesionales licenciados y autenticadas con sellos y firmas oficiales. Tasa de aceptación del USCIS del 99.9%."
+    },
+    "fastTurnaround": {
+      "title": "Entrega Rápida",
+      "description": "Traducciones estándar completadas en 24-48 horas. Servicio exprés disponible para documentos urgentes (4-8 horas) con procesamiento prioritario."
+    }
+  },
+  "testimonials": {
+    "title": "Lo Que Dicen Nuestros Clientes",
+    "description": "Comentarios reales de clientes satisfechos que confiaron sus documentos importantes a nosotros",
+    "items": {
+      "0": {
+        "name": "David Thompson",
+        "location": "Canadá → Nueva York",
+        "text": "Servicio rápido y profesional. Mi traducción de certificado de nacimiento fue aceptada por USCIS sin problemas.",
+        "document": "Certificado de Nacimiento"
+      },
+      "1": {
+        "name": "Jessica Martinez",
+        "location": "México → Texas",
+        "text": "Excelente calidad y entrega rápida. El sistema de verificación me dio tranquilidad.",
+        "document": "Expediente Académico"
+      },
+      "2": {
+        "name": "Ryan Anderson",
+        "location": "Brasil → California",
+        "text": "Servicio profesional con precios competitivos. Mi traducción de certificado de matrimonio quedó perfecta.",
+        "document": "Certificado de Matrimonio"
+      }
+    }
+  },
+  "contact": {
+    "title": "¿Necesitas Ayuda? Contáctanos",
+    "description": "Nuestros especialistas en traducción están aquí para ayudar con cualquier pregunta",
+    "phone": {
+      "title": "Teléfono",
+      "hours": "Lun-Vie: 9AM-6PM EST"
+    },
+    "email": {
+      "title": "Correo Electrónico",
+      "support": "Soporte 24/7"
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "description": "Mensajería instantánea"
+    }
+  },
+  "documentTypes": {
+    "title": "Traducimos Todo",
+    "description": "Desde documentos personales hasta papeles legales complejos - manejamos todos los tipos de traducciones",
+    "common": {
+      "title": "Documentos Más Comunes",
+      "birthCertificates": "Certificados de Nacimiento",
+      "marriageCertificates": "Certificados de Matrimonio",
+      "academicTranscripts": "Expedientes Académicos",
+      "bankStatements": "Estados de Cuenta Bancarios",
+      "medicalRecords": "Registros Médicos",
+      "legalDocuments": "Documentos Legales"
+    },
+    "more": {
+      "title": "Y Mucho Más",
+      "anyOfficial": "Cualquier Documento Oficial",
+      "businessContracts": "Contratos Comerciales",
+      "technicalManuals": "Manuales Técnicos",
+      "websiteContent": "Contenido de Sitio Web",
+      "marketingMaterials": "Material de Marketing"
+    }
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "description": "Todo lo que necesitas saber sobre nuestros servicios de traducción",
+    "items": {
+      "0": {
+        "question": "¿Cuánto tiempo toma la traducción?",
+        "answer": "Las traducciones estándar se completan en 24-48 horas. Los servicios urgentes están disponibles para documentos urgentes (4-8 horas) con tarifa adicional."
+      },
+      "1": {
+        "question": "¿Son aceptadas sus traducciones por USCIS?",
+        "answer": "Sí, todas nuestras traducciones están certificadas y autenticadas, cumpliendo los requisitos de USCIS. Incluyen declaraciones de certificación oficial y son aceptadas por todas las autoridades de inmigración estadounidenses."
+      },
+      "2": {
+        "question": "¿Qué documentos pueden traducir?",
+        "answer": "Traducimos todos los documentos de inmigración incluyendo certificados de nacimiento, certificados de matrimonio, expedientes académicos, registros médicos, antecedentes penales y más. Contáctanos para tipos específicos de documentos."
+      },
+      "3": {
+        "question": "¿Cómo verifico que mi traducción es auténtica?",
+        "answer": "Cada traducción viene con un código de verificación único. Puedes verificar la autenticidad en nuestro sitio web o contactarnos directamente con el código."
+      },
+      "4": {
+        "question": "¿Ofrecen servicios urgentes?",
+        "answer": "Sí, ofrecemos servicios urgentes para documentos urgentes. El plazo de 4-8 horas está disponible por una tarifa adicional del 50%. Contáctanos para precios específicos del servicio urgente."
+      },
+      "5": {
+        "question": "¿Qué idiomas soportan?",
+        "answer": "Soportamos Portugués, Portugués (Portugal), Español, Alemán, Árabe, Hebreo, Japonés y Coreano. Todos los documentos se traducen al inglés para los requisitos de USCIS y autoridades estadounidenses."
+      }
+    }
+  },
+  "languages": {
+    "title": "Idiomas Soportados",
+    "portuguese": "Portugués",
+    "portuguesePortugal": "Portugués (Portugal)",
+    "spanish": "Español",
+    "german": "Alemán",
+    "arabic": "Árabe",
+    "hebrew": "Hebreo",
+    "japanese": "Japonés",
+    "korean": "Coreano",
+    "description": "Todos los documentos son traducidos al inglés para requisitos del USCIS y autoridades americanas."
+  },
+  "footer": {
+    "description": "Transformando sueños en realidad a través de mentoría especializada para becas de estudio en Estados Unidos.",
+    "services": {
+      "title": "Nuestros Servicios",
+      "documentTranslation": "Traducción de Documentos",
+      "documentVerification": "Verificación de Documentos",
+      "mentorship": "Mentoría"
+    },
+    "contact": {
+      "title": "Contacto",
+      "location": "Estados Unidos"
+    },
+    "copyright": "© 2025 The Future of English. Todos los derechos reservados.",
+    "links": {
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Uso",
+      "cookies": "Política de Cookies"
+    }
+  },
+  "about": {
+    "title": "Sobre",
+    "titleUs": "Nosotros",
+    "description": "En The Future of English, ayudamos a estudiantes internacionales a realizar su sueño de estudiar en los Estados Unidos. Ofrecemos orientación completa, desde la selección de la escuela hasta la obtención de la beca ideal — con excelencia, transparencia y resultados comprobados.",
+    "scholarshipsSecured": "Becas Obtenidas",
+    "partnerSchools": "Escuelas Asociadas",
+    "countriesServed": "Países Atendidos",
+    "monthsAverage": "Meses en Promedio",
+    "features": {
+      "globalNetwork": {
+        "title": "Red Global",
+        "description": "Acceso a más de 50 escuelas asociadas en los Estados Unidos con oportunidades exclusivas de becas."
+      },
+      "expertGuidance": {
+        "title": "Orientación Especializada",
+        "description": "Consultores especializados con años de experiencia en educación internacional y procesos de visa."
+      },
+      "endToEndSupport": {
+        "title": "Soporte Completo",
+        "description": "Desde la consulta inicial hasta la llegada a los EE.UU., manejamos cada paso de tu viaje."
+      }
+    },
+    "values": {
+      "title": "Nuestros Valores",
+      "subtitle": "Principios que guían nuestra misión de transformar vidas a través de la educación",
+      "passion": {
+        "title": "Pasión por la Educación",
+        "description": "Creemos en el poder transformador de la educación internacional"
+      },
+      "innovation": {
+        "title": "Innovación Continua",
+        "description": "Siempre buscamos las mejores prácticas y tecnologías"
+      },
+      "partnership": {
+        "title": "Verdadera Asociación",
+        "description": "Construimos relaciones duraderas con nuestros estudiantes"
+      },
+      "excellence": {
+        "title": "Excelencia en Todo",
+        "description": "Compromiso con la calidad en cada detalle"
+      }
+    }
+  },
+  "upload": {
+    "pageTitle": "Traducción de Documentos",
+    "pageDescription": "Obtenga sus documentos traducidos profesionalmente con nuestro servicio seguro y confiable.",
+    "howItWorksTitle": "Cómo Funciona",
+    "steps": {
+      "upload": {
+        "title": "Subir Documento",
+        "description": "Selecciona tu archivo PDF o imagen"
+      },
+      "choose": {
+        "title": "Elegir Servicio",
+        "description": "Selecciona tipo de traducción e idioma"
+      },
+      "receive": {
+        "title": "Recibir Traducción",
+        "description": "Recibe tu documento traducido"
+      }
+    },
+    "form": {
+      "selectDocument": "1. Seleccionar Documento",
+      "uploadArea": {
+        "clickToUpload": "Haz clic para subir o arrastra y suelta",
+        "supportedFormats": "PDF, JPG, PNG hasta 10MB",
+        "removeFile": "Eliminar archivo"
+      },
+      "numberOfPages": "2. Número de Páginas",
+      "translationType": "3. Tipo de Traducción",
+      "isBankStatement": "4. ¿Es un extracto bancario?",
+      "originalLanguage": "5. Idioma Original del Documento",
+      "targetLanguage": "6. Idioma de Destino (Traducir A)",
+      "selectOptions": {
+        "yes": "Sí",
+        "no": "No"
+      }
+    },
+    "summary": {
+      "title": "Resumen del Pedido",
+      "fileName": "Archivo",
+      "pages": "páginas",
+      "page": "página",
+      "originalLang": "Idioma Original",
+      "targetLang": "Idioma de Destino",
+      "translationType": "Tipo de Traducción",
+      "bankStatement": "Extracto Bancario",
+      "pricing": {
+        "title": "Precios",
+        "perPage": "por página",
+        "certified": "Certificada",
+        "bankStatementFee": "Tarifa de extracto bancario",
+        "totalCost": "Costo Total"
+      },
+      "guarantees": {
+        "title": "Nuestras Garantías",
+        "uscisAccepted": "Aceptado por USCIS",
+        "certifiedTranslation": "Traducción Certificada",
+        "fastDelivery": "Entrega Rápida",
+        "moneyBack": "Garantía de Devolución"
+      },
+      "processPayment": "Procesar Pago"
+    },
+    "errors": {
+      "noFile": "Ningún archivo seleccionado",
+      "invalidFile": "Tipo de archivo inválido",
+      "fileTooLarge": "Archivo demasiado grande",
+      "uploadFailed": "Error en la carga",
+      "paymentFailed": "Error en el pago"
+    },
+    "success": {
+      "uploaded": "¡Documento subido exitosamente!",
+      "processing": "Tu documento está siendo procesado."
+    },
+    "serviceInfo": {
+      "title": "Información del Servicio",
+      "translationTypes": {
+        "title": "Tipos de Traducción",
+        "certified": {
+          "title": "Traducción Certificada",
+          "price": "$15/página",
+          "description": "Traducción estándar con certificación oficial para uso general, inmigración y propósitos legales.",
+          "features": [
+            "Sello de certificación oficial",
+            "Aceptado por USCIS",
+            "Código de verificación digital",
+            "Entrega en 24-48 horas"
+          ]
+        },
+        "notarized": {
+          "title": "Traducción Notarizada",
+          "price": "$20/página",
+          "description": "Traducción oficial notarizada con notarización legal adicional para documentos judiciales y procedimientos legales.",
+          "features": [
+            "Certificación de notario público",
+            "Autenticación de documento legal",
+            "Formato aceptado por tribunales",
+            "Verificación mejorada"
+          ]
+        }
+      },
+      "documentTypes": {
+        "title": "Tipos de Documento",
+        "regular": {
+          "title": "Documentos Regulares",
+          "price": "Tarifa estándar",
+          "description": "Certificados de nacimiento, certificados de matrimonio, diplomas, transcripciones y otros documentos oficiales."
+        },
+        "bankStatements": {
+          "title": "Extractos Bancarios",
+          "price": "+$10/página",
+          "description": "Verificación adicional y formateo requerido para documentos financieros.",
+          "features": [
+            "Proceso de verificación mejorado",
+            "Formateo de documentos financieros",
+            "Medidas de seguridad adicionales"
+          ]
+        }
+      },
+      "supportedLanguages": {
+        "title": "Idiomas Soportados",
+        "languages": [
+          "Portugués",
+          "Español",
+          "Árabe",
+          "Japonés",
+          "Portugués (Portugal)",
+          "Alemán",
+          "Hebreo",
+          "Coreano"
+        ],
+        "note": "Todos los documentos son traducidos al inglés para requisitos de USCIS y autoridades estadounidenses."
+      },
+      "serviceFeatures": {
+        "title": "Características del Servicio",
+        "features": [
+          "Aceptado por USCIS y Gobierno",
+          "Certificación Oficial",
+          "Sistema de Verificación Digital",
+          "Entrega en 24-48 Horas",
+          "Manejo Seguro de Archivos",
+          "Soporte al Cliente 24/7"
+        ]
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, CreditCard, DollarSign } from 'lucide-react';
-import { getEdgeFunctionAuthHeader } from '../lib/config';
+import { supabase } from '../lib/supabase';
 
 interface PaymentCalculatorProps {
   pages: number;
@@ -93,9 +93,15 @@ export function PaymentCalculator({
         totalPrice
       });
 
-      const response = await fetch('/functions/v1/create-checkout-session', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
         method: 'POST',
-        headers: getEdgeFunctionAuthHeader(),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
         body: JSON.stringify({
           pages,
           isCertified: services.find(s => s.id === 'certified')?.checked || false,

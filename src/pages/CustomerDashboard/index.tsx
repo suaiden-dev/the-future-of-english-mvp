@@ -6,6 +6,7 @@ import { QuickActions } from './QuickActions';
 import { DocumentUploadModal } from './DocumentUploadModal';
 import { DocumentsList } from './DocumentsList';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
+import { Chatbot } from '../../components/Chatbot';
 // import { DocumentManager } from './DocumentManager';
 import { Document, Folder } from '../../App';
 import { Database } from '../../lib/database.types';
@@ -14,6 +15,7 @@ import ProfilePage from './ProfilePage';
 import { CheckCircle, Home } from 'lucide-react';
 import UploadDocument from './UploadDocument';
 import { CustomUser } from '../../hooks/useAuth';
+import { useI18n } from '../../contexts/I18nContext';
 type Page = 'home' | 'translations' | 'dashboard-customer' | 'admin' | 'verify' | 'login' | 'register' | 'documents';
 
 type DocumentInsert = Database['public']['Tables']['documents']['Insert'];
@@ -41,6 +43,7 @@ export function CustomerDashboard({
   onViewDocument
 }: CustomerDashboardProps) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 
@@ -78,7 +81,7 @@ export function CustomerDashboard({
   const hasCompletedDocuments = documents.some(doc => doc.status === 'completed');
 
   const handleUploadClick = () => {
-    setIsUploadModalOpen(true);
+    navigate('/dashboard/upload');
   };
 
   const handleCloseUploadModal = () => {
@@ -105,7 +108,7 @@ export function CustomerDashboard({
         <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-50 border border-green-200 rounded-xl shadow-lg flex items-center px-6 py-4 gap-4 animate-fade-in-up min-w-[320px] max-w-[90vw]">
           <CheckCircle className="w-7 h-7 text-green-600" />
           <div className="flex-1">
-            <div className="font-semibold text-green-900 text-base mb-1">Your translation is ready!</div>
+            <div className="font-semibold text-green-900 text-base mb-1">{t('dashboard.notifications.translationReady')}</div>
             <div className="text-green-800 text-sm truncate">{newCompletedDoc.filename}</div>
           </div>
           <button
@@ -115,18 +118,18 @@ export function CustomerDashboard({
               onViewDocument(newCompletedDoc);
             }}
           >
-            Download
+            {t('dashboard.notifications.download')}
           </button>
           <button
             className="ml-2 text-green-700 hover:text-green-900 text-xl font-bold"
             onClick={() => setShowToast(false)}
-            aria-label="Close notification"
+            aria-label={t('dashboard.notifications.close')}
           >
             ×
           </button>
         </div>
       )}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
         {/* Dashboard principal - sempre renderiza o overview */}
         <WelcomeSection user={user} onUploadClick={handleUploadClick} />
         <CustomerStatsCards documents={documents} />
@@ -159,6 +162,7 @@ export function CustomerDashboard({
           onClose={handleCloseDetailsModal}
         />
       </div>
+      <Chatbot />
     </div>
   );
 }

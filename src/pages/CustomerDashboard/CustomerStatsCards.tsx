@@ -1,12 +1,15 @@
 import React from 'react';
 import { FileText, Clock, CheckCircle, DollarSign, TrendingUp, Calendar } from 'lucide-react';
 import { Document } from '../../App';
+import { useI18n } from '../../contexts/I18nContext';
 
 interface CustomerStatsCardsProps {
   documents: Document[];
 }
 
 export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
+  const { t } = useI18n();
+  
   const totalDocuments = documents.length;
   const pendingDocuments = documents.filter(doc => doc.status === 'pending').length;
   const processingDocuments = documents.filter(doc => doc.status === 'processing').length;
@@ -24,52 +27,52 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
 
   const stats = [
     {
-      title: 'Total Documents',
+      title: t('dashboard.statistics.cards.totalDocuments'),
       value: totalDocuments || 0,
       icon: FileText,
       bgColor: 'bg-tfe-blue-100',
       iconColor: 'text-tfe-blue-950',
-      description: `${totalPages || 0} pages total`
+      description: `${totalPages || 0} ${t('dashboard.statistics.cards.descriptions.pagesTotal')}`
     },
     {
-      title: 'In Progress',
+      title: t('dashboard.statistics.cards.inProgress'),
       value: pendingDocuments + processingDocuments || 0,
       icon: Clock,
       bgColor: 'bg-yellow-100',
       iconColor: 'text-yellow-900',
-      description: `${pendingDocuments || 0} pending, ${processingDocuments || 0} in progress`
+      description: `${pendingDocuments || 0} ${t('dashboard.statistics.cards.descriptions.pendingProgress')} ${processingDocuments || 0} ${t('dashboard.statistics.cards.descriptions.inProgressText')}`
     },
     {
-      title: 'Completed',
+      title: t('dashboard.statistics.cards.completed'),
       value: completedDocuments || 0,
       icon: CheckCircle,
       bgColor: 'bg-green-100',
       iconColor: 'text-green-900',
-      description: 'Ready for download'
+      description: t('dashboard.statistics.cards.descriptions.readyDownload')
     },
     {
-      title: 'Total Spent',
+      title: t('dashboard.statistics.cards.totalSpent'),
       value: `$${isNaN(totalSpent) ? '0' : totalSpent}`,
       icon: DollarSign,
       bgColor: 'bg-purple-100',
       iconColor: 'text-purple-900',
-      description: `$${totalDocuments > 0 ? (totalSpent / totalDocuments).toFixed(2) : '0'} avg per document`
+      description: `$${totalDocuments > 0 ? (totalSpent / totalDocuments).toFixed(2) : '0'} ${t('dashboard.statistics.cards.descriptions.avgPerDocument')}`
     },
     {
-      title: 'This Month',
+      title: t('dashboard.statistics.cards.thisMonth'),
       value: thisMonthDocuments.length || 0,
       icon: Calendar,
       bgColor: 'bg-indigo-100',
       iconColor: 'text-indigo-900',
-      description: 'Documents uploaded'
+      description: t('dashboard.statistics.cards.descriptions.documentsUploaded')
     },
     {
-      title: 'Success Rate',
+      title: t('dashboard.statistics.cards.successRate'),
       value: totalDocuments > 0 ? `${Math.round((completedDocuments / totalDocuments) * 100)}%` : '0%',
       icon: TrendingUp,
       bgColor: 'bg-emerald-100',
       iconColor: 'text-emerald-900',
-      description: 'Completion rate'
+      description: t('dashboard.statistics.cards.descriptions.completionRate')
     }
   ];
 
@@ -78,27 +81,27 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 mb-8 text-center">
         <FileText className="w-16 h-16 text-tfe-blue-300 mx-auto mb-4" />
         <h3 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-          Welcome to Your Dashboard!
+          {t('dashboard.statistics.welcome.title')}
         </h3>
         <p className="text-gray-600 mb-4 text-lg leading-relaxed">
-          Upload your first document to start tracking your translation progress and statistics.
+          {t('dashboard.statistics.welcome.description')}
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           <div className="bg-white p-4 rounded-lg">
             <div className="text-3xl font-bold text-tfe-blue-950">$20</div>
-            <div className="text-base font-medium text-gray-600">Per page</div>
+            <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.perPage')}</div>
           </div>
           <div className="bg-white p-4 rounded-lg">
             <div className="text-3xl font-bold text-green-900">24-48h</div>
-            <div className="text-base font-medium text-gray-600">Turnaround</div>
+            <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.turnaround')}</div>
           </div>
           <div className="bg-white p-4 rounded-lg">
             <div className="text-3xl font-bold text-purple-900">USCIS</div>
-            <div className="text-base font-medium text-gray-600">Accepted</div>
+            <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.accepted')}</div>
           </div>
           <div className="bg-white p-4 rounded-lg">
             <div className="text-3xl font-bold text-tfe-red-950">Certified</div>
-            <div className="text-base font-medium text-gray-600">Translation</div>
+            <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.translation')}</div>
           </div>
         </div>
       </div>
@@ -108,8 +111,8 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
   return (
     <div className="mb-8">
       <div className="mb-6">
-        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Your Statistics</h2>
-        <p className="text-gray-600 text-lg">Overview of your document translation activity</p>
+        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{t('dashboard.statistics.title')}</h2>
+        <p className="text-gray-600 text-lg">{t('dashboard.statistics.description')}</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

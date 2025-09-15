@@ -225,8 +225,8 @@ export function DocumentsToAuthenticateTable() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Desktop Table */}
+      <div className="overflow-x-auto hidden lg:block">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -296,6 +296,84 @@ export function DocumentsToAuthenticateTable() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="lg:hidden">
+        <div className="divide-y divide-gray-200">
+          {filteredDocuments.map((doc) => (
+            <div key={doc.id} className="p-3 sm:p-4 hover:bg-gray-50">
+              <div className="flex flex-col gap-3">
+                {/* Document Info */}
+                <div className="flex items-start gap-3">
+                  <FileText className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-gray-900 truncate" title={doc.filename}>
+                      {doc.filename}
+                    </h4>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {doc.pages} pages • ${doc.total_cost}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* User Info */}
+                <div className="flex items-start gap-3">
+                  <User className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-gray-900 truncate" title={doc.user_name}>
+                      {doc.user_name}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate" title={doc.user_email}>
+                      {doc.user_email}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Status and Authenticator */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="text-xs">
+                    <span className="font-medium text-gray-700">Status:</span>
+                    <div className="mt-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(doc.status)}`}>
+                        {getStatusIcon(doc.status)}
+                        <span className="ml-1 truncate">{doc.status}</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-xs">
+                    <span className="font-medium text-gray-700">Authenticator:</span>
+                    <div className="text-gray-900 mt-1">
+                      {doc.authenticated_by ? (
+                        <>
+                          <div className="truncate" title={doc.authenticated_by}>
+                            ID: {doc.authenticated_by.substring(0, 8)}...
+                          </div>
+                          <div className="text-gray-500">
+                            {doc.authenticated_at ? new Date(doc.authenticated_at).toLocaleDateString('pt-BR') : 'N/A'}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-gray-500">Not assigned</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Actions */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setSelectedDocument(doc)}
+                    className="text-tfe-blue-600 hover:text-tfe-blue-900 flex items-center p-2 rounded hover:bg-blue-50"
+                    title="View document details"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Empty state */}

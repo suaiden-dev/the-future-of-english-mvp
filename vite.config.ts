@@ -12,4 +12,7 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   assetsInclude: ['**/*.worker.js'],
+  json: {
+    stringify: true
+  }
 });

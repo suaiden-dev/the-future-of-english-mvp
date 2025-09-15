@@ -3,8 +3,7 @@ import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { fileStorage } from '../utils/fileStorage';
-import { generateUniqueFileName, generateUploadFileName } from '../utils/fileUtils';
-import { config, getEdgeFunctionAuthHeader } from '../lib/config';
+import { generateUniqueFileName } from '../utils/fileUtils';
 
 export function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -37,10 +36,15 @@ export function PaymentSuccess() {
     try {
       console.log('DEBUG: Processando sucesso do pagamento para session:', sessionId);
       
-      // Buscar informações da sessão do Stripe
-      const response = await fetch(config.edgeFunctions.getSessionInfo, {
+      // Buscar informações da sessão do Stripe usando Edge Function
+      const { data: { session } } = await supabase.auth.getSession();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/get-session-info`, {
         method: 'POST',
-        headers: getEdgeFunctionAuthHeader(),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
         body: JSON.stringify({ sessionId })
       });
 
@@ -65,7 +69,7 @@ export function PaymentSuccess() {
             setIsUploading(true);
             setUploadProgress(0);
 
-        const uploadPath = generateUploadFileName(file.name, userId);
+        const uploadPath = generateUniqueFileName(file.name, userId);
 
         console.log('DEBUG: Fazendo upload para:', uploadPath);
         console.log('DEBUG: Nome do arquivo:', file.name);
@@ -156,17 +160,7 @@ export function PaymentSuccess() {
             },
             metadata: {
               pageCount: parseInt(sessionData.metadata.pages),
-              documentType: (() => {
-                // Lógica correta para determinar o tipo de tradução
-                if (sessionData.metadata.isCertified === 'true') {
-                  return 'Certificado';
-                } else if (sessionData.metadata.isNotarized === 'true') {
-                  return 'Notorizado';
-                } else {
-                  // Fallback: se nenhum dos dois estiver marcado, usar Certificado como padrão
-                  return 'Certificado';
-                }
-              })()
+              documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified'
             }
           };
         
@@ -339,13 +333,26 @@ export function PaymentSuccess() {
       // Usar Edge Function para atualizar documento com service role
       console.log('DEBUG: Chamando Edge Function para atualizar documento');
       
-      const updateResponse = await fetch(config.edgeFunctions.updateDocument, {
+      const updateResponse = await fetch(`${supabaseUrl}/functions/v1/update-document`, {
         method: 'POST',
-        headers: getEdgeFunctionAuthHeader(),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
         body: JSON.stringify({
           documentId: finalDocumentId,
           fileUrl: publicUrl,
-          userId: userId
+          userId: userId,
+          filename: filename,
+          pages: parseInt(sessionData.metadata.pages),
+          totalCost: parseFloat(sessionData.metadata.totalPrice),
+          documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified',
+          isBankStatement: sessionData.metadata.isBankStatement === 'true',
+          sourceLanguage: sessionData.metadata.originalLanguage || 'Portuguese',
+          targetLanguage: sessionData.metadata.targetLanguage || 'English',
+          clientName: sessionData.metadata.clientName || 'Cliente Padrão',
+          sourceCurrency: sessionData.metadata.sourceCurrency || null,
+          targetCurrency: sessionData.metadata.targetCurrency || null
         })
       });
 
@@ -363,6 +370,23 @@ export function PaymentSuccess() {
       console.log('DEBUG: 🚀 INICIANDO ENVIO PARA N8N - CHAMADA MANUAL');
       console.log('DEBUG: Chamando send-translation-webhook para enviar para n8n');
       console.log('DEBUG: 📋 CONFIRMAÇÃO - APENAS UMA REQUISIÇÃO SERÁ ENVIADA PARA O N8N');
+      console.log('DEBUG: Metadados da sessão disponíveis:', sessionData.metadata);
+      console.log('DEBUG: Original Language:', sessionData.metadata.originalLanguage);
+      console.log('DEBUG: Target Language:', sessionData.metadata.targetLanguage);
+      console.log('DEBUG: Source Currency RAW:', sessionData.metadata.sourceCurrency);
+      console.log('DEBUG: Target Currency RAW:', sessionData.metadata.targetCurrency);
+      console.log('DEBUG: Document Type RAW:', sessionData.metadata.documentType);
+      console.log('DEBUG: Is Notarized RAW:', sessionData.metadata.isNotarized);
+      console.log('DEBUG: Is Bank Statement:', sessionData.metadata.isBankStatement);
+      console.log('DEBUG: VERIFICAÇÃO CRÍTICA - CAMPOS DE MOEDA:');
+      console.log('DEBUG: sessionData.metadata.sourceCurrency type:', typeof sessionData.metadata.sourceCurrency);
+      console.log('DEBUG: sessionData.metadata.targetCurrency type:', typeof sessionData.metadata.targetCurrency);
+      console.log('DEBUG: sessionData.metadata.documentType type:', typeof sessionData.metadata.documentType);
+      console.log('DEBUG: sessionData.metadata.targetLanguage type:', typeof sessionData.metadata.targetLanguage);
+      console.log('DEBUG: sourceCurrency value:', JSON.stringify(sessionData.metadata.sourceCurrency));
+      console.log('DEBUG: targetCurrency value:', JSON.stringify(sessionData.metadata.targetCurrency));
+      console.log('DEBUG: documentType value:', JSON.stringify(sessionData.metadata.documentType));
+      console.log('DEBUG: targetLanguage value:', JSON.stringify(sessionData.metadata.targetLanguage));
       
       // Garantir que a URL seja válida
       let finalUrl = publicUrl;
@@ -380,22 +404,15 @@ export function PaymentSuccess() {
         mimetype: 'application/pdf',
         size: storedFile?.file?.size || 0,
         user_id: userId,
-        paginas: parseInt(sessionData.metadata.pages),
-        tipo_trad: (() => {
-          // Lógica correta para determinar o tipo de tradução
-          if (sessionData.metadata.isCertified === 'true') {
-            return 'Certificado';
-          } else if (sessionData.metadata.isNotarized === 'true') {
-            return 'Notorizado';
-          } else {
-            // Fallback: se nenhum dos dois estiver marcado, usar Certificado como padrão
-            return 'Certificado';
-          }
-        })(),
-        valor: sessionData.metadata.totalPrice,
-        idioma_raiz: 'Portuguese',
+        pages: parseInt(sessionData.metadata.pages),
+        document_type: sessionData.metadata.documentType || (sessionData.metadata.isNotarized === 'true' ? 'Notorizado' : 'Certificado'),
+        total_cost: sessionData.metadata.totalPrice,
+        source_language: sessionData.metadata.originalLanguage || 'Portuguese',
+        target_language: sessionData.metadata.targetLanguage || 'English',
         is_bank_statement: sessionData.metadata.isBankStatement === 'true',
-        client_name: null,
+        source_currency: sessionData.metadata.sourceCurrency || null,
+        target_currency: sessionData.metadata.targetCurrency || null,
+        document_id: finalDocumentId,
         // Campos padronizados para compatibilidade com n8n
         isPdf: true,
         fileExtension: 'pdf',
@@ -404,10 +421,18 @@ export function PaymentSuccess() {
       };
 
       console.log('DEBUG: Payload para send-translation-webhook:', webhookPayload);
+      console.log('DEBUG: VERIFICAÇÃO FINAL - MOEDAS NO PAYLOAD:');
+      console.log('DEBUG: source_currency no payload:', webhookPayload.source_currency);
+      console.log('DEBUG: target_currency no payload:', webhookPayload.target_currency);
+      console.log('DEBUG: Tipo source_currency:', typeof webhookPayload.source_currency);
+      console.log('DEBUG: Tipo target_currency:', typeof webhookPayload.target_currency);
 
-      const webhookResponse = await fetch(config.edgeFunctions.sendTranslationWebhook, {
+      const webhookResponse = await fetch(`${supabaseUrl}/functions/v1/send-translation-webhook`, {
         method: 'POST',
-        headers: getEdgeFunctionAuthHeader(),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
         body: JSON.stringify(webhookPayload)
       });
 

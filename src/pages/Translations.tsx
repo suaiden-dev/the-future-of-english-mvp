@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { FileText, CurrencyDollar, Clock, Shield, CheckCircle, ArrowRight, Star, Users, Globe, Trophy, ChatCircle, CaretDown, CaretUp, Phone, Envelope, Lightning, HeartStraight, Target, TrendUp, Download, Upload, Eye, Lock } from '@phosphor-icons/react';
+﻿import { useState } from 'react';
+import { FileText, CurrencyDollar, Clock, Shield, CheckCircle, ArrowRight, Star, Globe, CaretDown, CaretUp, Envelope, Download, Upload, Eye, Lock, Phone, ChatCircle } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
+import { Footer } from '../components/Footer';
+import { Chatbot } from '../components/Chatbot';
 
 export function Translations() {
   const navigate = useNavigate();
@@ -117,42 +119,6 @@ export function Translations() {
     }
   ];
 
-  const documentTypes = [
-    {
-      category: "Personal Documents",
-      documents: [
-        "Birth Certificates",
-        "Marriage Certificates", 
-        "Divorce Decrees",
-        "Death Certificates",
-        "Passport Pages",
-        "Driver's Licenses",
-        "National ID Cards"
-      ]
-    },
-    {
-      category: "Academic Documents",
-      documents: [
-        "Academic Transcripts",
-        "Diplomas & Degrees",
-        "School Certificates",
-        "Course Descriptions",
-        "Academic References",
-        "Professional Certifications"
-      ]
-    },
-    {
-      category: "Legal & Medical",
-      documents: [
-        "Police Clearances",
-        "Medical Records",
-        "Vaccination Records",
-        "Employment Records",
-        "Bank Statements",
-        "Legal Documents"
-      ]
-    }
-  ];
 
   return (
     <div className="min-h-screen">
@@ -664,6 +630,9 @@ export function Translations() {
           </div>
         </div>
       </section>
+      
+      <Footer />
+      <Chatbot />
     </div>
   );
 }

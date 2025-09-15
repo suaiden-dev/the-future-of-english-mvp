@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Globe, Award } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Globe, Award, Receipt } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { generateUploadFileName } from '../../utils/fileUtils';
-import { config, getEdgeFunctionAuthHeader } from '../../lib/config';
+import { generateUniqueFileName } from '../../utils/fileUtils';
+import { useI18n } from '../../contexts/I18nContext';
 
 export default function AuthenticatorUpload() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pages, setPages] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
@@ -15,23 +16,33 @@ export default function AuthenticatorUpload() {
   const [dragActive, setDragActive] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [tipoTrad, setTipoTrad] = useState<'Certificado' | 'Notorizado'>('Certificado');
+  const [tipoTrad, setTipoTrad] = useState<'Certified' | 'Notarized'>('Certified');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
+  const [idiomaDestino, setIdiomaDestino] = useState('English');
   const [clientName, setClientName] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
+  const receiptInputRef = useRef<HTMLInputElement>(null);
+  
+  // Estados para moedas do bank statement
+  const [sourceCurrency, setSourceCurrency] = useState('USD');
+  const [targetCurrency, setTargetCurrency] = useState('USD');
   
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
   const translationTypes = [
-    { value: 'Certificado', label: 'Certified Translation' },
-    { value: 'Notorizado', label: 'Notarized Translation' },
+    { value: 'Certified', label: 'Certified' },
+    { value: 'Notarized', label: 'Notarized' },
   ];
   
-  const languages = [
+  
+  const targetLanguages = [
     'Portuguese',
-    'Portuguese (Portugal)',
     'Spanish',
+    'English',
     'German',
     'Arabic',
     'Hebrew',
@@ -39,14 +50,41 @@ export default function AuthenticatorUpload() {
     'Korean',
   ];
   
-  function calcularValor(pages: number, tipo: 'Certificado' | 'Notorizado', extrato: boolean) {
-    if (extrato) {
-      return tipo === 'Certificado' ? pages * 25 : pages * 35;
-    } else {
-      return tipo === 'Certificado' ? pages * 15 : pages * 20;
-    }
+  const currencies = [
+    'USD',
+    'BRL',
+    'EUR',
+    'GBP',
+    'CAD',
+    'AUD',
+    'JPY',
+    'CHF',
+    'CNY',
+    'MXN',
+    'ARS',
+    'CLP',
+    'COP',
+  ];
+  
+  const paymentMethods = [
+    { value: 'card', label: 'Credit/Debit Card' },
+    { value: 'cash', label: 'Cash' },
+    { value: 'transfer', label: 'Bank Transfer' },
+    { value: 'zelle', label: 'Zelle' },
+    { value: 'stripe', label: 'Stripe' },
+    { value: 'other', label: 'Other' },
+  ];
+
+  function calcularValor(pages: number, tipoTrad: string) {
+    let basePrice = tipoTrad === 'Notarized' ? 20 : 15; // $20 for Notarized, $15 for Certified
+    return pages * basePrice;
   }
-  const valor = calcularValor(pages, tipoTrad, isExtrato);
+
+  // Função para mapear o tipo de tradução para o valor correto no banco
+  function mapTipoTradToDatabase(tipoTrad: 'Certified' | 'Notarized'): string {
+    return tipoTrad === 'Certified' ? 'Certificado' : 'Notorizado';
+  }
+  const valor = calcularValor(pages, tipoTrad);
 
   // PDF page count
   let pdfjsLib: any = null;
@@ -72,9 +110,9 @@ export default function AuthenticatorUpload() {
     // Reset upload state
     setIsUploading(false);
     
-    // ✅ Validate file type - aceitar PDF, PNG e JPG como no upload do cliente
-    if (!file.type.includes('pdf') && !file.type.startsWith('image/')) {
-      setError('Please select a PDF file or image (PNG, JPG).');
+    // Validate file type
+    if (!file.type.includes('pdf')) {
+      setError('Please select a PDF file.');
       return;
     }
     
@@ -85,37 +123,48 @@ export default function AuthenticatorUpload() {
     }
     
     try {
-      if (file.type.includes('pdf')) {
-        // ✅ Processar PDF com PDF.js
-        if (!pdfjsLib) {
-          await loadPdfJs();
-        }
-        
-        // Contar páginas do PDF
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        const pageCount = pdf.numPages;
-        setPages(pageCount);
-        
-        console.log('DEBUG: PDF loaded, pages:', pageCount);
-      } else if (file.type.startsWith('image/')) {
-        // ✅ Imagem = 1 página (igual ao upload do cliente)
-        setPages(1);
-        console.log('DEBUG: Image file, setting pages to 1');
+      // Load PDF.js for page counting
+      if (!pdfjsLib) {
+        await loadPdfJs();
       }
       
-      // ✅ Gerar preview URL para PDF e imagem
+      // Count pages
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pageCount = pdf.numPages;
+      setPages(pageCount);
+      
+      console.log('DEBUG: PDF loaded, pages:', pageCount);
+      
+      // Generate preview URL
       const url = URL.createObjectURL(file);
       setFileUrl(url);
       
     } catch (error) {
-      console.error('Error processing file:', error);
-      if (file.type.includes('pdf')) {
-        setError('Error processing PDF file. Please try again.');
-      } else {
-        setError('Error processing image file. Please try again.');
-      }
+      console.error('Error processing PDF:', error);
+      setError('Error processing PDF file. Please try again.');
     }
+  };
+
+  const handleReceiptFileChange = (file: File) => {
+    setReceiptFile(file);
+    setError(null);
+    
+    // Validate file type
+    if (!file.type.includes('pdf') && !file.type.includes('image/')) {
+      setError('Receipt file must be PDF or image (JPG, PNG).');
+      return;
+    }
+    
+    // Validate file size (max 5MB for receipt)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Receipt file size must be less than 5MB.');
+      return;
+    }
+    
+    // Generate preview URL
+    const url = URL.createObjectURL(file);
+    setReceiptFileUrl(url);
   };
 
   // Função para processar upload direto (SEM PAGAMENTO para autenticador)
@@ -128,7 +177,7 @@ export default function AuthenticatorUpload() {
       console.log('DEBUG: Custom payload:', customPayload);
       
       if (!selectedFile) {
-        throw new Error('Nenhum arquivo selecionado');
+        throw new Error('No file selected');
       }
 
       if (!clientName.trim()) {
@@ -137,30 +186,44 @@ export default function AuthenticatorUpload() {
 
       const metadata = {
         documentType: tipoTrad,
-        certification: tipoTrad === 'Certificado',
-        notarization: tipoTrad === 'Notorizado',
+        certification: false,
+                    notarization: tipoTrad === 'Certified',
         pageCount: pages,
         isBankStatement: isExtrato,
         originalLanguage: idiomaRaiz,
+        targetLanguage: idiomaDestino,
         userId: user?.id,
-        clientName: clientName.trim()
+        clientName: clientName.trim(),
+        paymentMethod: paymentMethod,
+        ...(isExtrato && {
+          sourceCurrency: sourceCurrency,
+          targetCurrency: targetCurrency
+        })
       };
 
       console.log('DEBUG: Salvando arquivo no IndexedDB com metadata:', metadata);
       
-      // Usar payload customizado se fornecido, senão criar padrão
+      // Usar payload customizado se fornecido (que já tem originalLanguage e targetLanguage corretos)
       const payload = customPayload || {
         pages,
-        isCertified: tipoTrad === 'Certificado',
-        isNotarized: tipoTrad === 'Notorizado',
+        isCertified: false,
+        isNotarized: tipoTrad === 'Certified',
         isBankStatement: isExtrato,
-        filePath: customPayload?.filePath || fileId, // filePath sempre que possível
+        filePath: fileId,
         userId: user?.id,
         userEmail: user?.email,
         filename: selectedFile?.name,
-        clientName: clientName.trim()
+        clientName: clientName.trim(),
+        originalLanguage: idiomaRaiz,
+        targetLanguage: idiomaDestino,
+        documentType: 'Certificado',
+        paymentMethod: paymentMethod,
+        ...(isExtrato && {
+          sourceCurrency: sourceCurrency,
+          targetCurrency: targetCurrency
+        })
       };
-      console.log('Payload enviado para webhook:', payload);
+      console.log('Payload final a ser enviado para webhook:', payload);
 
       // Verificar se o documento já existe na tabela documents
       console.log('DEBUG: Verificando se documento já existe na tabela documents...');
@@ -178,6 +241,7 @@ export default function AuthenticatorUpload() {
           console.log(`DEBUG: Documento ${index + 1}:`, doc.id, doc.created_at);
         });
         newDocument = existingDocs[0]; // Usar o mais recente
+        console.log('DEBUG: Usando documento existente:', newDocument.id);
       } else {
         // Criar documento na tabela documents primeiro (para que a edge function possa puxar client_name)
         console.log('DEBUG: Criando documento na tabela documents...');
@@ -185,30 +249,49 @@ export default function AuthenticatorUpload() {
           .from('documents')
           .getPublicUrl(payload.filePath);
 
+        console.log('DEBUG: Dados para inserção na tabela documents:');
+        console.log('DEBUG: user_id:', user?.id);
+        console.log('DEBUG: filename:', selectedFile?.name);
+        console.log('DEBUG: pages:', pages);
+        console.log('DEBUG: valor:', valor);
+        console.log('DEBUG: tipo_trad:', mapTipoTradToDatabase(tipoTrad));
+        console.log('DEBUG: idioma_raiz:', idiomaRaiz);
+        console.log('DEBUG: idioma_destino:', idiomaDestino);
+        console.log('DEBUG: isExtrato:', isExtrato);
+
+        const documentData: any = {
+          user_id: user?.id,
+          filename: selectedFile?.name,
+          pages: pages,
+          status: 'pending',
+          total_cost: valor,
+          tipo_trad: mapTipoTradToDatabase(tipoTrad),
+          valor: valor,
+          idioma_raiz: idiomaRaiz,
+          idioma_destino: idiomaDestino,
+          is_bank_statement: isExtrato,
+          file_url: publicUrl,
+          verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
+          client_name: clientName.trim()
+        };
+
+        // Adicionar campos condicionais apenas se necessário
+        if (isExtrato) {
+          documentData.source_currency = sourceCurrency;
+          documentData.target_currency = targetCurrency;
+        }
+
+        console.log('DEBUG: Document data to insert:', documentData);
+
         const { data: createdDoc, error: createError } = await supabase
           .from('documents')
-          .insert({
-            user_id: user?.id,
-            filename: selectedFile?.name,
-            pages: pages,
-            status: 'pending',
-            total_cost: valor,
-            tipo_trad: tipoTrad,
-            valor: valor,
-            idioma_raiz: idiomaRaiz,
-            is_bank_statement: isExtrato,
-            file_url: publicUrl,
-            verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
-            client_name: clientName.trim(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .insert(documentData)
           .select()
           .single();
 
         if (createError) {
           console.error('ERROR: Erro ao criar documento na tabela documents:', createError);
-          throw new Error('Erro ao salvar documento no banco de dados');
+          throw new Error('Error saving document to database');
         }
 
         console.log('DEBUG: Documento criado na tabela documents:', createdDoc);
@@ -225,9 +308,15 @@ export default function AuthenticatorUpload() {
         is_bank_statement: isExtrato,
         client_name: clientName.trim(),
         idioma_raiz: idiomaRaiz,
-        tipo_trad: tipoTrad,
+        idioma_destino: idiomaDestino,
+        tipo_trad: mapTipoTradToDatabase(tipoTrad),
         mimetype: selectedFile?.type,
-        size: selectedFile?.size
+        size: selectedFile?.size,
+        payment_method: paymentMethod,
+        ...(isExtrato && {
+          source_currency: sourceCurrency,
+          target_currency: targetCurrency
+        })
       };
 
       console.log('DEBUG: Dados enviados para webhook:', webhookData);
@@ -235,12 +324,17 @@ export default function AuthenticatorUpload() {
       // Enviar direto para o webhook de tradução (SEM Stripe)
       console.log('DEBUG: === ENVIANDO PARA WEBHOOK ===');
       console.log('DEBUG: Timestamp:', new Date().toISOString());
-      console.log('DEBUG: Webhook URL:', config.edgeFunctions.sendTranslationWebhook);
+      
+      const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-translation-webhook`;
+      console.log('DEBUG: Webhook URL:', webhookUrl);
       console.log('DEBUG: Webhook data:', JSON.stringify(webhookData, null, 2));
       
-      const response = await fetch(config.edgeFunctions.sendTranslationWebhook, {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
-        headers: getEdgeFunctionAuthHeader(),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
         body: JSON.stringify(webhookData)
       });
 
@@ -255,10 +349,10 @@ export default function AuthenticatorUpload() {
         try {
           errorData = JSON.parse(responseText);
         } catch (e) {
-          errorData = { error: 'Resposta não é JSON', raw: responseText };
+          errorData = { error: 'Response is not JSON', raw: responseText };
         }
         console.error('Erro detalhado do webhook:', errorData);
-        throw new Error(errorData.error || 'Erro ao enviar documento para tradução');
+        throw new Error(errorData.error || 'Error sending document for translation');
       }
 
       console.log('DEBUG: === HANDLE DIRECT UPLOAD SUCCESS ===');
@@ -269,7 +363,7 @@ export default function AuthenticatorUpload() {
       console.error('ERROR: === HANDLE DIRECT UPLOAD ERROR ===');
       console.error('ERROR: Timestamp:', new Date().toISOString());
       console.error('ERROR: Erro no upload:', err);
-      setError(err.message || 'Erro ao processar upload');
+      setError(err.message || 'Error processing upload');
     }
   };
 
@@ -284,6 +378,7 @@ export default function AuthenticatorUpload() {
     console.log('DEBUG: tipoTrad:', tipoTrad);
     console.log('DEBUG: isExtrato:', isExtrato);
     console.log('DEBUG: idiomaRaiz:', idiomaRaiz);
+    console.log('DEBUG: idiomaDestino:', idiomaDestino);
     console.log('DEBUG: isUploading:', isUploading);
     
     // Proteção contra chamadas duplicadas
@@ -315,10 +410,32 @@ export default function AuthenticatorUpload() {
       
       // Upload direto para Supabase Storage
       console.log('DEBUG: Fazendo upload para Supabase Storage');
-      const filePath = generateUploadFileName(selectedFile.name, user.id);
+      const filePath = generateUniqueFileName(selectedFile.name, user.id);
       console.log('DEBUG: Tentando upload para Supabase Storage:', filePath);
       
       const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
+
+      // Upload do comprovante de pagamento se existir
+      let receiptPath = null;
+      if (receiptFile) {
+        try {
+          const receiptFilePath = generateUniqueFileName(`receipt_${receiptFile.name}`, user.id);
+          const { data: receiptData, error: receiptError } = await supabase.storage
+            .from('documents')
+            .upload(receiptFilePath, receiptFile);
+            
+          if (receiptError) {
+            console.error('DEBUG: Erro no upload do comprovante:', receiptError);
+            throw receiptError;
+          }
+          
+          console.log('DEBUG: Upload do comprovante bem-sucedido:', receiptData);
+          receiptPath = receiptFilePath;
+        } catch (err) {
+          console.error('DEBUG: Erro ao fazer upload do comprovante:', err);
+          // Não bloqueia o upload do documento principal se o comprovante falhar
+        }
+      }
       if (uploadError) {
         console.error('DEBUG: Erro no upload para Supabase Storage:', uploadError);
         throw uploadError;
@@ -326,20 +443,38 @@ export default function AuthenticatorUpload() {
       
       console.log('DEBUG: Upload para Supabase Storage bem-sucedido:', data);
       
+      // Debug dos valores antes de criar o payload
+      console.log('DEBUG: Valores no momento do payload:');
+      console.log('DEBUG: idiomaRaiz:', idiomaRaiz);
+      console.log('DEBUG: idiomaDestino:', idiomaDestino);
+      console.log('DEBUG: tipoTrad:', tipoTrad);
+      console.log('DEBUG: isExtrato:', isExtrato);
+      
       // Payload para webhook
       const payload = {
         pages,
-        isCertified: tipoTrad === 'Certificado',
-        isNotarized: tipoTrad === 'Notorizado',
+        isCertified: false,
+        isNotarized: tipoTrad === 'Certified',
         isBankStatement: isExtrato,
         filePath: filePath,
         userId: user.id,
         userEmail: user.email,
         filename: selectedFile?.name,
         clientName: clientName.trim(),
-        isMobile: isMobile
+        originalLanguage: idiomaRaiz,
+        targetLanguage: idiomaDestino,
+        documentType: 'Certificado',
+        isMobile: isMobile,
+        paymentMethod: paymentMethod,
+        receiptPath: receiptPath,
+        ...(isExtrato && {
+          sourceCurrency: sourceCurrency,
+          targetCurrency: targetCurrency
+        })
       };
       console.log('DEBUG: Payload enviado:', payload);
+      console.log('DEBUG: Payload.originalLanguage:', payload.originalLanguage);
+      console.log('DEBUG: Payload.targetLanguage:', payload.targetLanguage);
       
       // Chama o upload direto com payload
       await handleDirectUpload(filePath, payload);
@@ -348,7 +483,7 @@ export default function AuthenticatorUpload() {
       console.error('ERROR: === HANDLE UPLOAD ERROR ===');
       console.error('ERROR: Timestamp:', new Date().toISOString());
       console.error('ERROR: Erro no upload:', err);
-      setError(err.message || 'Erro ao processar upload');
+      setError(err.message || 'Error processing upload');
     } finally {
       setIsUploading(false);
     }
@@ -510,7 +645,7 @@ export default function AuthenticatorUpload() {
                     <select
                       id="translation-type"
                       value={tipoTrad}
-                      onChange={e => setTipoTrad(e.target.value as 'Certificado' | 'Notorizado')}
+                      onChange={e => setTipoTrad(e.target.value as 'Certified' | 'Notarized')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Translation type"
                     >
@@ -536,6 +671,45 @@ export default function AuthenticatorUpload() {
                     </select>
                   </div>
                   
+                  {/* Campos de moeda - aparecem apenas se for bank statement */}
+                  {isExtrato && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="source-currency">
+                          5.1. Source Currency (Original Document)
+                        </label>
+                        <select
+                          id="source-currency"
+                          value={sourceCurrency}
+                          onChange={e => setSourceCurrency(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                          aria-label="Source currency"
+                        >
+                          {currencies.map(currency => (
+                            <option key={currency} value={currency}>{currency}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-currency">
+                          5.2. Target Currency (Translation To)
+                        </label>
+                        <select
+                          id="target-currency"
+                          value={targetCurrency}
+                          onChange={e => setTargetCurrency(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                          aria-label="Target currency"
+                        >
+                          {currencies.map(currency => (
+                            <option key={currency} value={currency}>{currency}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="original-language">
                       6. Original Document Language
@@ -547,11 +721,107 @@ export default function AuthenticatorUpload() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Original document language"
                     >
-                      {languages.map(lang => (
+                      {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
+                        <option key={index} value={lang}>{lang}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-language">
+                      7. Target Language (Translation To)
+                    </label>
+                    <select
+                      id="target-language"
+                      value={idiomaDestino}
+                      onChange={e => setIdiomaDestino(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                      aria-label="Target language for translation"
+                    >
+                      {targetLanguages.map(lang => (
                         <option key={lang} value={lang}>{lang}</option>
                       ))}
                     </select>
                   </div>
+                </section>
+
+                {/* Payment Method */}
+                <section>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="payment-method">
+                    8. Payment Method
+                  </label>
+                  <select
+                    id="payment-method"
+                    value={paymentMethod}
+                    onChange={e => setPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                    aria-label="Payment method"
+                  >
+                    {paymentMethods.map(method => (
+                      <option key={method.value} value={method.value}>{method.label}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select the payment method used by the client for this translation service.
+                  </p>
+                </section>
+
+                {/* Receipt Upload */}
+                <section>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="receipt-upload">
+                    9. Payment Receipt (Optional)
+                  </label>
+                  <div
+                    className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer flex flex-col items-center justify-center ${receiptFile ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-green-400'}`}
+                    onClick={() => receiptInputRef.current?.click()}
+                    style={{ minHeight: 120 }}
+                    aria-label="Upload receipt area"
+                  >
+                    <input
+                      type="file"
+                      ref={receiptInputRef}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleReceiptFileChange(file);
+                      }}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="hidden"
+                      id="receipt-upload"
+                      aria-label="Upload receipt file input"
+                      title="Select a receipt file to upload"
+                    />
+                    {receiptFile ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Receipt className="w-8 h-8 text-green-500 mb-1" />
+                        <span className="text-gray-800 font-medium text-sm">{receiptFile.name}</span>
+                        <span className="text-xs text-gray-500">{(receiptFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                        <button
+                          className="mt-1 text-xs text-tfe-red-500 hover:underline"
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            setReceiptFile(null); 
+                            setReceiptFileUrl(null);
+                          }}
+                        >Remove receipt</button>
+                        {receiptFile && receiptFileUrl && receiptFile.type.startsWith('image/') && (
+                          <img src={receiptFileUrl} alt="Receipt Preview" className="max-h-24 rounded shadow mt-2" />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <Receipt className="w-8 h-8 text-gray-400 mb-1" />
+                        <p className="text-sm text-gray-600 font-medium">
+                          Click to upload receipt or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          PDF, JPG, PNG up to 5MB
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Upload a copy of the payment receipt for record keeping purposes. This is optional.
+                  </p>
                 </section>
 
                 {/* Error/Success Messages */}
@@ -606,8 +876,14 @@ export default function AuthenticatorUpload() {
                   <span className="text-2xl font-bold text-green-600">FREE</span>
                 </div>
                 <p className="text-xs text-tfe-blue-950/80 mb-2">
-                  {translationTypes.find(t => t.value === tipoTrad)?.label} {isExtrato ? (tipoTrad === 'Certificado' ? '$25' : '$35') : (tipoTrad === 'Certificado' ? '$15' : '$20')} per page × {pages} page{pages !== 1 ? 's' : ''}
+                                    {translationTypes.find(t => t.value === tipoTrad)?.label} ${tipoTrad === 'Notarized' ? '20' : '15'} per page × {pages} pages = ${valor.toFixed(2)}
                 </p>
+                <div className="mb-3 p-2 bg-tfe-blue-100 rounded-lg">
+                  <p className="text-xs text-tfe-blue-950/80 font-medium flex items-center gap-1">
+                    <Globe className="w-3 h-3" />
+                    {idiomaRaiz} → {idiomaDestino}
+                  </p>
+                </div>
                 <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
                   <li>USCIS accepted translations</li>
                   <li>Official certification & authentication</li>
@@ -620,7 +896,7 @@ export default function AuthenticatorUpload() {
               <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Info className="w-5 h-5 text-tfe-blue-600" />
-                  Service Information
+                  {t('upload.serviceInfo.title')}
                 </h3>
                 
                 <div className="space-y-6">
@@ -628,38 +904,38 @@ export default function AuthenticatorUpload() {
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <Award className="w-4 h-4 text-tfe-blue-600" />
-                      Translation Types
+                      {t('upload.serviceInfo.translationTypes.title')}
                     </h4>
                     <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Certified Translation</span>
-                          <span className="text-sm font-bold text-tfe-blue-600">$15/page</span>
+                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.translationTypes.certified.title')}</span>
+                          <span className="text-sm font-bold text-tfe-blue-600">{t('upload.serviceInfo.translationTypes.certified.price')}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Standard translation with official certification for general use, immigration, and legal purposes.
+                          {t('upload.serviceInfo.translationTypes.certified.description')}
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
-                          <li>• Official certification stamp</li>
-                          <li>• USCIS accepted</li>
-                          <li>• Digital verification code</li>
-                          <li>• 24-48 hour turnaround</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.0', 'Official certification stamp')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.1', 'USCIS accepted')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.2', 'Digital verification code')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.3', '24-48 hour turnaround')}</li>
                         </ul>
                       </div>
                       
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Notarized Translation</span>
-                          <span className="text-sm font-bold text-tfe-blue-600">$20/page</span>
+                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.translationTypes.notarized.title')}</span>
+                          <span className="text-sm font-bold text-tfe-blue-600">{t('upload.serviceInfo.translationTypes.notarized.price')}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Official notarized translation with additional legal notarization for court documents and legal proceedings.
+                          {t('upload.serviceInfo.translationTypes.notarized.description')}
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
-                          <li>• Notary public certification</li>
-                          <li>• Legal document authentication</li>
-                          <li>• Court-accepted format</li>
-                          <li>• Enhanced verification</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.0', 'Notary public certification')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.1', 'Legal document authentication')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.2', 'Court-accepted format')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.3', 'Enhanced verification')}</li>
                         </ul>
                       </div>
                     </div>
@@ -669,31 +945,31 @@ export default function AuthenticatorUpload() {
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <FileText className="w-4 h-4 text-tfe-blue-600" />
-                      Document Types
+                      {t('upload.serviceInfo.documentTypes.title')}
                     </h4>
                     <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Regular Documents</span>
-                          <span className="text-sm text-gray-600">Standard rate</span>
+                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.documentTypes.regular.title')}</span>
+                          <span className="text-sm text-gray-600">{t('upload.serviceInfo.documentTypes.regular.price')}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Birth certificates, marriage certificates, diplomas, transcripts, and other official documents.
+                          {t('upload.serviceInfo.documentTypes.regular.description')}
                         </p>
                       </div>
                       
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Bank Statements</span>
-                          <span className="text-sm font-bold text-orange-600">+$10/page</span>
+                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.documentTypes.bankStatements.title')}</span>
+                          <span className="text-sm font-bold text-orange-600">{t('upload.serviceInfo.documentTypes.bankStatements.price')}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Additional verification and formatting required for financial documents.
+                          {t('upload.serviceInfo.documentTypes.bankStatements.description')}
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
-                          <li>• Enhanced verification process</li>
-                          <li>• Financial document formatting</li>
-                          <li>• Additional security measures</li>
+                          <li>• {t('upload.serviceInfo.documentTypes.bankStatements.features.0', 'Enhanced verification process')}</li>
+                          <li>• {t('upload.serviceInfo.documentTypes.bankStatements.features.1', 'Financial document formatting')}</li>
+                          <li>• {t('upload.serviceInfo.documentTypes.bankStatements.features.2', 'Additional security measures')}</li>
                         </ul>
                       </div>
                     </div>
@@ -703,18 +979,18 @@ export default function AuthenticatorUpload() {
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <Globe className="w-4 h-4 text-tfe-blue-600" />
-                      Supported Languages
+                      {t('upload.serviceInfo.supportedLanguages.title')}
                     </h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      {languages.map(lang => (
-                        <div key={lang} className="flex items-center gap-2">
+                      {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
+                        <div key={index} className="flex items-center gap-2">
                           <CheckCircle className="w-3 h-3 text-green-500" />
                           <span className="text-gray-700">{lang}</span>
                         </div>
                       ))}
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      All documents are translated to English for USCIS and US authority requirements.
+                      {t('upload.serviceInfo.supportedLanguages.note')}
                     </p>
                   </div>
 
@@ -722,33 +998,15 @@ export default function AuthenticatorUpload() {
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <Shield className="w-4 h-4 text-tfe-blue-600" />
-                      Service Features
+                      {t('upload.serviceInfo.serviceFeatures.title')}
                     </h4>
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">USCIS & Government Accepted</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">Official Certification</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">Digital Verification System</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">24-48 Hour Turnaround</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">Secure File Handling</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">24/7 Customer Support</span>
-                      </div>
+                      {(t('upload.serviceInfo.serviceFeatures.features', { returnObjects: true }) as unknown as string[]).map((feature: string, index: number) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span className="text-gray-700">{feature}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

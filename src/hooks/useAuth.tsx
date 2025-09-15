@@ -4,7 +4,7 @@ import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { getResetPasswordUrl } from '../utils/urlUtils';
 
 export interface CustomUser extends SupabaseUser {
-  role: 'user' | 'authenticator' | 'admin';
+  role: 'user' | 'authenticator' | 'admin' | 'finance';
   phone?: string;
 }
 
@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [sessionExpired, setSessionExpired] = useState(false);
 
   // Busca ou cria perfil na tabela profiles
-  const fetchOrCreateProfile = async (userId: string, email: string, name: string, role: 'user' | 'authenticator' | 'admin' = 'user', phone?: string) => {
+  const fetchOrCreateProfile = async (userId: string, email: string, name: string, role: 'user' | 'authenticator' | 'admin' | 'finance' = 'user', phone?: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -77,7 +77,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (session?.user) {
       const userObj = session.user;
       try {
-        const profile = await fetchOrCreateProfile(userObj.id, userObj.email ?? '', userObj.user_metadata?.name ?? '', 'user', userObj.user_metadata?.phone);
+        // Primeiro buscar o perfil existente para obter o role correto
+        const { data: existingProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userObj.id)
+          .single();
+        
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error('[Auth] Erro ao buscar perfil existente:', profileError);
+        }
+        
+        // Se o perfil existe, usar o role dele. Se não, criar com role 'user'
+        const defaultRole = existingProfile?.role || 'user';
+        const profile = await fetchOrCreateProfile(userObj.id, userObj.email ?? '', userObj.user_metadata?.name ?? '', defaultRole, userObj.user_metadata?.phone);
         const role = profile?.role || 'user';
         const customUser: CustomUser = { ...userObj, role, phone: profile?.phone };
         setUser(customUser);
@@ -131,7 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   };
 
-  const signUp = async (email: string, password: string, name: string, phone: string, role: 'user' | 'authenticator' = 'user') => {
+  const signUp = async (email: string, password: string, name: string, phone: string, role: 'user' | 'authenticator' | 'admin' | 'finance' = 'user') => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

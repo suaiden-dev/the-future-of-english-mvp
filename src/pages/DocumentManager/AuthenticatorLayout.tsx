@@ -1,10 +1,10 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import AuthenticatorDashboard from './AuthenticatorDashboard';
 import TranslatedDocuments from './TranslatedDocuments';
 import AuthenticatorOverview from './AuthenticatorOverview';
 import AuthenticatorUpload from './AuthenticatorUpload';
-import { FileText, CheckCircle, LogOut, Home as HomeIcon, Menu, X, User, Upload } from 'lucide-react';
+import { FileText, CheckCircle, LogOut, Menu, X, User, Upload, Home as HomeIcon } from 'lucide-react';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OverviewProvider } from '../../contexts/OverviewContext';
@@ -62,10 +62,15 @@ export default function AuthenticatorLayout() {
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TFE</span>
-              </div>
-              <h3 className="text-xl font-bold">The Future of English</h3>
+              <img 
+                src="/logo.png" 
+                alt="The Future of English" 
+                className="w-8 h-8 flex-shrink-0 object-contain"
+              />
+              <h3 className="text-xl font-bold">
+                <span className="text-tfe-blue-950">THE FUTURE</span>
+                <span className="text-tfe-red-950"> OF ENGLISH</span>
+              </h3>
             </div>
           </div>
           <button
@@ -144,19 +149,7 @@ export default function AuthenticatorLayout() {
             </button>
           </nav>
 
-                     {/* Back to Mentorship Button */}
-           {user && (
-             <button
-               onClick={() => {
-                 navigate('/');
-                 setIsMobileMenuOpen(false);
-               }}
-               className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-             >
-               <HomeIcon className="w-5 h-5 text-gray-400" />
-               <span className="font-medium">Back to Mentorship</span>
-             </button>
-           )}
+          
 
           {/* Logout */}
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -183,10 +176,15 @@ export default function AuthenticatorLayout() {
         <div className="flex flex-col flex-grow bg-white shadow-sm border-r border-gray-200">
           <div className="flex items-center justify-center p-6 border-b border-gray-200">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TFE</span>
-              </div>
-              <h3 className="text-xl font-bold">The Future of English</h3>
+              <img 
+                src="/logo.png" 
+                alt="The Future of English" 
+                className="w-8 h-8 flex-shrink-0 object-contain"
+              />
+              <h3 className="text-xl font-bold">
+                <span className="text-tfe-blue-950">THE FUTURE</span>
+                <span className="text-tfe-red-950"> OF ENGLISH</span>
+              </h3>
             </div>
           </div>
 
@@ -258,16 +256,6 @@ export default function AuthenticatorLayout() {
                 </button>
               </nav>
 
-                             {/* Back to Mentorship Button */}
-               {user && (
-                 <button
-                                    onClick={() => navigate('/')}
-                   className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                 >
-                   <HomeIcon className="w-5 h-5 text-gray-400" />
-                   <span className="font-medium">Back to Mentorship</span>
-                 </button>
-               )}
 
               {/* Logout */}
               <div className="mt-4 pt-4 border-t border-gray-200">
@@ -287,7 +275,7 @@ export default function AuthenticatorLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:ml-64">
         {/* Mobile Header */}
-        <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 p-4">
+        <div className="lg:hidden sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <button
@@ -298,10 +286,15 @@ export default function AuthenticatorLayout() {
                 <Menu className="w-6 h-6" />
               </button>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">TFE</span>
-                </div>
-                <h3 className="text-xl font-bold">The Future of English</h3>
+                <img 
+                  src="/logo.png" 
+                  alt="The Future of English" 
+                  className="w-10 h-10 flex-shrink-0 object-contain"
+                />
+                <h3 className="text-xl font-bold">
+                  <span className="text-tfe-blue-950">THE FUTURE</span>
+                  <span className="text-tfe-red-950"> OF ENGLISH</span>
+                </h3>
               </div>
             </div>
             <div className="flex items-center space-x-3">

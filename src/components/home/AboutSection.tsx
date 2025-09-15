@@ -1,12 +1,15 @@
 import React from 'react';
 import { Shield, Globe, Trophy, TrendUp, Buildings, Users, CheckCircle, GraduationCap, Student, Certificate, Money, UsersThree, Clock, Flag } from '@phosphor-icons/react';
+import { useI18n } from '../../contexts/I18nContext';
 
 export function AboutSection() {
+  const { t } = useI18n();
+  
   const stats = [
-    { number: "$2M+", label: "Scholarships Secured", icon: Money },
-    { number: "50+", label: "Partner Schools", icon: Buildings },
-    { number: "70+", label: "Countries Served", icon: Flag },
-    { number: "3-6", label: "Months Average", icon: Clock }
+    { number: "$2M+", label: t('about.scholarshipsSecured'), icon: Money },
+    { number: "50+", label: t('about.partnerSchools'), icon: Buildings },
+    { number: "70+", label: t('about.countriesServed'), icon: Flag },
+    { number: "3-6", label: t('about.monthsAverage'), icon: Clock }
   ];
 
   return (
@@ -24,19 +27,14 @@ export function AboutSection() {
             </div>
             
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              About{' '}
+              {t('about.title')}{' '}
               <span className="text-tfe-red-600">
-                Us
+                {t('about.titleUs')}
               </span>
             </h2>
             
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              At The Future of English, we help international students realize their dream of 
-              studying in the United States. We offer complete guidance, from school selection 
-              to securing the ideal scholarship — with{' '}
-              <span className="font-semibold text-tfe-blue-600">excellence</span>,{' '}
-              <span className="font-semibold text-tfe-red-600">transparency</span> and{' '}
-              <span className="font-semibold text-tfe-blue-600">proven results</span>.
+              {t('about.description')}
             </p>
           </div>
 
@@ -60,20 +58,20 @@ export function AboutSection() {
             {[
               {
                 icon: Globe,
-                title: "Global Network",
-                description: "Access to 50+ partner schools across the United States with exclusive scholarship opportunities.",
+                title: t('about.features.globalNetwork.title'),
+                description: t('about.features.globalNetwork.description'),
                 color: "bg-tfe-blue-500"
               },
               {
                 icon: Certificate,
-                title: "Expert Guidance",
-                description: "Specialized advisors with years of experience in international education and visa processes.",
+                title: t('about.features.expertGuidance.title'),
+                description: t('about.features.expertGuidance.description'),
                 color: "bg-tfe-red-500"
               },
               {
                 icon: CheckCircle,
-                title: "End-to-End Support",
-                description: "From initial consultation to arrival in the USA, we handle every step of your journey.",
+                title: t('about.features.endToEndSupport.title'),
+                description: t('about.features.endToEndSupport.description'),
                 color: "bg-tfe-blue-600"
               }
             ].map((feature, index) => (
@@ -103,10 +101,10 @@ export function AboutSection() {
             <div className="relative z-10">
               <div className="text-center mb-8">
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                  Our Values
+                  {t('about.values.title')}
                 </h3>
                 <p className="text-gray-600 max-w-2xl mx-auto">
-                  Principles that guide our mission to transform lives through education
+                  {t('about.values.subtitle')}
                 </p>
               </div>
               
@@ -116,8 +114,8 @@ export function AboutSection() {
                     <GraduationCap className="w-5 h-5 text-white" weight="fill" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Passion for Education</h4>
-                    <p className="text-gray-600">We believe in the transformative power of international education</p>
+                    <h4 className="font-semibold text-gray-900 mb-2">{t('about.values.passion.title')}</h4>
+                    <p className="text-gray-600">{t('about.values.passion.description')}</p>
                   </div>
                 </div>
                 
@@ -126,8 +124,8 @@ export function AboutSection() {
                     <Trophy className="w-5 h-5 text-white" weight="fill" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Continuous Innovation</h4>
-                    <p className="text-gray-600">We always seek the best practices and technologies</p>
+                    <h4 className="font-semibold text-gray-900 mb-2">{t('about.values.innovation.title')}</h4>
+                    <p className="text-gray-600">{t('about.values.innovation.description')}</p>
                   </div>
                 </div>
                 
@@ -136,8 +134,8 @@ export function AboutSection() {
                     <UsersThree className="w-5 h-5 text-white" weight="fill" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">True Partnership</h4>
-                    <p className="text-gray-600">We build lasting relationships with our students</p>
+                    <h4 className="font-semibold text-gray-900 mb-2">{t('about.values.partnership.title')}</h4>
+                    <p className="text-gray-600">{t('about.values.partnership.description')}</p>
                   </div>
                 </div>
                 
@@ -146,8 +144,8 @@ export function AboutSection() {
                     <Certificate className="w-5 h-5 text-white" weight="fill" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Excellence in Everything</h4>
-                    <p className="text-gray-600">Commitment to quality in every detail</p>
+                    <h4 className="font-semibold text-gray-900 mb-2">{t('about.values.excellence.title')}</h4>
+                    <p className="text-gray-600">{t('about.values.excellence.description')}</p>
                   </div>
                 </div>
               </div>
