@@ -167,11 +167,9 @@ export function Chatbot() {
                  <div className="w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden" style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)' }}>
           {/* Header */}
                      <div className="bg-blue-950 px-4 py-3 flex justify-between items-center">
-            <img
-              src="https://lushamerica.com/logo.png"
-              alt="Lush America Logo"
-              className="h-6 object-contain"
-            />
+            <div className="h-6 w-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded flex items-center justify-center">
+              <span className="text-white font-bold text-xs">TFE</span>
+            </div>
             <button
               onClick={() => setIsOpen(false)}
               className="text-white text-xl font-bold hover:text-gray-200 transition-colors"

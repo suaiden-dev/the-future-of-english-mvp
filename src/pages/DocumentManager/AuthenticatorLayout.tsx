@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import AuthenticatorDashboard from './AuthenticatorDashboard';
 import TranslatedDocuments from './TranslatedDocuments';
@@ -64,12 +64,12 @@ export default function AuthenticatorLayout() {
             <div className="flex items-center gap-2">
               <img 
                 src="/logo.png" 
-                alt="Lush America Translations" 
+                alt="The Future of English" 
                 className="w-8 h-8 flex-shrink-0 object-contain"
               />
               <h3 className="text-xl font-bold">
-                <span className="text-tfe-blue-950">LUSH</span>
-                <span className="text-tfe-red-950"> AMERICA</span>
+                <span className="text-tfe-blue-950">THE FUTURE</span>
+                <span className="text-tfe-red-950"> OF ENGLISH</span>
               </h3>
             </div>
           </div>
@@ -178,12 +178,12 @@ export default function AuthenticatorLayout() {
             <div className="flex items-center gap-2">
               <img 
                 src="/logo.png" 
-                alt="Lush America Translations" 
+                alt="The Future of English" 
                 className="w-8 h-8 flex-shrink-0 object-contain"
               />
               <h3 className="text-xl font-bold">
-                <span className="text-tfe-blue-950">LUSH</span>
-                <span className="text-tfe-red-950"> AMERICA</span>
+                <span className="text-tfe-blue-950">THE FUTURE</span>
+                <span className="text-tfe-red-950"> OF ENGLISH</span>
               </h3>
             </div>
           </div>
@@ -289,12 +289,12 @@ export default function AuthenticatorLayout() {
               <div className="flex items-center gap-2">
                 <img 
                   src="/logo.png" 
-                  alt="Lush America Translations" 
+                  alt="The Future of English" 
                   className="w-10 h-10 flex-shrink-0 object-contain"
                 />
                 <h3 className="text-xl font-bold">
-                  <span className="text-tfe-blue-950">LUSH</span>
-                  <span className="text-tfe-red-950"> AMERICA</span>
+                  <span className="text-tfe-blue-950">THE FUTURE</span>
+                  <span className="text-tfe-red-950"> OF ENGLISH</span>
                 </h3>
               </div>
             </div>

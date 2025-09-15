@@ -1,27 +1,27 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { XCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export function PaymentCancelled() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false); // Começa como false pois agora limpamos ao clicar no botão
+  const [isLoading, setIsLoading] = useState(false); // ComeÃ§a como false pois agora limpamos ao clicar no botÃ£o
   const [error, setError] = useState<string | null>(null);
   const [cleanupComplete, setCleanupComplete] = useState(false);
 
   useEffect(() => {
-    // Chamar a função de limpeza assim que a página carregar
-    // Mas só se não foi executada ainda
+    // Chamar a funÃ§Ã£o de limpeza assim que a pÃ¡gina carregar
+    // Mas sÃ³ se nÃ£o foi executada ainda
     if (!cleanupComplete) {
       cleanupDraftDocuments();
     }
   }, [cleanupComplete]);
 
-  // Função para chamar a Edge Function que limpa o documento
+  // FunÃ§Ã£o para chamar a Edge Function que limpa o documento
   const cleanupDraftDocuments = async () => {
     // Evitar chamadas duplas
     if (isLoading) {
-      console.log('DEBUG: cleanupDraftDocuments já está executando, ignorando');
+      console.log('DEBUG: cleanupDraftDocuments jÃ¡ estÃ¡ executando, ignorando');
       return;
     }
 
@@ -32,11 +32,11 @@ export function PaymentCancelled() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        throw new Error('Usuário não autenticado. Faça login para continuar.');
+        throw new Error('UsuÃ¡rio nÃ£o autenticado. FaÃ§a login para continuar.');
       }
 
       const userId = session.user.id;
-      console.log('DEBUG: Iniciando limpeza para usuário:', {
+      console.log('DEBUG: Iniciando limpeza para usuÃ¡rio:', {
         userId: userId,
         userEmail: session.user.email,
         timestamp: new Date().toISOString()
@@ -70,10 +70,10 @@ export function PaymentCancelled() {
           userId: userId, // Log do userId que foi enviado
           result
         });
-        throw new Error(result.error || 'Falha ao chamar a função de limpeza.');
+        throw new Error(result.error || 'Falha ao chamar a funÃ§Ã£o de limpeza.');
       }
 
-      console.log('DEBUG: Documento de rascunho limpo com sucesso para usuário:', {
+      console.log('DEBUG: Documento de rascunho limpo com sucesso para usuÃ¡rio:', {
         userId: userId,
         result
       });
@@ -107,7 +107,7 @@ export function PaymentCancelled() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 max-w-md w-full text-center">
-        {/* Icone e Título */}
+        {/* Icone e TÃ­tulo */}
         <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
           <XCircle className="w-10 h-10 text-red-600" />
         </div>
@@ -131,7 +131,7 @@ export function PaymentCancelled() {
           </ul>
         </div>
 
-        {/* Botão de Ação */}
+        {/* BotÃ£o de AÃ§Ã£o */}
         <div className="mb-6">
           <button
             onClick={async () => {
@@ -152,10 +152,10 @@ export function PaymentCancelled() {
           </button>
         </div>
 
-        {/* Informações de Contato */}
+        {/* InformaÃ§Ãµes de Contato */}
         <div className="pt-6 border-t border-gray-200">
           <p className="text-sm text-gray-500">
-            Need help? Contact us at <a href="mailto:support@lushamerica.com" className="font-medium text-blue-600 hover:underline">support@lushamerica.com</a>
+            Need help? Contact us at <a href="mailto:support@thefutureofenglish.com" className="font-medium text-blue-600 hover:underline">support@thefutureofenglish.com</a>
           </p>
         </div>
       </div>

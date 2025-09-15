@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { FileText, Download, Eye, Calendar, DollarSign, User, CheckCircle, XCircle } from 'lucide-react';
 import { getValidFileUrl } from '../../utils/fileUtils';
+import { TranslatedDocumentsFilters } from '../../components/TranslatedDocumentsFilters';
+import { DateRange } from '../../components/DateRangeFilter';
 
 interface TranslatedDocument {
   id: string;
@@ -47,6 +49,15 @@ export default function TranslatedDocuments() {
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
   
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: null,
+    endDate: null,
+    preset: 'all'
+  });
+  
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const documentsPerPage = 10;
@@ -76,6 +87,19 @@ export default function TranslatedDocuments() {
           query = query.eq('authenticated_by', user.id);
         }
         
+        // Aplicar filtros de data se fornecidos
+        if (dateRange.startDate) {
+          const startDate = new Date(dateRange.startDate);
+          startDate.setHours(0, 0, 0, 0);
+          query = query.gte('created_at', startDate.toISOString());
+        }
+        
+        if (dateRange.endDate) {
+          const endDate = new Date(dateRange.endDate);
+          endDate.setHours(23, 59, 59, 999);
+          query = query.lte('created_at', endDate.toISOString());
+        }
+        
         const { data, error } = await query.order('created_at', { ascending: false });
         
         if (error) {
@@ -98,7 +122,31 @@ export default function TranslatedDocuments() {
       }
     }
     fetchTranslatedDocuments();
-  }, [user]);
+  }, [user, dateRange]);
+
+  // Aplicar filtros locais (busca e status)
+  const filteredDocuments = useMemo(() => {
+    return documents.filter(doc => {
+      // Filtro de busca textual
+      const matchesSearch = searchTerm === '' ||
+        doc.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.user_email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Filtro de status
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'authenticated' && doc.is_authenticated) ||
+        (statusFilter === 'pending' && !doc.is_authenticated);
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [documents, searchTerm, statusFilter]);
+
+  // Reset página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, dateRange]);
+
 
   async function handleViewUser(userId: string) {
     setUserLoading(true);
@@ -123,16 +171,16 @@ export default function TranslatedDocuments() {
     }
   }
 
-  // Summary cards
-  const totalDocuments = documents.length;
-  const totalValue = documents.reduce((sum, doc) => sum + (doc.total_cost || 0), 0);
-  const totalPages = documents.reduce((sum, doc) => sum + (doc.pages || 0), 0);
+  // Summary cards - usar documentos filtrados
+  const totalDocuments = filteredDocuments.length;
+  const totalValue = filteredDocuments.reduce((sum, doc) => sum + (doc.total_cost || 0), 0);
+  const totalPages = filteredDocuments.reduce((sum, doc) => sum + (doc.pages || 0), 0);
 
-  // Paginação
-  const totalPagesForPagination = Math.ceil(documents.length / documentsPerPage);
+  // Paginação - usar documentos filtrados
+  const totalPagesForPagination = Math.ceil(filteredDocuments.length / documentsPerPage);
   const startIndex = (currentPage - 1) * documentsPerPage;
   const endIndex = startIndex + documentsPerPage;
-  const currentDocuments = documents.slice(startIndex, endIndex);
+  const currentDocuments = filteredDocuments.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -177,6 +225,18 @@ export default function TranslatedDocuments() {
           </div>
         </div>
 
+        {/* Filters */}
+        <TranslatedDocumentsFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          totalDocuments={documents.length}
+          filteredDocuments={filteredDocuments.length}
+        />
+
         {/* Overview Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
@@ -209,12 +269,21 @@ export default function TranslatedDocuments() {
         </div>
 
         {/* Documents Table */}
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-700" /> Translated Documents History
-          </h2>
-          {loading && <p className="text-tfe-blue-700 text-base sm:text-lg">Loading documents...</p>}
-          {error && <p className="text-tfe-red-500 text-base sm:text-lg">Error: {error}</p>}
+        <div className="bg-white rounded-lg shadow w-full">
+          {loading && (
+            <div className="p-6">
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="p-6">
+              <p className="text-red-500 text-base">Error: {error}</p>
+            </div>
+          )}
           
           {/* Mobile Cards View */}
           <div className="block sm:hidden space-y-4">
@@ -423,46 +492,54 @@ export default function TranslatedDocuments() {
             </table>
           </div>
 
-          {documents.length === 0 && !loading && <p className="mt-8 text-gray-500 text-center text-base sm:text-lg">No translated documents found.</p>}
+          {!loading && !error && filteredDocuments.length === 0 && (
+            <div className="text-center py-8 px-4">
+              <FileText className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+              <p className="text-base font-medium text-gray-700">No documents found</p>
+              <p className="text-sm text-gray-500">Try adjusting your search or filter criteria.</p>
+            </div>
+          )}
           
           {/* Controles de Paginação */}
-          {documents.length > 0 && (
-            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="text-sm text-gray-700 text-center sm:text-left">
-                Showing {startIndex + 1} to {Math.min(endIndex, documents.length)} of {documents.length} documents
-              </div>
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Previous
-                </button>
-                
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPagesForPagination }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        currentPage === page
-                          ? 'bg-tfe-blue-600 text-white'
-                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+          {filteredDocuments.length > 0 && (
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="text-sm text-gray-700 text-center sm:text-left">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredDocuments.length)} of {filteredDocuments.length} documents
                 </div>
-                
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPagesForPagination}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Next
-                </button>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPagesForPagination }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          currentPage === page
+                            ? 'bg-tfe-blue-600 text-white'
+                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPagesForPagination}
+                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           )}

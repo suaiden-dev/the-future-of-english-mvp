@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Upload, XCircle, FileText, CheckCircle, AlertCircle, Info, Shield, DollarSign, Award } from 'lucide-react';
+import { Upload, XCircle, FileText, CheckCircle, AlertCircle, Info, Shield, DollarSign, Award, Globe } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { fileStorage } from '../../utils/fileStorage';
 import { generateUniqueFileName } from '../../utils/fileUtils';
 import { PaymentMethodModal } from '../../components/PaymentMethodModal';
 import { ZellePaymentModal } from '../../components/ZellePaymentModal';
+import { useI18n } from '../../contexts/I18nContext';
 
 interface DocumentUploadModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface DocumentUploadModalProps {
 }
 
 export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, currentFolderId }: DocumentUploadModalProps) {
+  const { t } = useI18n();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pages, setPages] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
@@ -23,9 +25,12 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
   const [dragActive, setDragActive] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [tipoTrad, setTipoTrad] = useState<'Certified'>('Certified');
+  const [tipoTrad, setTipoTrad] = useState<'Certified' | 'Notarized'>('Certified');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
+  const [idiomaDestino, setIdiomaDestino] = useState('English');
+  const [sourceCurrency, setSourceCurrency] = useState('USD');
+  const [targetCurrency, setTargetCurrency] = useState('BRL');
   
   // Estados para os modais de pagamento
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -34,12 +39,14 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
   
   const translationTypes = [
     { value: 'Certified', label: 'Certified' },
+    { value: 'Notarized', label: 'Notarized' },
   ];
   
   const languages = [
     'Portuguese',
     'Portuguese (Portugal)',
     'Spanish',
+    'English',
     'German',
     'Arabic',
     'Hebrew',
@@ -47,15 +54,33 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
     'Korean',
   ];
 
+  const currencies = [
+    'USD',
+    'BRL',
+    'EUR',
+    'GBP',
+    'CAD',
+    'AUD',
+    'JPY',
+    'KRW',
+    'CNY',
+    'INR',
+    'MXN',
+    'CHF',
+  ];
+
   // Function to calculate the value
-  function calculateValue(pages: number, isBankStatement: boolean) {
-    if (isBankStatement) {
-      return pages * 25; // $20 base + $5 bank statement fee
-    } else {
-      return pages * 20; // $20 per page
-    }
+  function calculateValue(pages: number, isBankStatement: boolean, tipoTrad: string) {
+    let basePrice = tipoTrad === 'Notarized' ? 20 : 15; // $20 for Notarized, $15 for Certified
+    let bankFee = isBankStatement ? 10 : 0; // $10 additional fee for bank statements
+    return pages * (basePrice + bankFee);
   }
-  const value = calculateValue(pages, isExtrato);
+
+  // Função para mapear o tipo de tradução para o valor correto no banco
+  function mapTipoTradToDatabase(tipoTrad: 'Certified' | 'Notarized'): string {
+    return tipoTrad === 'Certified' ? 'Certificado' : 'Notorizado';
+  }
+  const value = calculateValue(pages, isExtrato, tipoTrad);
 
   if (!isOpen) return null;
 
@@ -113,12 +138,17 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
       const payload = customPayload || {
         pages,
         isCertified: true, // Always certified now
-        isNotarized: tipoTrad === 'Certified',
+        isNotarized: tipoTrad === 'Notarized', // Corrigir lógica
         isBankStatement: isExtrato,
         fileId, // Usar o ID do arquivo no IndexedDB
         userId,
         userEmail, // Adicionar email do usuário
         filename: selectedFile?.name,
+        originalLanguage: idiomaRaiz,
+        targetLanguage: idiomaDestino,
+        documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente
+        sourceCurrency: isExtrato ? sourceCurrency : null,
+        targetCurrency: isExtrato ? targetCurrency : null,
         isMobile: false // Desktop
       };
       console.log('Payload enviado para checkout:', payload);
@@ -129,8 +159,8 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
         userId,
         filename: selectedFile.name,
         pages,
-        status: 'draft',
-        total_cost: calculateValue(pages, isExtrato)
+        status: 'pending',
+        total_cost: calculateValue(pages, isExtrato, tipoTrad)
       });
 
       const { data: newDocument, error: createError } = await supabase
@@ -139,16 +169,19 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
           user_id: userId,
           filename: selectedFile.name,
           pages: pages,
-          status: 'draft', // Criar como draft até o pagamento ser confirmado
-          total_cost: calculateValue(pages, isExtrato),
+          status: 'pending', // Criar como pending até o pagamento ser confirmado
+          total_cost: calculateValue(pages, isExtrato, tipoTrad),
           verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
           is_authenticated: true,
           upload_date: new Date().toISOString(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          tipo_trad: tipoTrad,
+          tipo_trad: mapTipoTradToDatabase(tipoTrad),
           idioma_raiz: idiomaRaiz,
-          is_bank_statement: isExtrato
+          idioma_destino: idiomaDestino,
+          is_bank_statement: isExtrato,
+          source_currency: isExtrato ? sourceCurrency : null,
+          target_currency: isExtrato ? targetCurrency : null
         })
         .select()
         .single();
@@ -244,17 +277,19 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
           user_id: userId,
           filename: selectedFile.name,
           pages: pages,
-          status: 'draft',
-          total_cost: calculateValue(pages, isExtrato),
+          status: 'pending',
+          total_cost: calculateValue(pages, isExtrato, tipoTrad),
           verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
           is_authenticated: true,
           upload_date: new Date().toISOString(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          tipo_trad: tipoTrad,
+          tipo_trad: mapTipoTradToDatabase(tipoTrad),
           idioma_raiz: idiomaRaiz,
-          idioma_destino: 'English',
+          idioma_destino: idiomaDestino,
           is_bank_statement: isExtrato,
+          source_currency: isExtrato ? sourceCurrency : null,
+          target_currency: isExtrato ? targetCurrency : null,
           current_folder_id: currentFolderId || null
         })
         .select()
@@ -293,13 +328,16 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
         // Mobile: Tentar usar IndexedDB primeiro
         try {
           const fileId = await fileStorage.storeFile(selectedFile, {
-            documentType: tipoTrad,
+            documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente
             certification: true,
-            notarization: tipoTrad === 'Certified',
+            notarization: tipoTrad === 'Notarized', // Corrigir lógica
             pageCount: pages,
             isBankStatement: isExtrato,
             originalLanguage: idiomaRaiz,
+            targetLanguage: idiomaDestino,
             userId,
+            sourceCurrency: isExtrato ? sourceCurrency : null,
+            targetCurrency: isExtrato ? targetCurrency : null,
             currentFolderId
           });
           
@@ -313,15 +351,17 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
           const payload = {
             pages,
             isCertified: true,
-            isNotarized: tipoTrad === 'Certified',
+            isNotarized: tipoTrad === 'Notarized', // Corrigir lógica
             isBankStatement: isExtrato,
             filePath,
             userId: userId,
             userEmail: userEmail,
             filename: selectedFile?.name,
             originalLanguage: idiomaRaiz,
-            targetLanguage: 'English',
-            documentType: 'Certificado',
+            targetLanguage: idiomaDestino,
+            documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente
+            sourceCurrency: isExtrato ? sourceCurrency : null,
+            targetCurrency: isExtrato ? targetCurrency : null,
             isMobile: true,
             documentId: currentDocumentId
           };
@@ -331,13 +371,16 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
       } else {
         // Desktop: Usar IndexedDB
         const fileId = await fileStorage.storeFile(selectedFile, {
-          documentType: tipoTrad,
+          documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente
           certification: true,
-          notarization: tipoTrad === 'Certified',
+          notarization: tipoTrad === 'Notarized', // Corrigir lógica
           pageCount: pages,
           isBankStatement: isExtrato,
           originalLanguage: idiomaRaiz,
+          targetLanguage: idiomaDestino,
           userId,
+          sourceCurrency: isExtrato ? sourceCurrency : null,
+          targetCurrency: isExtrato ? targetCurrency : null,
           currentFolderId
         });
         
@@ -502,7 +545,7 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
                       <select
                         id="translation-type"
                         value={tipoTrad}
-                        onChange={e => setTipoTrad(e.target.value as 'Certified')}
+                        onChange={e => setTipoTrad(e.target.value as 'Certified' | 'Notarized')}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                         aria-label="Translation type"
                       >
@@ -544,6 +587,62 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
                         ))}
                       </select>
                     </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-language">
+                        6. Target Language
+                      </label>
+                      <select
+                        id="target-language"
+                        value={idiomaDestino}
+                        onChange={e => setIdiomaDestino(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                        aria-label="Target language for translation"
+                      >
+                        {languages.map(lang => (
+                          <option key={lang} value={lang}>{lang}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Currency Fields - Only show when isExtrato is true */}
+                    {isExtrato && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="source-currency">
+                            7.1. Source Currency (Original Document)
+                          </label>
+                          <select
+                            id="source-currency"
+                            value={sourceCurrency}
+                            onChange={e => setSourceCurrency(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                            aria-label="Source currency"
+                          >
+                            {currencies.map(currency => (
+                              <option key={currency} value={currency}>{currency}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-currency">
+                            7.2. Target Currency (Translation To)
+                          </label>
+                          <select
+                            id="target-currency"
+                            value={targetCurrency}
+                            onChange={e => setTargetCurrency(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                            aria-label="Target currency"
+                          >
+                            {currencies.map(currency => (
+                              <option key={currency} value={currency}>{currency}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
                   </section>
 
                   {/* Error/Success Messages */}
@@ -588,7 +687,7 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
                     <span className="text-2xl font-bold text-tfe-blue-950">${value}.00</span>
                   </div>
                   <p className="text-xs text-tfe-blue-950/80 mb-2">
-                    {translationTypes.find(t => t.value === tipoTrad)?.label} {isExtrato ? '$25' : '$20'} per page × {pages} page{pages !== 1 ? 's' : ''}
+                    {translationTypes.find(t => t.value === tipoTrad)?.label} ${tipoTrad === 'Notarized' ? '20' : '15'}{isExtrato ? ' + $10' : ''} per page × {pages} page{pages !== 1 ? 's' : ''}
                   </p>
                   <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
                     <li>USCIS accepted translations</li>
@@ -602,7 +701,7 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
                 <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <Info className="w-5 h-5 text-tfe-blue-600" />
-                    Service Information
+                    {t('upload.serviceInfo.title')}
                   </h3>
                   
                   <div className="space-y-4">
@@ -610,16 +709,26 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
                     <div>
                       <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                         <Award className="w-4 h-4 text-tfe-blue-600" />
-                        Translation Types
+                        {t('upload.serviceInfo.translationTypes.title')}
                       </h4>
                       <div className="space-y-2">
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex justify-between items-start mb-1">
-                            <span className="font-medium text-gray-800 text-sm">Certified</span>
-                            <span className="text-xs font-bold text-tfe-blue-600">$20/page</span>
+                            <span className="font-medium text-gray-800 text-sm">{t('upload.serviceInfo.translationTypes.certified.title')}</span>
+                            <span className="text-xs font-bold text-tfe-blue-600">{t('upload.serviceInfo.translationTypes.certified.price')}</span>
                           </div>
                           <p className="text-xs text-gray-600">
-                            Official certified translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.
+                            {t('upload.serviceInfo.translationTypes.certified.description')}
+                          </p>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="font-medium text-gray-800 text-sm">{t('upload.serviceInfo.translationTypes.notarized.title')}</span>
+                            <span className="text-xs font-bold text-tfe-blue-600">{t('upload.serviceInfo.translationTypes.notarized.price')}</span>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            {t('upload.serviceInfo.translationTypes.notarized.description')}
                           </p>
                         </div>
                       </div>
@@ -629,62 +738,63 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
                     <div>
                       <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                         <FileText className="w-4 h-4 text-tfe-blue-600" />
-                        Document Types
+                        {t('upload.serviceInfo.documentTypes.title')}
                       </h4>
                       <div className="space-y-2">
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex justify-between items-start mb-1">
-                            <span className="font-medium text-gray-800 text-sm">Regular Documents</span>
-                            <span className="text-xs text-gray-600">Standard rate</span>
+                            <span className="font-medium text-gray-800 text-sm">{t('upload.serviceInfo.documentTypes.regular.title')}</span>
+                            <span className="text-xs text-gray-600">{t('upload.serviceInfo.documentTypes.regular.price')}</span>
                           </div>
                           <p className="text-xs text-gray-600">
-                            Birth certificates, marriage certificates, diplomas, transcripts, and other official documents.
+                            {t('upload.serviceInfo.documentTypes.regular.description')}
                           </p>
                         </div>
                         
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex justify-between items-start mb-1">
-                            <span className="font-medium text-gray-800 text-sm">Bank Statements</span>
-                            <span className="text-xs font-bold text-orange-600">+$5/page</span>
+                            <span className="font-medium text-gray-800 text-sm">{t('upload.serviceInfo.documentTypes.bankStatements.title')}</span>
+                            <span className="text-xs font-bold text-orange-600">{t('upload.serviceInfo.documentTypes.bankStatements.price')}</span>
                           </div>
                           <p className="text-xs text-gray-600">
-                            Additional verification and formatting required for financial documents.
+                            {t('upload.serviceInfo.documentTypes.bankStatements.description')}
                           </p>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Languages */}
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-tfe-blue-600" />
+                        {t('upload.serviceInfo.supportedLanguages.title')}
+                      </h4>
+                      <div className="grid grid-cols-2 gap-1 text-xs">
+                        {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
+                          <div key={index} className="flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                            <span className="text-gray-700">{lang}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        {t('upload.serviceInfo.supportedLanguages.note')}
+                      </p>
                     </div>
 
                     {/* Features */}
                     <div>
                       <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                         <Shield className="w-4 h-4 text-tfe-blue-600" />
-                        Service Features
+                        {t('upload.serviceInfo.serviceFeatures.title')}
                       </h4>
                       <div className="space-y-1 text-xs">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                          <span className="text-gray-700">USCIS & Government Accepted</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                          <span className="text-gray-700">Official Certification</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                          <span className="text-gray-700">Digital Verification System</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                          <span className="text-gray-700">24-48 Hour Turnaround</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                          <span className="text-gray-700">Secure File Handling</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                          <span className="text-gray-700">24/7 Customer Support</span>
-                        </div>
+                        {(t('upload.serviceInfo.serviceFeatures.features', { returnObjects: true }) as unknown as string[]).map((feature: string, index: number) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                            <span className="text-gray-700">{feature}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -707,7 +817,7 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
           setShowPaymentModal(false);
           setShowZelleModal(true);
         }}
-        amount={calculateValue(pages, isExtrato)}
+        amount={calculateValue(pages, isExtrato, tipoTrad)}
       />
 
       {/* Modal de Pagamento Zelle */}
@@ -715,7 +825,7 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
         <ZellePaymentModal
           isOpen={showZelleModal}
           onClose={() => setShowZelleModal(false)}
-          amount={calculateValue(pages, isExtrato)}
+          amount={calculateValue(pages, isExtrato, tipoTrad)}
           documentId={currentDocumentId}
           userId={userId}
           documentDetails={{

@@ -1,4 +1,4 @@
-# Lush America Translations MVP
+# The Future of English MVP
 
 ## Estrutura do Projeto
 

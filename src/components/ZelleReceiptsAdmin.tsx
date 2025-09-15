@@ -204,7 +204,7 @@ export function ZelleReceiptsAdmin() {
       setProcessingPaymentId(confirmationModal.payment.id);
       
       // Usar a função RPC para aprovar o pagamento
-      const { error: verifyError } = await supabase.rpc('verify_zelle_payment', { 
+      const { error: verifyError } = await supabase.rpc('verify_payment', { 
         payment_id: confirmationModal.payment.id 
       });
 
@@ -393,7 +393,7 @@ export function ZelleReceiptsAdmin() {
       setProcessingPaymentId(paymentId);
       
       // Se aprovado, usar a função RPC
-      const { error } = await supabase.rpc('verify_zelle_payment', { 
+      const { error } = await supabase.rpc('verify_payment', { 
         payment_id: paymentId 
       });
 

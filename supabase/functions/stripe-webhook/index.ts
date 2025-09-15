@@ -10,9 +10,11 @@ Deno.serve(async (req: Request) => {
   console.log(`[${new Date().toISOString()}] Webhook Stripe chamado`);
   console.log(`Method: ${req.method}`);
   console.log(`URL: ${req.url}`);
+  console.log(`Headers:`, Object.fromEntries(req.headers.entries()));
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('OPTIONS request - returning CORS headers');
     return new Response('ok', { headers: corsHeaders });
   }
 
@@ -26,7 +28,12 @@ Deno.serve(async (req: Request) => {
     const body = await req.text();
     const signature = req.headers.get('stripe-signature');
 
+    console.log('DEBUG: Body length:', body.length);
+    console.log('DEBUG: Signature present:', !!signature);
+    console.log('DEBUG: Signature value:', signature ? signature.substring(0, 20) + '...' : 'null');
+
     if (!signature) {
+      console.error('ERROR: Stripe signature missing');
       throw new Error('Stripe signature missing');
     }
 
@@ -36,7 +43,14 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('PROJECT_URL');
     const supabaseServiceKey = Deno.env.get('SERVICE_ROLE_KEY');
 
+    console.log('DEBUG: Verificando variáveis de ambiente...');
+    console.log('DEBUG: STRIPE_SECRET_KEY:', stripeSecretKey ? '✅ Configurada' : '❌ Não configurada');
+    console.log('DEBUG: STRIPE_WEBHOOK_SECRET:', stripeWebhookSecret ? '✅ Configurada' : '❌ Não configurada');
+    console.log('DEBUG: PROJECT_URL:', supabaseUrl ? '✅ Configurada' : '❌ Não configurada');
+    console.log('DEBUG: SERVICE_ROLE_KEY:', supabaseServiceKey ? '✅ Configurada' : '❌ Não configurada');
+
     if (!stripeSecretKey || !stripeWebhookSecret || !supabaseUrl || !supabaseServiceKey) {
+      console.error('ERROR: Variáveis de ambiente não configuradas');
       throw new Error('Environment variables not configured');
     }
 
@@ -45,8 +59,13 @@ Deno.serve(async (req: Request) => {
       apiVersion: '2024-12-18.acacia',
     });
 
-    // Criar cliente Supabase
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Criar cliente Supabase com service_role para contornar RLS
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
     // Verificar assinatura do webhook
     let event;
@@ -156,29 +175,36 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
     // Atualizar o status da sessão na tabela stripe_sessions
     try {
       console.log('DEBUG: Atualizando stripe_sessions para completed');
+      console.log('DEBUG: Session ID para atualizar:', session.id);
       
-      const { error: sessionUpdateError } = await supabase
+      const { data: sessionUpdateData, error: sessionUpdateError } = await supabase
         .from('stripe_sessions')
         .update({
           payment_status: 'completed',
           updated_at: new Date().toISOString()
         })
-        .eq('session_id', session.id);
+        .eq('session_id', session.id)
+        .select();
 
       if (sessionUpdateError) {
-        console.error('WARNING: Erro ao atualizar stripe_sessions:', sessionUpdateError);
+        console.error('ERROR: Erro ao atualizar stripe_sessions:', sessionUpdateError);
+        console.error('DEBUG: Detalhes do erro stripe_sessions:', JSON.stringify(sessionUpdateError, null, 2));
+        console.error('DEBUG: Código do erro stripe_sessions:', sessionUpdateError.code);
+        console.error('DEBUG: Mensagem do erro stripe_sessions:', sessionUpdateError.message);
         // Não falhar se isso der erro, apenas log
       } else {
         console.log('DEBUG: stripe_sessions atualizado com sucesso para completed');
+        console.log('DEBUG: Dados atualizados stripe_sessions:', JSON.stringify(sessionUpdateData, null, 2));
       }
     } catch (sessionError) {
-      console.log('WARNING: Erro ao atualizar stripe_sessions:', sessionError);
+      console.error('ERROR: Exceção ao atualizar stripe_sessions:', sessionError);
       // Não falhar se isso der erro
     }
 
     // Criar registro na tabela payments
     try {
       console.log('DEBUG: Criando registro na tabela payments');
+      console.log('DEBUG: Cliente Supabase criado:', supabase ? '✅' : '❌');
       
       const paymentData = {
         document_id: documentId,
@@ -191,7 +217,8 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
         payment_date: new Date().toISOString()
       };
 
-      console.log('DEBUG: Dados do pagamento a serem inseridos:', paymentData);
+      console.log('DEBUG: Dados do pagamento a serem inseridos:', JSON.stringify(paymentData, null, 2));
+      console.log('DEBUG: Tentando inserir na tabela payments...');
       
       const { data: paymentRecord, error: paymentError } = await supabase
         .from('payments')
@@ -202,9 +229,13 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
       if (paymentError) {
         console.error('ERROR: Erro ao criar registro na tabela payments:', paymentError);
         console.error('DEBUG: Detalhes do erro:', JSON.stringify(paymentError, null, 2));
+        console.error('DEBUG: Código do erro:', paymentError.code);
+        console.error('DEBUG: Mensagem do erro:', paymentError.message);
+        console.error('DEBUG: Detalhes do erro:', paymentError.details);
         throw new Error('Failed to create payment record');
       } else {
         console.log('DEBUG: Registro criado na tabela payments com sucesso:', paymentRecord.id);
+        console.log('DEBUG: Dados do registro criado:', JSON.stringify(paymentRecord, null, 2));
       }
       
       // Enviar notificação de pagamento para admins

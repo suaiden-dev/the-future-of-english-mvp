@@ -375,12 +375,18 @@ export function PaymentSuccess() {
       console.log('DEBUG: Target Language:', sessionData.metadata.targetLanguage);
       console.log('DEBUG: Source Currency RAW:', sessionData.metadata.sourceCurrency);
       console.log('DEBUG: Target Currency RAW:', sessionData.metadata.targetCurrency);
+      console.log('DEBUG: Document Type RAW:', sessionData.metadata.documentType);
+      console.log('DEBUG: Is Notarized RAW:', sessionData.metadata.isNotarized);
       console.log('DEBUG: Is Bank Statement:', sessionData.metadata.isBankStatement);
       console.log('DEBUG: VERIFICAÇÃO CRÍTICA - CAMPOS DE MOEDA:');
       console.log('DEBUG: sessionData.metadata.sourceCurrency type:', typeof sessionData.metadata.sourceCurrency);
       console.log('DEBUG: sessionData.metadata.targetCurrency type:', typeof sessionData.metadata.targetCurrency);
+      console.log('DEBUG: sessionData.metadata.documentType type:', typeof sessionData.metadata.documentType);
+      console.log('DEBUG: sessionData.metadata.targetLanguage type:', typeof sessionData.metadata.targetLanguage);
       console.log('DEBUG: sourceCurrency value:', JSON.stringify(sessionData.metadata.sourceCurrency));
       console.log('DEBUG: targetCurrency value:', JSON.stringify(sessionData.metadata.targetCurrency));
+      console.log('DEBUG: documentType value:', JSON.stringify(sessionData.metadata.documentType));
+      console.log('DEBUG: targetLanguage value:', JSON.stringify(sessionData.metadata.targetLanguage));
       
       // Garantir que a URL seja válida
       let finalUrl = publicUrl;
@@ -399,7 +405,7 @@ export function PaymentSuccess() {
         size: storedFile?.file?.size || 0,
         user_id: userId,
         pages: parseInt(sessionData.metadata.pages),
-        document_type: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified',
+        document_type: sessionData.metadata.documentType || (sessionData.metadata.isNotarized === 'true' ? 'Notorizado' : 'Certificado'),
         total_cost: sessionData.metadata.totalPrice,
         source_language: sessionData.metadata.originalLanguage || 'Portuguese',
         target_language: sessionData.metadata.targetLanguage || 'English',

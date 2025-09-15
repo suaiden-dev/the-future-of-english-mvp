@@ -69,7 +69,7 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
       const statusMap: DocumentStatus = {};
       data?.forEach(item => {
         // Usar filename como chave para relacionar com documents
-        const matchingDoc = recentDocuments.find(doc => doc.filename === item.filename);
+        const matchingDoc = recentDocuments.find(doc => doc.filename === item.filename && doc.user_id === item.user_id);
         if (matchingDoc) {
           statusMap[matchingDoc.id] = item.status;
         }
@@ -192,7 +192,7 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
         console.log('🎯 Error:', error);
 
         // Procurar o documento traduzido que corresponde ao filename atual
-        const translatedDoc = translatedDocs?.find(td => td.filename === doc.filename);
+        const translatedDoc = translatedDocs?.find(td => td.filename === doc.filename && td.user_id === doc.user_id);
         console.log('🎯 Documento traduzido correspondente:', translatedDoc);
 
         if (translatedDoc && translatedDoc.translated_file_url && !error) {

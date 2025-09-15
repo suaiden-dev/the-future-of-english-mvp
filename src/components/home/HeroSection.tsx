@@ -28,23 +28,23 @@ export function HeroSection() {
                 </span>
               </div>
             </div>
-            
+
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight">
               <span className="text-gray-900">{t('hero.title1')}</span>
               <br />
               <span className="text-gray-900">{t('hero.title2')} </span>
               <span className="text-tfe-blue-600">
-                {t('hero.title3')}
+                {t('Study Scholarships')}
               </span>
               <br />
-              <span className="text-gray-900">{t('hero.title4')}</span>
+              <span className="text-gray-900">{t('in the USA')}</span>
             </h1>
-            
+
             <p className="text-lg sm:text-xl mb-6 sm:mb-8 text-gray-600 max-w-xl leading-relaxed">
               {t('hero.description')}
               <span className="font-semibold text-tfe-red-600"> {t('hero.successRate')}</span>
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
               <button
                 onClick={() => navigate('/register')}
@@ -55,7 +55,7 @@ export function HeroSection() {
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
               </button>
-              
+
               <button
                 onClick={() => window.open('https://wa.me/13237883117?text=Hello%20The%20Future%20of%20English,%20I%20would%20like%20to%20know%20more%20about%20the%20visa%20consulting%20service.', '_blank')}
                 className="group border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 cursor-pointer whitespace-nowrap flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
@@ -64,7 +64,7 @@ export function HeroSection() {
                 {t('hero.talkToSpecialist')}
               </button>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 text-gray-600">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 sm:w-8 sm:h-8 bg-tfe-blue-50 rounded-full flex items-center justify-center">
@@ -72,7 +72,7 @@ export function HeroSection() {
                 </div>
                 <span className="text-sm sm:text-base font-medium">{t('hero.personalized')}</span>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-100 rounded-full flex items-center justify-center">
                   <Lightning className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" weight="fill" />
@@ -81,20 +81,20 @@ export function HeroSection() {
               </div>
             </div>
           </div>
-          
+
           {/* Right Image */}
           <div className="relative">
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl sm:rounded-3xl transform rotate-2 sm:rotate-3 group-hover:rotate-4 sm:group-hover:rotate-6 transition-transform duration-300"></div>
               <div className="relative bg-white p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-2xl">
-                <img 
+                <img
                   src="/foto main tfe.jpg"
                   alt="International Student"
                   className="w-full h-auto rounded-xl sm:rounded-2xl object-cover object-top"
                   loading="lazy"
                 />
               </div>
-              
+
               {/* Enhanced Floating Cards - Responsive Positioning */}
               <div className="absolute -top-4 sm:-top-6 lg:-top-8 -right-4 sm:-right-6 lg:-right-8 bg-white rounded-2xl shadow-2xl p-4 sm:p-6 border border-gray-100 transform hover:scale-105 transition-transform duration-300">
                 <div className="flex items-center gap-2 sm:gap-4">
@@ -107,7 +107,7 @@ export function HeroSection() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="absolute -bottom-4 sm:-bottom-6 lg:-bottom-8 -left-4 sm:-left-6 lg:-left-8 bg-white rounded-2xl shadow-2xl p-4 sm:p-6 border border-gray-100 transform hover:scale-105 transition-transform duration-300">
                 <div className="flex items-center gap-2 sm:gap-4">
                   <div className="w-10 h-10 sm:w-14 sm:h-14 bg-tfe-red-600 rounded-2xl flex items-center justify-center">
@@ -119,7 +119,7 @@ export function HeroSection() {
                   </div>
                 </div>
               </div>
-              
+
 
             </div>
           </div>

@@ -126,7 +126,7 @@ export default function AuthenticatorDashboard() {
 
         // Mapear documentos principais com informações de verificação
         const mainDocuments = (mainDocs as any[] || []).map(doc => {
-          const verifiedDoc = verifiedDocs?.find(v => v.filename === doc.filename);
+          const verifiedDoc = verifiedDocs?.find(v => v.filename === doc.filename && v.user_id === doc.user_id);
           
           console.log(`[AuthenticatorDashboard] Processando documento: ${doc.filename}`);
           console.log(`[AuthenticatorDashboard] - Documento principal:`, doc);
@@ -412,30 +412,53 @@ export default function AuthenticatorDashboard() {
           .single();
           
         if (docError || !docData) {
+          console.error('[AuthenticatorDashboard] Erro ao buscar documento original:', docError);
           throw new Error('Não foi possível obter dados do documento original.');
+        }
+
+        // Validar campos obrigatórios
+        if (!docData.user_id) {
+          throw new Error('user_id é obrigatório para criar entrada na tabela de verificação.');
+        }
+        if (!docData.filename) {
+          throw new Error('filename é obrigatório para criar entrada na tabela de verificação.');
+        }
+        if (!docData.verification_code) {
+          throw new Error('verification_code é obrigatório para criar entrada na tabela de verificação.');
         }
         
         // Criar entrada na tabela documents_to_be_verified
+        const insertData = {
+          user_id: docData.user_id,
+          filename: docData.filename,
+          pages: parseInt(docData.pages) || 1,
+          total_cost: parseFloat(docData.total_cost || docData.valor || 0),
+          status: 'pending',
+          verification_code: docData.verification_code,
+          source_language: docData.idioma_raiz || 'Portuguese',
+          target_language: docData.idioma_destino || 'English',
+          is_bank_statement: Boolean(docData.is_bank_statement),
+          client_name: docData.client_name || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        console.log('[AuthenticatorDashboard] Dados para inserção na tabela documents_to_be_verified:', insertData);
+        console.log('[AuthenticatorDashboard] docData completo:', docData);
+
         const { data: newVerifiedDoc, error: createError } = await supabase
           .from('documents_to_be_verified')
-          .insert({
-            user_id: docData.user_id,
-            filename: docData.filename,
-            pages: docData.pages,
-            total_cost: docData.total_cost || docData.valor || 0,
-            status: 'pending',
-            verification_code: docData.verification_code,
-            source_language: docData.idioma_raiz,
-            target_language: docData.idioma_destino,
-            is_bank_statement: docData.is_bank_statement || false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .insert(insertData)
           .select('id, verification_code')
           .single();
           
-        if (createError || !newVerifiedDoc) {
-          throw new Error('Não foi possível criar entrada na tabela de verificação.');
+        if (createError) {
+          console.error('[AuthenticatorDashboard] Erro detalhado ao inserir na tabela documents_to_be_verified:', createError);
+          throw new Error(`Não foi possível criar entrada na tabela de verificação: ${createError.message}`);
+        }
+        
+        if (!newVerifiedDoc) {
+          throw new Error('Não foi possível criar entrada na tabela de verificação: resposta vazia do servidor.');
         }
         
         finalVerificationId = newVerifiedDoc.id;

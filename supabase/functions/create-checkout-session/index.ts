@@ -34,17 +34,15 @@ interface RequestBody {
 }
 
 // Função para calcular o preço baseado nos critérios
-function calculatePrice(pages: number, isBankStatement: boolean): number {
-  let pricePerPage = 20; // $20 por página para "Certified"
-  if (isBankStatement) {
-    pricePerPage += 5; // Taxa adicional de $5 para extratos bancários
-  }
-  return pricePerPage * pages;
+function calculatePrice(pages: number, isNotarized: boolean, isBankStatement: boolean): number {
+  let basePrice = isNotarized ? 20 : 15; // $20 para Notarized, $15 para Certified
+  let bankFee = isBankStatement ? 10 : 0; // $10 taxa adicional para extratos bancários
+  return pages * (basePrice + bankFee);
 }
 
 // Função para gerar a descrição do serviço
-function generateServiceDescription(pages: number, isBankStatement: boolean): string {
-  const services = ['Certified'];
+function generateServiceDescription(pages: number, isNotarized: boolean, isBankStatement: boolean): string {
+  const services = [isNotarized ? 'Notarized' : 'Certified'];
   if (isBankStatement) services.push('Bank Statement');
   
   const serviceText = ` (${services.join(', ')})`;
@@ -87,8 +85,15 @@ Deno.serve(async (req: Request) => {
     } = await req.json() as RequestBody;
 
     console.log('DEBUG: Dados recebidos:', {
-      pages, isCertified, isNotarized, isBankStatement, fileId, filePath, isMobile, userId, userEmail, filename, fileSize, fileType, originalLanguage, targetLanguage, documentType, clientName
+      pages, isCertified, isNotarized, isBankStatement, fileId, filePath, isMobile, userId, userEmail, filename, fileSize, fileType, originalLanguage, targetLanguage, documentType, clientName, sourceCurrency, targetCurrency
     });
+
+    console.log('DEBUG: VERIFICAÇÃO CRÍTICA - CAMPOS IMPORTANTES:');
+    console.log('DEBUG: documentType type:', typeof documentType, 'value:', documentType);
+    console.log('DEBUG: targetLanguage type:', typeof targetLanguage, 'value:', targetLanguage);
+    console.log('DEBUG: sourceCurrency type:', typeof sourceCurrency, 'value:', sourceCurrency);
+    console.log('DEBUG: targetCurrency type:', typeof targetCurrency, 'value:', targetCurrency);
+    console.log('DEBUG: isNotarized type:', typeof isNotarized, 'value:', isNotarized);
 
     // Validações de entrada
     if (!pages || pages < 1) {
@@ -120,8 +125,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Calcular preço e descrição
-    const totalPrice = calculatePrice(pages, isBankStatement);
-    const serviceDescription = generateServiceDescription(pages, isBankStatement);
+    const totalPrice = calculatePrice(pages, isNotarized, isBankStatement);
+    const serviceDescription = generateServiceDescription(pages, isNotarized, isBankStatement);
 
     console.log('DEBUG: Preço calculado:', totalPrice);
     console.log('DEBUG: Descrição do serviço:', serviceDescription);
@@ -182,7 +187,12 @@ Deno.serve(async (req: Request) => {
     // Inserir dados da sessão na tabela do Supabase se as chaves estiverem disponíveis
     if (supabaseUrl && supabaseServiceKey) {
       try {
-        const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        });
         
         const metadataToSave = {
           fileId: fileIdentifier,
@@ -206,7 +216,18 @@ Deno.serve(async (req: Request) => {
           targetCurrency,
         };
 
-        const { error: insertError } = await supabaseClient
+        console.log('DEBUG: Tentando inserir na tabela stripe_sessions...');
+        console.log('DEBUG: Dados a serem inseridos:', {
+          session_id: session.id,
+          document_id: documentId || null,
+          user_id: userId,
+          metadata: metadataToSave,
+          payment_status: 'pending',
+          amount: totalPrice,
+          currency: 'usd'
+        });
+
+        const { data: insertData, error: insertError } = await supabaseClient
           .from('stripe_sessions')
           .insert({
             session_id: session.id,
@@ -216,12 +237,17 @@ Deno.serve(async (req: Request) => {
             payment_status: 'pending',
             amount: totalPrice,
             currency: 'usd'
-          });
+          })
+          .select();
 
         if (insertError) {
-          console.error('WARNING: Erro ao inserir na tabela stripe_sessions:', insertError);
+          console.error('ERROR: Erro ao inserir na tabela stripe_sessions:', insertError);
+          console.error('DEBUG: Detalhes do erro stripe_sessions:', JSON.stringify(insertError, null, 2));
+          console.error('DEBUG: Código do erro stripe_sessions:', insertError.code);
+          console.error('DEBUG: Mensagem do erro stripe_sessions:', insertError.message);
         } else {
           console.log('DEBUG: Sessão inserida na tabela stripe_sessions com sucesso:', session.id);
+          console.log('DEBUG: Dados inseridos stripe_sessions:', JSON.stringify(insertData, null, 2));
         }
       } catch (dbError) {
         console.error('WARNING: Erro crítico ao tentar salvar sessão no banco de dados:', dbError);

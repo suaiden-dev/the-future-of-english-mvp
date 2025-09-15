@@ -243,12 +243,12 @@
     "selectLanguage": "Seleccionar Idioma"
   },
   "company": {
-    "name": "LUSH AMERICA TRANSLATIONS"
+    "name": "THE FUTURE OF ENGLISH"
   },
   "hero": {
-    "title1": "Traducciones de Documentos",
-    "title2": "Profesionales",
-    "description": "Servicios de traducción certificada para documentos de inmigración con autenticación oficial y verificación. Tasa de aceptación del USCIS del 99.9%.",
+    "title1": "Transforma Tu",
+    "title2": "Futuro con",
+    "description": "Mentoría especializada para encontrar la mejor escuela y asegurar tu oportunidad de beca con nuestra comprobada tasa de éxito del 95%.",
     "startTranslation": "Iniciar Traducción",
     "verifyDocument": "Verificar Documento",
     "successRate": "tasa de éxito del 95%",
@@ -440,13 +440,14 @@
     "services": {
       "title": "Nuestros Servicios",
       "documentTranslation": "Traducción de Documentos",
-      "documentVerification": "Verificación de Documentos"
+      "documentVerification": "Verificación de Documentos",
+      "mentorship": "Mentoría"
     },
     "contact": {
       "title": "Contacto",
       "location": "Estados Unidos"
     },
-    "copyright": "© 2025 Lush America Translations. Todos los derechos reservados.",
+    "copyright": "© 2025 The Future of English. Todos los derechos reservados.",
     "links": {
       "privacy": "Política de Privacidad",
       "terms": "Términos de Uso",
@@ -456,7 +457,7 @@
   "about": {
     "title": "Sobre",
     "titleUs": "Nosotros",
-    "description": "En Lush America Translations, ayudamos a estudiantes internacionales a realizar su sueño de estudiar en los Estados Unidos. Ofrecemos orientación completa, desde la selección de la escuela hasta la obtención de la beca ideal — con excelencia, transparencia y resultados comprobados.",
+    "description": "En The Future of English, ayudamos a estudiantes internacionales a realizar su sueño de estudiar en los Estados Unidos. Ofrecemos orientación completa, desde la selección de la escuela hasta la obtención de la beca ideal — con excelencia, transparencia y resultados comprobados.",
     "scholarshipsSecured": "Becas Obtenidas",
     "partnerSchools": "Escuelas Asociadas",
     "countriesServed": "Países Atendidos",
@@ -572,18 +573,25 @@
       "translationTypes": {
         "title": "Tipos de Traducción",
         "certified": {
-          "title": "Certificada",
-          "price": "$20/página",
-          "description": "Traducción certificada oficial con autenticación legal completa para todos los propósitos incluyendo documentos judiciales, procedimientos legales, inmigración y aplicaciones de USCIS.",
+          "title": "Traducción Certificada",
+          "price": "$15/página",
+          "description": "Traducción estándar con certificación oficial para uso general, inmigración y propósitos legales.",
           "features": [
             "Sello de certificación oficial",
-            "Certificación de notario público",
             "Aceptado por USCIS",
             "Código de verificación digital",
+            "Entrega en 24-48 horas"
+          ]
+        },
+        "notarized": {
+          "title": "Traducción Notarizada",
+          "price": "$20/página",
+          "description": "Traducción oficial notarizada con notarización legal adicional para documentos judiciales y procedimientos legales.",
+          "features": [
+            "Certificación de notario público",
             "Autenticación de documento legal",
             "Formato aceptado por tribunales",
-            "Verificación mejorada",
-            "Entrega en 24-48 horas"
+            "Verificación mejorada"
           ]
         }
       },
@@ -596,7 +604,7 @@
         },
         "bankStatements": {
           "title": "Extractos Bancarios",
-          "price": "+$5/página",
+          "price": "+$10/página",
           "description": "Verificación adicional y formateo requerido para documentos financieros.",
           "features": [
             "Proceso de verificación mejorado",
@@ -607,6 +615,16 @@
       },
       "supportedLanguages": {
         "title": "Idiomas Soportados",
+        "languages": [
+          "Portugués",
+          "Español",
+          "Árabe",
+          "Japonés",
+          "Portugués (Portugal)",
+          "Alemán",
+          "Hebreo",
+          "Coreano"
+        ],
         "note": "Todos los documentos son traducidos al inglés para requisitos de USCIS y autoridades estadounidenses."
       },
       "serviceFeatures": {

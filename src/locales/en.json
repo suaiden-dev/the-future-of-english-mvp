@@ -243,15 +243,15 @@
     "selectLanguage": "Select Language"
   },
   "company": {
-    "name": "LUSH AMERICA TRANSLATIONS"
+    "name": "THE FUTURE OF ENGLISH"
   },
   "hero": {
-    "title1": "Professional",
-    "title2": "Document Translation",
-    "description": "Certified translation services for immigration documents with official authentication and verification. 99.9% USCIS acceptance rate.",
+    "title1": "Transform Your",
+    "title2": "Future with",
+    "description": "Specialized mentorship to find the best school and secure your scholarship opportunity with our proven",
     "startTranslation": "Start Translation",
     "verifyDocument": "Verify Document",
-    "successRate": "95% success rate",
+    "successRate": "95% success rate.",
     "startNow": "I Want to Start Now",
     "talkToSpecialist": "Talk to a Specialist",
     "personalized": "100% Personalized",
@@ -440,13 +440,14 @@
     "services": {
       "title": "Our Services",
       "documentTranslation": "Document Translation",
-      "documentVerification": "Document Verification"
+      "documentVerification": "Document Verification",
+      "mentorship": "Mentorship"
     },
     "contact": {
       "title": "Contact",
       "location": "United States"
     },
-    "copyright": "© 2025 Lush America Translations. All rights reserved.",
+    "copyright": "© 2025 The Future of English. All rights reserved.",
     "links": {
       "privacy": "Privacy Policy",
       "terms": "Terms of Use",
@@ -456,7 +457,7 @@
   "about": {
     "title": "About",
     "titleUs": "Us",
-    "description": "At Lush America Translations, we help international students realize their dream of studying in the United States. We offer complete guidance, from school selection to securing the ideal scholarship — with excellence, transparency and proven results.",
+    "description": "At The Future of English, we help international students realize their dream of studying in the United States. We offer complete guidance, from school selection to securing the ideal scholarship — with excellence, transparency and proven results.",
     "scholarshipsSecured": "Scholarships Secured",
     "partnerSchools": "Partner Schools",
     "countriesServed": "Countries Served",
@@ -572,18 +573,25 @@
       "translationTypes": {
         "title": "Translation Types",
         "certified": {
-          "title": "Certified",
-          "price": "$20/page",
-          "description": "Official certified translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.",
+          "title": "Certified Translation",
+          "price": "$15/page",
+          "description": "Standard translation with official certification for general use, immigration, and legal purposes.",
           "features": [
             "Official certification stamp",
-            "Notary public certification",
             "USCIS accepted",
             "Digital verification code",
+            "24-48 hour turnaround"
+          ]
+        },
+        "notarized": {
+          "title": "Notarized Translation",
+          "price": "$20/page",
+          "description": "Official notarized translation with additional legal notarization for court documents and legal proceedings.",
+          "features": [
+            "Notary public certification",
             "Legal document authentication",
             "Court-accepted format",
-            "Enhanced verification",
-            "24-48 hour turnaround"
+            "Enhanced verification"
           ]
         }
       },
@@ -596,7 +604,7 @@
         },
         "bankStatements": {
           "title": "Bank Statements",
-          "price": "+$5/page",
+          "price": "+$10/page",
           "description": "Additional verification and formatting required for financial documents.",
           "features": [
             "Enhanced verification process",
@@ -607,6 +615,16 @@
       },
       "supportedLanguages": {
         "title": "Supported Languages",
+        "languages": [
+          "Portuguese",
+          "Spanish",
+          "Arabic",
+          "Japanese",
+          "Portuguese (Portugal)",
+          "German",
+          "Hebrew",
+          "Korean"
+        ],
         "note": "All documents are translated to English for USCIS and US authority requirements."
       },
       "serviceFeatures": {

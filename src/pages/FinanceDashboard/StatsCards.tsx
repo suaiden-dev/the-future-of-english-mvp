@@ -67,7 +67,7 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
 
       // Mesclar dados: priorizar status da documents_to_be_verified (usar filename como chave)
       const allDocs = (documentsData || []).map(doc => {
-        const verifiedDoc = verifiedData?.find(v => v.filename === doc.filename);
+        const verifiedDoc = verifiedData?.find(v => v.filename === doc.filename && v.user_id === doc.user_id);
         return {
           ...doc,
           status: verifiedDoc ? verifiedDoc.status : doc.status

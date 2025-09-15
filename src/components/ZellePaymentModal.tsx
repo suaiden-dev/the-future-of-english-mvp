@@ -32,7 +32,7 @@ export function ZellePaymentModal({
   // Dados Zelle da empresa (você deve configurar estes dados)
   const ZELLE_INFO = {
     email: 'info@thefutureofenglish.com',
-    businessName: 'Lush America Translations'
+    businessName: 'The Future of English'
   };
 
   const copyToClipboard = (text: string, type: string) => {

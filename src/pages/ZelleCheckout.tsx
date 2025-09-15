@@ -22,7 +22,7 @@ export function ZelleCheckout() {
   // Zelle company data
   const ZELLE_INFO = {
     email: 'info@thefutureofenglish.com',
-    businessName: 'Lush America Translations'
+    businessName: 'The Future of English'
   };
 
   // Extract URL parameters
@@ -226,7 +226,7 @@ export function ZelleCheckout() {
 
   const sendWebhook = async (receiptUrl: string, userId: string): Promise<string> => {
     try {
-      const response = await fetch('https://nwh.thefutureofenglish.com/webhook/zelle-global', {
+      const response = await fetch('https://nwh.thefutureofenglish.com/webhook/zelle-global-tfoe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -343,10 +343,10 @@ export function ZelleCheckout() {
         size: documentData.file_size || 0,
         user_id: documentData.user_id,
         pages: documentData.pages || 1,
-        document_type: documentData.document_type || 'Certificado',
+        document_type: documentData.tipo_trad || 'Certificado',
         total_cost: amount || '0',
-        source_language: documentData.source_language || 'Portuguese',
-        target_language: documentData.target_language || 'English',
+        source_language: documentData.idioma_raiz || 'Portuguese',
+        target_language: documentData.idioma_destino || 'English',
         is_bank_statement: documentData.is_bank_statement || false,
         client_name: documentData.client_name || userProfile?.name,
         source_currency: documentData.source_currency || null,

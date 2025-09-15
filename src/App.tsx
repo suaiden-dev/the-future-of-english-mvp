@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useDocuments, useAllDocuments } from './hooks/useDocuments';
 import { useFolders } from './hooks/useFolders';
@@ -121,7 +121,7 @@ function App() {
 
   const location = useLocation();
 
-  // Bloquear loading apenas para páginas protegidas
+  // Bloquear loading apenas para pÃ¡ginas protegidas
   const protectedPages: Page[] = ['dashboard-customer', 'admin', 'upload'];
   if (authLoading && protectedPages.includes(location.pathname as Page)) {
     return (
@@ -131,12 +131,12 @@ function App() {
             <div className="flex items-center gap-2 mb-4">
               <img 
                 src="/logo.png" 
-                alt="Lush America Translations" 
+                alt="The Future of English" 
                 className="w-8 h-8 flex-shrink-0 object-contain"
               />
               <h3 className="text-xl font-bold">
-                <span className="text-tfe-blue-950">LUSH</span>
-                <span className="text-tfe-red-950"> AMERICA TRANSLATIONS</span>
+                <span className="text-tfe-blue-950">THE FUTURE</span>
+                <span className="text-tfe-red-950"> OF ENGLISH</span>
               </h3>
             </div>
           </div>
@@ -154,7 +154,7 @@ function App() {
       { id: 'verify', label: 'Verify Document', icon: Search, page: 'verify' as Page },
     ];
 
-    // Se não está logado, retorna itens básicos + login/register
+    // Se nÃ£o estÃ¡ logado, retorna itens bÃ¡sicos + login/register
     if (!user) {
       const result = [
         ...baseItems,
@@ -164,7 +164,7 @@ function App() {
       return result;
     }
 
-    // Verificar se está nas páginas do Dashboard ou outras páginas específicas
+    // Verificar se estÃ¡ nas pÃ¡ginas do Dashboard ou outras pÃ¡ginas especÃ­ficas
     const isDashboardArea = location.pathname.startsWith('/dashboard') || 
                            location.pathname.startsWith('/admin') || 
                            location.pathname.startsWith('/authenticator') ||
@@ -172,7 +172,7 @@ function App() {
                            location.pathname === '/user-management' ||
                            location.pathname === '/authenticator-control';
     
-    // Se está na área de Dashboard, mostrar apenas itens do Dashboard (botão Home é separado)
+    // Se estÃ¡ na Ã¡rea de Dashboard, mostrar apenas itens do Dashboard (botÃ£o Home Ã© separado)
     if (isDashboardArea) {
       if (user.role === 'authenticator') {
         const items = [
@@ -187,8 +187,6 @@ function App() {
           { id: 'admin', label: 'Admin Dashboard', icon: Shield, page: 'admin' as Page },
           { id: 'user-management', label: 'User Management', icon: Users, page: 'user-management' as Page },
           { id: 'authenticator-control', label: 'Authenticator Control', icon: UserCheck, page: 'authenticator-control' as Page },
-          { id: 'admin-to-authenticate', label: 'To Authenticate', icon: FileText, page: 'admin#to-authenticate' as Page },
-          { id: 'admin-translated', label: 'Translated', icon: CheckCircle, page: 'admin#translated' as Page },
         ];
         return items;
       }
@@ -201,7 +199,7 @@ function App() {
         return items;
       }
       
-      // Usuário comum no dashboard
+      // UsuÃ¡rio comum no dashboard
       const userItems = [
         { id: 'dashboard', label: 'Overview', icon: UserIcon, page: '/dashboard' },
         { id: 'upload-document', label: 'Get Translation', icon: UploadIcon, page: '/dashboard/upload' },
@@ -213,10 +211,10 @@ function App() {
       return userItems;
     }
     
-    // Se está na Home ou outras páginas públicas, mostrar itens da Home + ir para Dashboard
+    // Se estÃ¡ na Home ou outras pÃ¡ginas pÃºblicas, mostrar itens da Home + ir para Dashboard
     const homeItems = [
       ...baseItems,
-      { id: 'go-to-dashboard', label: 'My Dashboard →', icon: UserIcon, page: '/dashboard' },
+      { id: 'go-to-dashboard', label: 'My Dashboard â†’', icon: UserIcon, page: '/dashboard' },
     ];
     
     return homeItems;
@@ -247,12 +245,12 @@ function App() {
               <div className="flex items-center gap-2 min-w-0">
                 <img 
                   src="/logo.png" 
-                  alt="Lush America Translations" 
+                  alt="The Future of English" 
                   className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 object-contain"
                 />
                 <h3 className="text-lg sm:text-xl font-bold truncate">
-                  <span className="text-tfe-blue-950">LUSH</span>
-                  <span className="text-tfe-red-950"> AMERICA TRANSLATIONS</span>
+                  <span className="text-tfe-blue-950">THE FUTURE</span>
+                  <span className="text-tfe-red-950"> OF ENGLISH</span>
                 </h3>
               </div>
             </button>
@@ -267,7 +265,7 @@ function App() {
           </div>
           
           <div className="p-3 sm:p-4 h-full overflow-y-auto">
-            {/* Botão Back to Home para área do Dashboard */}
+            {/* BotÃ£o Back to Home para Ã¡rea do Dashboard */}
             {user && (location.pathname.startsWith('/dashboard') || 
                      location.pathname.startsWith('/admin') || 
                      location.pathname.startsWith('/authenticator') ||
@@ -281,7 +279,7 @@ function App() {
                   className="w-full flex items-center space-x-3 px-3 py-2 text-left text-gray-600 hover:text-tfe-blue-600 hover:bg-tfe-blue-50 rounded-lg transition-colors"
                 >
                   <HomeIcon className="w-5 h-5" />
-                  <span className="font-medium">← Back to Home</span>
+                  <span className="font-medium">â† Back to Home</span>
                 </button>
               </div>
             )}
@@ -308,8 +306,8 @@ function App() {
       {/* Mobile menu */}
       <MobileMenu />
       
-      {/* Renderiza Header apenas em rotas públicas */}
-      {['/', '/verify', '/login', '/register'].includes(location.pathname) && (
+      {/* Renderiza Header apenas em rotas pÃºblicas */}
+      {['/', '/translations', '/verify', '/login', '/register'].includes(location.pathname) && (
         <Header 
           user={user} 
           onLogout={handleLogout} 
@@ -319,7 +317,8 @@ function App() {
       
       <AuthRedirect>
         <Routes>
-          <Route path="/" element={<Translations />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/translations" element={<Translations />} />
 
           <Route path="/verify" element={<DocumentVerification />} />
           <Route path="/login" element={<Login />} />
@@ -340,12 +339,12 @@ function App() {
                     <div className="flex items-center gap-2">
                       <img 
                         src="/logo.png" 
-                        alt="Lush America Translations" 
+                        alt="The Future of English" 
                         className="w-8 h-8 flex-shrink-0 object-contain"
                       />
                       <h3 className="text-xl font-bold">
-                        <span className="text-tfe-blue-950">LUSH</span>
-                        <span className="text-tfe-red-950"> AMERICA TRANSLATIONS</span>
+                        <span className="text-tfe-blue-950">THE FUTURE</span>
+                        <span className="text-tfe-red-950"> OF ENGLISH</span>
                       </h3>
                     </div>
                   </div>
@@ -473,14 +472,14 @@ function App() {
                     <div className="flex items-center gap-2">
                       <img 
                         src="/logo.png" 
-                        alt="Lush America Translations" 
+                        alt="The Future of English" 
                         className="w-8 h-8 flex-shrink-0 object-contain"
                       />
                     </div>
                     <div>
                       <div className="font-bold text-sm text-gray-900">
-                        <span className="text-tfe-blue-950">LUSH</span>
-                        <span className="text-tfe-red-950"> AMERICA TRANSLATIONS</span>
+                        <span className="text-tfe-blue-950">THE FUTURE</span>
+                        <span className="text-tfe-red-950"> OF ENGLISH</span>
                       </div>
                       <div className="text-xs text-gray-600">
                         Professional Translation

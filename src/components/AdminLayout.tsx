@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Menu, User } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { NotificationBell } from './NotificationBell';
@@ -42,7 +42,7 @@ export function AdminLayout({
               <div className="flex items-center gap-2">
                 <img 
                   src="/logo.png" 
-                  alt="Lush America Translations" 
+                  alt="The Future of English" 
                   className="w-8 h-8 flex-shrink-0 object-contain"
                 />
                 <div>

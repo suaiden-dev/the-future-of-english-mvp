@@ -3,9 +3,11 @@ import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, Globe, Award,
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { generateUniqueFileName } from '../../utils/fileUtils';
+import { useI18n } from '../../contexts/I18nContext';
 
 export default function AuthenticatorUpload() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pages, setPages] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
@@ -14,7 +16,7 @@ export default function AuthenticatorUpload() {
   const [dragActive, setDragActive] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [tipoTrad, setTipoTrad] = useState<'Certified'>('Certified');
+  const [tipoTrad, setTipoTrad] = useState<'Certified' | 'Notarized'>('Certified');
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
   const [idiomaDestino, setIdiomaDestino] = useState('English');
@@ -33,19 +35,9 @@ export default function AuthenticatorUpload() {
   
   const translationTypes = [
     { value: 'Certified', label: 'Certified' },
+    { value: 'Notarized', label: 'Notarized' },
   ];
   
-  const sourceLanguages = [
-    'Portuguese',
-    'Portuguese (Portugal)',
-    'Spanish',
-    'English',
-    'German',
-    'Arabic',
-    'Hebrew',
-    'Japanese',
-    'Korean',
-  ];
   
   const targetLanguages = [
     'Portuguese',
@@ -83,10 +75,16 @@ export default function AuthenticatorUpload() {
     { value: 'other', label: 'Other' },
   ];
 
-  function calcularValor(pages: number) {
-    return pages * 20;
+  function calcularValor(pages: number, tipoTrad: string) {
+    let basePrice = tipoTrad === 'Notarized' ? 20 : 15; // $20 for Notarized, $15 for Certified
+    return pages * basePrice;
   }
-  const valor = calcularValor(pages);
+
+  // Função para mapear o tipo de tradução para o valor correto no banco
+  function mapTipoTradToDatabase(tipoTrad: 'Certified' | 'Notarized'): string {
+    return tipoTrad === 'Certified' ? 'Certificado' : 'Notorizado';
+  }
+  const valor = calcularValor(pages, tipoTrad);
 
   // PDF page count
   let pdfjsLib: any = null;
@@ -251,31 +249,43 @@ export default function AuthenticatorUpload() {
           .from('documents')
           .getPublicUrl(payload.filePath);
 
+        console.log('DEBUG: Dados para inserção na tabela documents:');
+        console.log('DEBUG: user_id:', user?.id);
+        console.log('DEBUG: filename:', selectedFile?.name);
+        console.log('DEBUG: pages:', pages);
+        console.log('DEBUG: valor:', valor);
+        console.log('DEBUG: tipo_trad:', mapTipoTradToDatabase(tipoTrad));
+        console.log('DEBUG: idioma_raiz:', idiomaRaiz);
+        console.log('DEBUG: idioma_destino:', idiomaDestino);
+        console.log('DEBUG: isExtrato:', isExtrato);
+
+        const documentData: any = {
+          user_id: user?.id,
+          filename: selectedFile?.name,
+          pages: pages,
+          status: 'pending',
+          total_cost: valor,
+          tipo_trad: mapTipoTradToDatabase(tipoTrad),
+          valor: valor,
+          idioma_raiz: idiomaRaiz,
+          idioma_destino: idiomaDestino,
+          is_bank_statement: isExtrato,
+          file_url: publicUrl,
+          verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
+          client_name: clientName.trim()
+        };
+
+        // Adicionar campos condicionais apenas se necessário
+        if (isExtrato) {
+          documentData.source_currency = sourceCurrency;
+          documentData.target_currency = targetCurrency;
+        }
+
+        console.log('DEBUG: Document data to insert:', documentData);
+
         const { data: createdDoc, error: createError } = await supabase
           .from('documents')
-          .insert({
-            user_id: user?.id,
-            filename: selectedFile?.name,
-            pages: pages,
-            status: 'pending',
-            total_cost: valor,
-            tipo_trad: tipoTrad,
-            valor: valor,
-            idioma_raiz: idiomaRaiz,
-            // idioma_destino: idiomaDestino, // Temporariamente comentado até criar a coluna no banco
-            is_bank_statement: isExtrato,
-            file_url: publicUrl,
-            verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
-            client_name: clientName.trim(),
-            payment_method: paymentMethod,
-            receipt_url: customPayload?.receiptPath ? supabase.storage.from('documents').getPublicUrl(customPayload.receiptPath).data.publicUrl : null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            ...(isExtrato && {
-              source_currency: sourceCurrency,
-              target_currency: targetCurrency
-            })
-          })
+          .insert(documentData)
           .select()
           .single();
 
@@ -299,7 +309,7 @@ export default function AuthenticatorUpload() {
         client_name: clientName.trim(),
         idioma_raiz: idiomaRaiz,
         idioma_destino: idiomaDestino,
-        tipo_trad: tipoTrad,
+        tipo_trad: mapTipoTradToDatabase(tipoTrad),
         mimetype: selectedFile?.type,
         size: selectedFile?.size,
         payment_method: paymentMethod,
@@ -635,7 +645,7 @@ export default function AuthenticatorUpload() {
                     <select
                       id="translation-type"
                       value={tipoTrad}
-                      onChange={e => setTipoTrad(e.target.value as 'Certified')}
+                      onChange={e => setTipoTrad(e.target.value as 'Certified' | 'Notarized')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Translation type"
                     >
@@ -711,8 +721,8 @@ export default function AuthenticatorUpload() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
                       aria-label="Original document language"
                     >
-                      {sourceLanguages.map(lang => (
-                        <option key={lang} value={lang}>{lang}</option>
+                      {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
+                        <option key={index} value={lang}>{lang}</option>
                       ))}
                     </select>
                   </div>
@@ -866,7 +876,7 @@ export default function AuthenticatorUpload() {
                   <span className="text-2xl font-bold text-green-600">FREE</span>
                 </div>
                 <p className="text-xs text-tfe-blue-950/80 mb-2">
-                                    {translationTypes.find(t => t.value === tipoTrad)?.label} $20 per page × {pages} pages = ${(pages * 20).toFixed(2)}
+                                    {translationTypes.find(t => t.value === tipoTrad)?.label} ${tipoTrad === 'Notarized' ? '20' : '15'} per page × {pages} pages = ${valor.toFixed(2)}
                 </p>
                 <div className="mb-3 p-2 bg-tfe-blue-100 rounded-lg">
                   <p className="text-xs text-tfe-blue-950/80 font-medium flex items-center gap-1">
@@ -886,7 +896,7 @@ export default function AuthenticatorUpload() {
               <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Info className="w-5 h-5 text-tfe-blue-600" />
-                  Service Information
+                  {t('upload.serviceInfo.title')}
                 </h3>
                 
                 <div className="space-y-6">
@@ -894,26 +904,38 @@ export default function AuthenticatorUpload() {
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <Award className="w-4 h-4 text-tfe-blue-600" />
-                      Translation Types
+                      {t('upload.serviceInfo.translationTypes.title')}
                     </h4>
                     <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Certified Translation</span>
-                          <span className="text-sm font-bold text-tfe-blue-600">$20/page</span>
+                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.translationTypes.certified.title')}</span>
+                          <span className="text-sm font-bold text-tfe-blue-600">{t('upload.serviceInfo.translationTypes.certified.price')}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Official certified translation with complete legal authentication for all purposes including court documents, legal proceedings, immigration, and USCIS applications.
+                          {t('upload.serviceInfo.translationTypes.certified.description')}
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
-                          <li>• Official certification stamp</li>
-                          <li>• Notary public certification</li>
-                          <li>• Legal document authentication</li>
-                          <li>• USCIS accepted</li>
-                          <li>• Digital verification code</li>
-                          <li>• Court-accepted format</li>
-                          <li>• Enhanced verification</li>
-                          <li>• 24-48 hour turnaround</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.0', 'Official certification stamp')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.1', 'USCIS accepted')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.2', 'Digital verification code')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.3', '24-48 hour turnaround')}</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.translationTypes.notarized.title')}</span>
+                          <span className="text-sm font-bold text-tfe-blue-600">{t('upload.serviceInfo.translationTypes.notarized.price')}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {t('upload.serviceInfo.translationTypes.notarized.description')}
+                        </p>
+                        <ul className="text-xs text-gray-500 space-y-1">
+                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.0', 'Notary public certification')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.1', 'Legal document authentication')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.2', 'Court-accepted format')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.3', 'Enhanced verification')}</li>
                         </ul>
                       </div>
                     </div>
@@ -923,31 +945,31 @@ export default function AuthenticatorUpload() {
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <FileText className="w-4 h-4 text-tfe-blue-600" />
-                      Document Types
+                      {t('upload.serviceInfo.documentTypes.title')}
                     </h4>
                     <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Regular Documents</span>
-                          <span className="text-sm text-gray-600">Standard rate</span>
+                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.documentTypes.regular.title')}</span>
+                          <span className="text-sm text-gray-600">{t('upload.serviceInfo.documentTypes.regular.price')}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Birth certificates, marriage certificates, diplomas, transcripts, and other official documents.
+                          {t('upload.serviceInfo.documentTypes.regular.description')}
                         </p>
                       </div>
                       
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">Bank Statements</span>
-                          <span className="text-sm font-bold text-orange-600">+$5/page</span>
+                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.documentTypes.bankStatements.title')}</span>
+                          <span className="text-sm font-bold text-orange-600">{t('upload.serviceInfo.documentTypes.bankStatements.price')}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Additional verification and formatting required for financial documents.
+                          {t('upload.serviceInfo.documentTypes.bankStatements.description')}
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
-                          <li>• Enhanced verification process</li>
-                          <li>• Financial document formatting</li>
-                          <li>• Additional security measures</li>
+                          <li>• {t('upload.serviceInfo.documentTypes.bankStatements.features.0', 'Enhanced verification process')}</li>
+                          <li>• {t('upload.serviceInfo.documentTypes.bankStatements.features.1', 'Financial document formatting')}</li>
+                          <li>• {t('upload.serviceInfo.documentTypes.bankStatements.features.2', 'Additional security measures')}</li>
                         </ul>
                       </div>
                     </div>
@@ -957,18 +979,18 @@ export default function AuthenticatorUpload() {
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <Globe className="w-4 h-4 text-tfe-blue-600" />
-                      Supported Languages
+                      {t('upload.serviceInfo.supportedLanguages.title')}
                     </h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      {sourceLanguages.map(lang => (
-                        <div key={lang} className="flex items-center gap-2">
+                      {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
+                        <div key={index} className="flex items-center gap-2">
                           <CheckCircle className="w-3 h-3 text-green-500" />
                           <span className="text-gray-700">{lang}</span>
                         </div>
                       ))}
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      All documents are translated to English for USCIS and US authority requirements.
+                      {t('upload.serviceInfo.supportedLanguages.note')}
                     </p>
                   </div>
 
@@ -976,33 +998,15 @@ export default function AuthenticatorUpload() {
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <Shield className="w-4 h-4 text-tfe-blue-600" />
-                      Service Features
+                      {t('upload.serviceInfo.serviceFeatures.title')}
                     </h4>
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">USCIS & Government Accepted</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">Official Certification</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">Digital Verification System</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">24-48 Hour Turnaround</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">Secure File Handling</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700">24/7 Customer Support</span>
-                      </div>
+                      {(t('upload.serviceInfo.serviceFeatures.features', { returnObjects: true }) as unknown as string[]).map((feature: string, index: number) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span className="text-gray-700">{feature}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

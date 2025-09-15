@@ -52,7 +52,7 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
         // Para cada documento principal, verificar primeiro se existe em documents_to_be_verified
         // Relacionamento por filename ao invés de document_id
         const documentsWithCorrectStatus = mainDocuments.map((doc: any) => {
-          const verifiedDoc = verifiedDocuments.find((vDoc: any) => vDoc.filename === doc.filename);
+          const verifiedDoc = verifiedDocuments.find((vDoc: any) => vDoc.filename === doc.filename && vDoc.user_id === doc.user_id);
           const actualStatus = verifiedDoc ? verifiedDoc.status : doc.status;
           
           console.log(`Document ${doc.filename}: original status = ${doc.status}, verified status = ${verifiedDoc?.status || 'not found'}, final status = ${actualStatus}`);

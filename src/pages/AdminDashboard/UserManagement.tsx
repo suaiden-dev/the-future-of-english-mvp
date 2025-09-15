@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Users, Shield, UserCheck, Search, Filter, ChevronDown, ChevronUp, Crown, User, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -20,7 +20,7 @@ export function UserManagement() {
   const [showFilters, setShowFilters] = useState(false);
   const [updatingUser, setUpdatingUser] = useState<string | null>(null);
 
-  // Buscar todos os usuários
+  // Buscar todos os usuÃ¡rios
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -44,7 +44,7 @@ export function UserManagement() {
     fetchUsers();
   }, []);
 
-  // Atualizar role do usuário
+  // Atualizar role do usuÃ¡rio
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
       setUpdatingUser(userId);
@@ -69,7 +69,7 @@ export function UserManagement() {
     }
   };
 
-  // Filtrar usuários
+  // Filtrar usuÃ¡rios
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -77,7 +77,7 @@ export function UserManagement() {
     return matchesSearch && matchesRole;
   });
 
-  // Estatísticas
+  // EstatÃ­sticas
   const totalUsers = users.length;
   const adminUsers = users.filter(user => user.role === 'admin').length;
   const authenticatorUsers = users.filter(user => user.role === 'authenticator').length;
@@ -124,10 +124,10 @@ export function UserManagement() {
                 <div className="flex items-center gap-2 mb-4">
                   <img
                     src="/logo.png"
-                    alt="Lush America Translations"
+                    alt="The Future of English"
                     className="w-8 h-8 flex-shrink-0 object-contain"
                   />
-                  <h3 className="text-xl font-bold">Lush America Translations</h3>
+                  <h3 className="text-xl font-bold">The Future of English</h3>
                 </div>
               </div>
               <p className="text-gray-600 mt-4">Loading users...</p>
@@ -197,7 +197,7 @@ export function UserManagement() {
             </div>
           </div>
 
-          {/* O erro estava aqui, faltava um </div> para fechar o "bg-white" do card. O correto é ter um card por tipo de usuário. */}
+          {/* O erro estava aqui, faltava um </div> para fechar o "bg-white" do card. O correto Ã© ter um card por tipo de usuÃ¡rio. */}
           <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">

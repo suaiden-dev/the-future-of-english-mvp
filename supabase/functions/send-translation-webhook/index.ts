@@ -6,8 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Cache para evitar processamento duplicado
-const processedRequests = new Map<string, number>();
 
 Deno.serve(async (req: Request) => {
   console.log(`[${new Date().toISOString()}] Edge Function: send-translation-webhook called`);
@@ -63,86 +61,6 @@ Deno.serve(async (req: Request) => {
     console.log("Origin:", origin);
     console.log("User-Agent:", req.headers.get('user-agent') || 'unknown');
 
-    // Gerar um ID único para esta requisição baseado no conteúdo (SEM timestamp para detectar duplicatas reais)
-    const requestId = `${parsedBody.user_id || 'unknown'}_${parsedBody.filename || 'unknown'}`;
-    console.log("Request ID:", requestId);
-    
-    // VERIFICAÇÃO ROBUSTA DE DUPLICATAS USANDO BANCO DE DADOS
-    // Cache em memória pode falhar se houver múltiplas instâncias da Edge Function
-    if (parsedBody.user_id && parsedBody.filename) {
-      console.log("🔍 VERIFICAÇÃO ANTI-DUPLICATA: Checando banco de dados...");
-      
-      const cutoffTime = new Date(Date.now() - 2 * 60 * 1000).toISOString(); // 2 minutos atrás
-      
-      const { data: recentDocs, error: recentError } = await supabase
-        .from('documents_to_be_verified')
-        .select('id, filename, created_at')
-        .eq('user_id', parsedBody.user_id)
-        .eq('filename', parsedBody.filename)
-        .gte('created_at', cutoffTime)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (recentError) {
-        console.log("⚠️ Erro ao verificar duplicatas:", recentError);
-      } else if (recentDocs && recentDocs.length > 0) {
-        console.log("🚨 DUPLICATA DETECTADA! Documento já processado recentemente:");
-        console.log("Documento existente:", recentDocs[0]);
-        console.log("⏱️ Criado em:", recentDocs[0].created_at);
-        console.log("✅ IGNORANDO upload duplicado para prevenir múltiplos documentos");
-        
-        return new Response(
-          JSON.stringify({
-            success: true,
-            status: 200,
-            message: "Document already processed recently - duplicate prevented",
-            existing_document: recentDocs[0],
-            timestamp: new Date().toISOString()
-          }),
-          {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
-              ...corsHeaders,
-            },
-          }
-        );
-      } else {
-        console.log("✅ Nenhuma duplicata encontrada, prosseguindo com o upload");
-      }
-    }
-    
-    // Cache em memória como backup (pode não funcionar com múltiplas instâncias)
-    const now = Date.now();
-    const lastProcessed = processedRequests.get(requestId);
-    if (lastProcessed && (now - lastProcessed) < 120000) {
-      console.log("🔄 Cache em memória detectou duplicata");
-      return new Response(
-        JSON.stringify({
-          success: true,
-          status: 200,
-          message: "Request already processed (memory cache)",
-          timestamp: new Date().toISOString()
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        }
-      );
-    }
-    
-    // Marcar esta requisição como processada
-    processedRequests.set(requestId, now);
-    
-    // Limpar cache antigo (mais de 5 minutos)
-    for (const [key, timestamp] of processedRequests.entries()) {
-      if (now - timestamp > 300000) { // 5 minutos
-        processedRequests.delete(key);
-      }
-    }
 
     // Recebe o evento do Supabase Storage ou do frontend
     const { 
@@ -209,10 +127,10 @@ Deno.serve(async (req: Request) => {
         user_id: record.user_id || record.metadata?.user_id || null,
         // Sempre usar campos padronizados
         pages: record.pages || pages || paginas || 1,
-        document_type: 'Certificado', // Sempre usar 'Certificado' em português
+        document_type: document_type || record.tipo_trad || 'Certificado', // Priorizar document_type do frontend
         total_cost: record.total_cost || total_cost || record.valor || valor || '0',
-        source_language: record.source_language || source_language || record.idioma_raiz || idioma_raiz,
-        target_language: record.target_language || target_language || record.idioma_destino || idioma_destino,
+        source_language: record.idioma_raiz || idioma_raiz || record.source_language || source_language || 'Portuguese',
+        target_language: record.idioma_destino || idioma_destino || record.target_language || target_language || 'English',
         is_bank_statement: record.is_bank_statement || is_bank_statement || false,
         client_name: record.client_name || client_name || null,
         // Campos de moeda para bank statements
@@ -266,10 +184,10 @@ Deno.serve(async (req: Request) => {
         user_id: user_id || null, 
         // Sempre usar campos padronizados
         pages: pages || paginas || 1,
-        document_type: 'Certificado', // Sempre usar 'Certificado' em português
+        document_type: document_type || tipo_trad || 'Certificado', // Priorizar document_type do frontend
         total_cost: total_cost || valor || '0',
-        source_language: source_language || idioma_raiz,
-        target_language: target_language || idioma_destino,
+        source_language: idioma_raiz || source_language || 'Portuguese',
+        target_language: idioma_destino || target_language || 'English',
         is_bank_statement: is_bank_statement || false,
         client_name: client_name || null,
         // Campos de moeda para bank statements
@@ -296,7 +214,7 @@ Deno.serve(async (req: Request) => {
     console.log("Table name for n8n:", payload.tableName);
 
     // Send POST to n8n webhook
-    const webhookUrl = "https://nwh.thefutureofenglish.com/webhook/thelushamericatranslations";
+    const webhookUrl = "https://nwh.thefutureofenglish.com/webhook/tfoetranslations";
     console.log("Sending webhook to:", webhookUrl);
     console.log("Payload being sent to n8n:", JSON.stringify(payload, null, 2));
 

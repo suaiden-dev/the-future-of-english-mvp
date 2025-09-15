@@ -211,7 +211,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       // Processar documentos de autenticadores (documents_to_be_verified)
       // Para autenticadores, o payment_method está na tabela documents
       const authenticatorPayments: MappedPayment[] = verifiedDocuments?.map(verifiedDoc => {
-        const mainDoc = mainDocuments?.find(doc => doc.filename === verifiedDoc.filename);
+        const mainDoc = mainDocuments?.find(doc => doc.filename === verifiedDoc.filename && doc.user_id === verifiedDoc.user_id);
         
         return {
           id: `auth-${verifiedDoc.id}`,
@@ -564,7 +564,6 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       case 'refunded':
         return 'bg-gray-200 text-gray-800'; // Changed from gray-100 for more contrast
       case 'processing': // For document status
-      case 'draft': // For document status
         return 'bg-blue-100 text-blue-800';
       case 'deleted': // For document status
         return 'bg-red-200 text-red-800';
