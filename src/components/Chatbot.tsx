@@ -61,7 +61,7 @@ export function Chatbot() {
     setMessages(prev => [...prev, typingMessage]);
 
     try {
-      const response = await fetch('https://nwh.thefutureofenglish.com/webhook/botsitelush', {
+      const response = await fetch('https://nwh.thefutureofenglish.com/webhook/botsitetfoe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
