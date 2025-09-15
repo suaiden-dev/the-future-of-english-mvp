@@ -24,6 +24,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           navigate('/admin', { replace: true });
         } else if (user.role === 'authenticator') {
           navigate('/authenticator', { replace: true });
+        } else if (user.role === 'finance') {
+          navigate('/finance', { replace: true });
         } else if (user.role === 'user') {
           navigate('/dashboard', { replace: true });
         }
@@ -31,7 +33,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       return;
     }
     // Rotas privadas
-    const privatePaths = ['/dashboard', '/upload', '/admin', '/authenticator', '/documents'];
+    const privatePaths = ['/dashboard', '/upload', '/admin', '/authenticator', '/finance', '/documents'];
     const isPrivate = privatePaths.some(path => currentPath.startsWith(path));
     if (isPrivate && !user) {
       navigate('/login', { replace: true });
@@ -47,6 +49,12 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     if (user?.role === 'authenticator' && !currentPath.startsWith('/authenticator')) {
       if (currentPath !== '/authenticator') {
         navigate('/authenticator', { replace: true });
+      }
+      return;
+    }
+    if (user?.role === 'finance' && !currentPath.startsWith('/finance')) {
+      if (currentPath !== '/finance') {
+        navigate('/finance', { replace: true });
       }
       return;
     }

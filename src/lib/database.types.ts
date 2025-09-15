@@ -7,10 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
@@ -25,15 +25,17 @@ export type Database = {
           idioma_raiz: string | null
           is_authenticated: boolean | null
           is_bank_statement: boolean | null
-          pages: number
-          status: string
+          pages: number | null
+          status: Database["public"]["Enums"]["document_status"] | null
           tipo_trad: string | null
-          total_cost: number
+          total_cost: number | null
           updated_at: string | null
           upload_date: string | null
           user_id: string
           valor: number | null
-          verification_code: string
+          verification_code: string | null
+          client_name: string | null
+          payment_method: string | null
         }
         Insert: {
           created_at?: string | null
@@ -45,15 +47,15 @@ export type Database = {
           idioma_raiz?: string | null
           is_authenticated?: boolean | null
           is_bank_statement?: boolean | null
-          pages?: number
-          status?: string
+          pages?: number | null
+          status?: Database["public"]["Enums"]["document_status"] | null
           tipo_trad?: string | null
-          total_cost?: number
+          total_cost?: number | null
           updated_at?: string | null
           upload_date?: string | null
           user_id: string
           valor?: number | null
-          verification_code: string
+          verification_code?: string | null
         }
         Update: {
           created_at?: string | null
@@ -65,15 +67,15 @@ export type Database = {
           idioma_raiz?: string | null
           is_authenticated?: boolean | null
           is_bank_statement?: boolean | null
-          pages?: number
-          status?: string
+          pages?: number | null
+          status?: Database["public"]["Enums"]["document_status"] | null
           tipo_trad?: string | null
-          total_cost?: number
+          total_cost?: number | null
           updated_at?: string | null
           upload_date?: string | null
           user_id?: string
           valor?: number | null
-          verification_code?: string
+          verification_code?: string | null
         }
         Relationships: [
           {
@@ -179,20 +181,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "documentos_a_serem_verificados_folder_id_fkey"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "folders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documentos_a_serem_verificados_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "documents_to_be_verified_authenticated_by_fkey"
             columns: ["authenticated_by"]
             isOneToOne: false
@@ -200,8 +188,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "documents_to_be_verified_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "documents_to_be_verified_rejected_by_fkey"
             columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_to_be_verified_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -257,7 +259,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          is_read: boolean | null
+          is_read: boolean
           message: string
           related_document_id: string | null
           title: string
@@ -268,18 +270,18 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
-          is_read?: boolean | null
+          is_read?: boolean
           message: string
           related_document_id?: string | null
           title: string
-          type: string
+          type?: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
-          is_read?: boolean | null
+          is_read?: boolean
           message?: string
           related_document_id?: string | null
           title?: string
@@ -304,7 +306,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
-          role: string
+          role: Database["public"]["Enums"]["user_role"] | null
           updated_at: string | null
         }
         Insert: {
@@ -313,7 +315,7 @@ export type Database = {
           id: string
           name: string
           phone?: string | null
-          role?: string
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string | null
         }
         Update: {
@@ -322,7 +324,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
-          role?: string
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -361,6 +363,106 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      payments: {
+        Row: {
+          id: string
+          document_id: string
+          user_id: string
+          stripe_session_id: string | null
+          amount: number
+          currency: string
+          status: string
+          payment_method: string | null
+          payment_date: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          user_id: string
+          stripe_session_id?: string | null
+          amount: number
+          currency?: string
+          payment_method?: string | null
+          payment_date?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          user_id?: string
+          stripe_session_id?: string | null
+          amount?: number
+          currency?: string
+          status?: string
+          payment_method?: string | null
+          payment_date?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_to_be_verified"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      reports: {
+        Row: {
+          id: string
+          report_type: string
+          title: string
+          description: string | null
+          file_url: string | null
+          generated_by: string | null
+          parameters: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          report_type: string
+          title: string
+          description?: string | null
+          file_url?: string | null
+          generated_by?: string | null
+          parameters?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          report_type?: string
+          title?: string
+          description?: string | null
+          file_url?: string | null
+          generated_by?: string | null
+          parameters?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       translated_documents: {
         Row: {
@@ -434,29 +536,29 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "documentos_traduzidos_documento_original_id_fkey"
-            columns: ["original_document_id"]
+            foreignKeyName: "translated_documents_authenticated_by_fkey"
+            columns: ["authenticated_by"]
             isOneToOne: false
-            referencedRelation: "documents_to_be_verified"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "documentos_traduzidos_folder_id_fkey"
+            foreignKeyName: "translated_documents_folder_id_fkey"
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "folders"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "documentos_traduzidos_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "translated_documents_original_document_id_fkey"
+            columns: ["original_document_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "documents_to_be_verified"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "translated_documents_authenticated_by_fkey"
-            columns: ["authenticated_by"]
+            foreignKeyName: "translated_documents_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -497,26 +599,156 @@ export type Database = {
       }
     }
     Functions: {
+      check_file_accessibility: {
+        Args: { file_path: string }
+        Returns: boolean
+      }
       debug_auth_info: {
         Args: Record<PropertyKey, never>
         Returns: {
+          auth_role: string
           current_user_id: string
           current_user_role: string
-          auth_role: string
           is_authenticated: boolean
         }[]
+      }
+      generate_permanent_public_url: {
+        Args: { file_path: string }
+        Returns: string
       }
       generate_verification_code: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
       is_admin: {
-        Args: Record<PropertyKey, never> | { user_id: string }
+        Args: { user_id?: string }
         Returns: boolean
+      }
+      is_finance: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
+      get_payment_stats: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          total_payments: number
+          total_amount: number
+          completed_payments: number
+          pending_payments: number
+          failed_payments: number
+        }[]
+      }
+      get_translation_stats: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          total_documents: number
+          completed_translations: number
+          pending_translations: number
+          total_revenue: number
+        }[]
+      }
+      get_enhanced_translation_stats: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          total_documents: number
+          total_revenue: number
+          user_uploads_total: number
+          user_uploads_completed: number
+          user_uploads_pending: number
+          user_uploads_revenue: number
+          authenticator_uploads_total: number
+          authenticator_uploads_completed: number
+          authenticator_uploads_pending: number
+          authenticator_uploads_revenue: number
+          total_completed: number
+          total_pending: number
+          total_rejected: number
+        }[]
+      }
+      get_user_type_breakdown: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          user_type: string
+          total_documents: number
+          completed_documents: number
+          pending_documents: number
+          total_revenue: number
+          avg_revenue_per_doc: number
+        }[]
+      }
+      generate_payment_report: {
+        Args: { report_type?: string; start_date?: string; end_date?: string }
+        Returns: {
+          document_id: string
+          user_email: string
+          amount: number
+          status: string
+          payment_date: string
+          stripe_session_id: string
+        }[]
+      }
+      debug_document_revenue: {
+        Args: Record<string, never>
+        Returns: {
+          document_id: string
+          user_id: string
+          user_role: string
+          filename: string
+          status: string
+          total_cost: number
+          created_at: string
+        }[]
+      }
+      check_total_cost_by_status: {
+        Args: Record<string, never>
+        Returns: {
+          status: string
+          document_count: number
+          total_revenue: number
+          avg_cost: number
+          min_cost: number
+          max_cost: number
+        }[]
+      }
+      check_total_cost_by_role: {
+        Args: Record<string, never>
+        Returns: {
+          user_role: string
+          document_count: number
+          total_revenue: number
+          avg_cost: number
+          min_cost: number
+          max_cost: number
+        }[]
+      }
+      analyze_document_types: {
+        Args: Record<string, never>
+        Returns: {
+          document_count: number
+          avg_pages: number
+          status_distribution: string
+          cost_range: string
+        }[]
+      }
+      set_realistic_costs: {
+        Args: Record<string, never>
+        Returns: {
+          updated_documents: number
+          total_revenue: number
+        }[]
+      }
+      set_role_based_costs: {
+        Args: Record<string, never>
+        Returns: {
+          updated_documents: number
+          user_revenue: number
+          authenticator_revenue: number
+        }[]
       }
     }
     Enums: {
-      [_ in never]: never
+      document_status: "pending" | "processing" | "completed"
+      user_role: "user" | "admin" | "authenticator" | "finance"
     }
     CompositeTypes: {
       [_ in never]: never

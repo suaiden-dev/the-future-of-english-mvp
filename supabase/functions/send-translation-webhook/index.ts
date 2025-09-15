@@ -6,8 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Cache para evitar processamento duplicado (backup)
-const processedRequests = new Map<string, number>();
 
 Deno.serve(async (req: Request) => {
   console.log(`[${new Date().toISOString()}] Edge Function: send-translation-webhook called`);
@@ -63,86 +61,6 @@ Deno.serve(async (req: Request) => {
     console.log("Origin:", origin);
     console.log("User-Agent:", req.headers.get('user-agent') || 'unknown');
 
-    // Gerar um ID único para esta requisição baseado no conteúdo (SEM timestamp para detectar duplicatas reais)
-    const requestId = `${parsedBody.user_id || 'unknown'}_${parsedBody.filename || 'unknown'}`;
-    console.log("Request ID:", requestId);
-    
-    // 🔍 VERIFICAÇÃO ROBUSTA ANTI-DUPLICATA USANDO BANCO DE DADOS
-    // Esta é a solução principal - verificar no banco se já existe documento recente
-    if (parsedBody.user_id && parsedBody.filename) {
-      console.log("🔍 VERIFICAÇÃO ANTI-DUPLICATA: Checando banco de dados...");
-      
-      const cutoffTime = new Date(Date.now() - 2 * 60 * 1000).toISOString(); // 2 minutos atrás
-      
-      const { data: recentDocs, error: recentError } = await supabase
-        .from('documents_to_be_verified')
-        .select('id, filename, created_at')
-        .eq('user_id', parsedBody.user_id)
-        .eq('filename', parsedBody.filename)
-        .gte('created_at', cutoffTime)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (recentError) {
-        console.log("⚠️ Erro ao verificar duplicatas:", recentError);
-      } else if (recentDocs && recentDocs.length > 0) {
-        console.log("🚨 DUPLICATA DETECTADA! Documento já processado recentemente:");
-        console.log("Documento existente:", recentDocs[0]);
-        console.log("⏱️ Criado em:", recentDocs[0].created_at);
-        console.log("✅ IGNORANDO upload duplicado para prevenir múltiplos documentos");
-        
-        return new Response(
-          JSON.stringify({
-            success: true,
-            status: 200,
-            message: "Document already processed recently - duplicate prevented",
-            existing_document: recentDocs[0],
-            timestamp: new Date().toISOString()
-          }),
-          {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
-              ...corsHeaders,
-            },
-          }
-        );
-      } else {
-        console.log("✅ Nenhuma duplicata encontrada, prosseguindo com o upload");
-      }
-    }
-    
-    // Cache em memória como backup (pode não funcionar com múltiplas instâncias)
-    const now = Date.now();
-    const lastProcessed = processedRequests.get(requestId);
-    if (lastProcessed && (now - lastProcessed) < 120000) {
-      console.log("🔄 Cache em memória detectou duplicata");
-      return new Response(
-        JSON.stringify({
-          success: true,
-          status: 200,
-          message: "Request already processed (memory cache)",
-          timestamp: new Date().toISOString()
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        }
-      );
-    }
-    
-    // Marcar esta requisição como processada
-    processedRequests.set(requestId, now);
-    
-    // Limpar cache antigo (mais de 5 minutos)
-    for (const [key, timestamp] of processedRequests.entries()) {
-      if (now - timestamp > 300000) { // 5 minutos
-        processedRequests.delete(key);
-      }
-    }
 
     // Recebe o evento do Supabase Storage ou do frontend
     const { 
@@ -160,10 +78,24 @@ Deno.serve(async (req: Request) => {
       valor, 
       source_language,
       target_language,
-      idioma_raiz, 
+      idioma_raiz,
+      idioma_destino,
       is_bank_statement, 
-      client_name 
+      client_name,
+      source_currency,
+      target_currency
     } = parsedBody;
+    
+    // Debug logs para idiomas e moedas
+    console.log("=== LANGUAGE & CURRENCY DEBUG ===");
+    console.log("source_language:", source_language);
+    console.log("target_language:", target_language);
+    console.log("idioma_raiz:", idioma_raiz);
+    console.log("idioma_destino:", idioma_destino);
+    console.log("source_currency:", source_currency);
+    console.log("target_currency:", target_currency);
+    console.log("is_bank_statement:", is_bank_statement);
+    
     let payload;
 
     if (record) {
@@ -193,13 +125,17 @@ Deno.serve(async (req: Request) => {
         mimetype: record.mimetype || record.metadata?.mimetype || "application/octet-stream",
         size: record.size || record.metadata?.size || null,
         user_id: record.user_id || record.metadata?.user_id || null,
-        // 🎯 USAR CAMPOS EXATOS QUE O N8N ESPERA (como funcionava antes)
-        paginas: record.pages || pages || paginas || 1,                                              // "paginas" ✅
-        tipo_trad: record.document_type || document_type || record.tipo_trad || tipo_trad || 'Certificado',  // "tipo_trad" ✅  
-        valor: record.total_cost || total_cost || record.valor || valor || 0,                                 // "valor" ✅
-        idioma_raiz: record.source_language || source_language || record.idioma_raiz || idioma_raiz || 'Portuguese',  // "idioma_raiz" ✅
+        // Sempre usar campos padronizados
+        pages: record.pages || pages || paginas || 1,
+        document_type: document_type || record.tipo_trad || 'Certificado', // Priorizar document_type do frontend
+        total_cost: record.total_cost || total_cost || record.valor || valor || '0',
+        source_language: record.idioma_raiz || idioma_raiz || record.source_language || source_language || 'Portuguese',
+        target_language: record.idioma_destino || idioma_destino || record.target_language || target_language || 'English',
         is_bank_statement: record.is_bank_statement || is_bank_statement || false,
         client_name: record.client_name || client_name || null,
+        // Campos de moeda para bank statements
+        source_currency: record.source_currency || source_currency || null,
+        target_currency: record.target_currency || target_currency || null,
         // Adicionar informações sobre o tipo de arquivo
         isPdf: (record.mimetype || record.metadata?.mimetype || "application/octet-stream") === 'application/pdf',
         fileExtension: path.split('.').pop()?.toLowerCase(),
@@ -246,13 +182,17 @@ Deno.serve(async (req: Request) => {
         mimetype, 
         size, 
         user_id: user_id || null, 
-        // 🎯 USAR CAMPOS EXATOS QUE O N8N ESPERA (como funcionava antes)
-        paginas: pages || paginas || 1,                              // "paginas" ✅
-        tipo_trad: document_type || tipo_trad || 'Certificado',      // "tipo_trad" ✅
-        valor: total_cost || valor || 0,                             // "valor" ✅
-        idioma_raiz: source_language || idioma_raiz || 'Portuguese', // "idioma_raiz" ✅
+        // Sempre usar campos padronizados
+        pages: pages || paginas || 1,
+        document_type: document_type || tipo_trad || 'Certificado', // Priorizar document_type do frontend
+        total_cost: total_cost || valor || '0',
+        source_language: idioma_raiz || source_language || 'Portuguese',
+        target_language: idioma_destino || target_language || 'English',
         is_bank_statement: is_bank_statement || false,
         client_name: client_name || null,
+        // Campos de moeda para bank statements
+        source_currency: source_currency || null,
+        target_currency: target_currency || null,
         // Adicionar informações sobre o tipo de arquivo
         isPdf: mimetype === 'application/pdf',
         fileExtension: filename.split('.').pop()?.toLowerCase(),
@@ -314,100 +254,12 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 📋 FLUXO HÍBRIDO: Enviar para n8n E inserir na tabela documents_to_be_verified
-    // Isso garante que o valor seja registrado mesmo para traduções gratuitas
-    if (webhookResponse.ok && user_id && url) {
-      try {
-        console.log("=== INSERÇÃO EM DOCUMENTS_TO_BE_VERIFIED ===");
-        console.log("user_id:", user_id);
-        console.log("filename:", filename);
-        
-        // Buscar dados do documento para pegar informações completas
-        const { data: docData, error: docError } = await supabase
-          .from('documents')
-          .select('id, total_cost, document_type, source_language, is_bank_statement, pages, client_name')
-          .eq('user_id', user_id)
-          .eq('filename', filename)
-          .single();
-
-        if (docData && !docError) {
-          console.log("Found document data:", docData);
-          
-          // Verificação final contra duplicatas ANTES da inserção
-          const { data: finalCheck, error: finalCheckError } = await supabase
-            .from('documents_to_be_verified')
-            .select('id, filename, status, created_at')
-            .eq('user_id', user_id)
-            .eq('filename', filename)
-            .limit(1);
-
-          if (finalCheckError) {
-            console.error("Error in final duplicate check:", finalCheckError);
-          } else if (finalCheck && finalCheck.length > 0) {
-            console.log("🚨 FINAL DUPLICATE CHECK: Document already exists in documents_to_be_verified");
-            console.log("Existing document:", finalCheck[0]);
-            console.log("⏭️ SKIPPING insertion to prevent duplicate");
-          } else {
-            console.log("✅ Final duplicate check passed - proceeding with insertion");
-            
-            // 🎯 USAR A LÓGICA DA EDGE FUNCTION ANTIGA (que funcionava!)
-            // Pegar o valor original do documento, não calcular baseado em páginas
-            const pages = docData.pages || payload.pages || 1;
-            const originalValue = docData.total_cost || payload.total_cost || 0;
-            
-            console.log("📊 VALOR ORIGINAL DO DOCUMENTO (como na Edge Function antiga):");
-            console.log("  - Páginas:", pages);
-            console.log("  - Valor original do documento:", originalValue);
-            console.log("  - Valor pago pelo authenticator:", docData.total_cost || payload.total_cost || 0);
-            console.log("  - Usando valor original (não calculado) ✅");
-            
-            const insertData = {
-              user_id: user_id,
-              filename: filename,
-              pages: pages,
-              status: 'pending',
-              total_cost: originalValue, // 🎯 VALOR ORIGINAL (como funcionava antes)
-              is_bank_statement: docData.is_bank_statement || payload.is_bank_statement || false,
-              source_language: docData.source_language || payload.source_language || 'portuguese',
-              target_language: 'english',
-              translation_status: 'pending',
-              file_id: docData.id,
-              verification_code: `TFEB${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-              client_name: docData.client_name || payload.client_name || null,
-              translated_file_url: payload.url
-            };
-            
-            console.log("Attempting to insert data:", JSON.stringify(insertData, null, 2));
-            
-            const { data: verifyData, error: verifyError } = await supabase
-              .from('documents_to_be_verified')
-              .insert(insertData)
-              .select();
-
-            if (verifyError) {
-              console.error("Error inserting into documents_to_be_verified:", verifyError);
-              
-              // Se o erro for de duplicata, não falhar completamente
-              if (verifyError.code === '23505') {
-                console.log("🚨 DUPLICATE KEY ERROR - Document already exists (this is expected behavior)");
-              }
-            } else {
-              console.log("✅ Inserted into documents_to_be_verified successfully:", verifyData);
-              console.log("💰 Valor registrado:", insertData.total_cost);
-            }
-          }
-        } else {
-          console.error("Error finding document:", docError);
-        }
-      } catch (verifyError) {
-        console.error("Exception inserting into documents_to_be_verified:", verifyError);
-      }
-    }
-
-    // ✅ Webhook enviado para n8n com sucesso
+    // 📋 FLUXO CORRETO: Apenas enviar para n8n
+    // O retorno do webhook do n8n é que vai salvar na tabela documents_to_be_verified
     if (webhookResponse.ok) {
       console.log("✅ Webhook enviado para n8n com sucesso");
-      console.log("📋 Valor da tradução registrado em documents_to_be_verified");
+      console.log("📋 O retorno do n8n será responsável por salvar em documents_to_be_verified");
+      console.log("🚫 Edge Function NÃO deve inserir diretamente em documents_to_be_verified");
     }
 
     const responseData = {

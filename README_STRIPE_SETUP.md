@@ -1,4 +1,4 @@
-# Configuração do Stripe para The Future of English
+# Configuração do Stripe para Lush America Translations
 
 Este guia explica como configurar o Stripe para processar pagamentos dinâmicos no projeto.
 

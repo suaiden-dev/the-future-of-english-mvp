@@ -10,9 +10,11 @@ Deno.serve(async (req: Request) => {
   console.log(`[${new Date().toISOString()}] Webhook Stripe chamado`);
   console.log(`Method: ${req.method}`);
   console.log(`URL: ${req.url}`);
+  console.log(`Headers:`, Object.fromEntries(req.headers.entries()));
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('OPTIONS request - returning CORS headers');
     return new Response('ok', { headers: corsHeaders });
   }
 
@@ -26,7 +28,12 @@ Deno.serve(async (req: Request) => {
     const body = await req.text();
     const signature = req.headers.get('stripe-signature');
 
+    console.log('DEBUG: Body length:', body.length);
+    console.log('DEBUG: Signature present:', !!signature);
+    console.log('DEBUG: Signature value:', signature ? signature.substring(0, 20) + '...' : 'null');
+
     if (!signature) {
+      console.error('ERROR: Stripe signature missing');
       throw new Error('Stripe signature missing');
     }
 
@@ -36,7 +43,14 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('PROJECT_URL');
     const supabaseServiceKey = Deno.env.get('SERVICE_ROLE_KEY');
 
+    console.log('DEBUG: Verificando variáveis de ambiente...');
+    console.log('DEBUG: STRIPE_SECRET_KEY:', stripeSecretKey ? '✅ Configurada' : '❌ Não configurada');
+    console.log('DEBUG: STRIPE_WEBHOOK_SECRET:', stripeWebhookSecret ? '✅ Configurada' : '❌ Não configurada');
+    console.log('DEBUG: PROJECT_URL:', supabaseUrl ? '✅ Configurada' : '❌ Não configurada');
+    console.log('DEBUG: SERVICE_ROLE_KEY:', supabaseServiceKey ? '✅ Configurada' : '❌ Não configurada');
+
     if (!stripeSecretKey || !stripeWebhookSecret || !supabaseUrl || !supabaseServiceKey) {
+      console.error('ERROR: Variáveis de ambiente não configuradas');
       throw new Error('Environment variables not configured');
     }
 
@@ -45,8 +59,13 @@ Deno.serve(async (req: Request) => {
       apiVersion: '2024-12-18.acacia',
     });
 
-    // Criar cliente Supabase
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Criar cliente Supabase com service_role para contornar RLS
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
     // Verificar assinatura do webhook
     let event;
@@ -58,6 +77,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log('DEBUG: Webhook event received:', event.type);
+    console.log('DEBUG: Event data:', JSON.stringify(event.data.object, null, 2));
 
     // Processar eventos específicos
     switch (event.type) {
@@ -102,6 +122,7 @@ Deno.serve(async (req: Request) => {
 
 async function handleCheckoutSessionCompleted(session: any, supabase: any) {
   console.log('DEBUG: Processando checkout session completed:', session.id);
+  console.log('DEBUG: Sessão completa:', JSON.stringify(session, null, 2));
   
   try {
     const {
@@ -122,6 +143,11 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
 
     if (!documentId) {
       console.log('WARNING: documentId não encontrado nos metadados, pulando processamento');
+      return;
+    }
+
+    if (!userId) {
+      console.log('WARNING: userId não encontrado nos metadados, pulando processamento');
       return;
     }
 
@@ -146,12 +172,196 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
 
     console.log('DEBUG: Documento atualizado com sucesso:', updatedDocument);
 
+    // Atualizar o status da sessão na tabela stripe_sessions
+    try {
+      console.log('DEBUG: Atualizando stripe_sessions para completed');
+      console.log('DEBUG: Session ID para atualizar:', session.id);
+      
+      const { data: sessionUpdateData, error: sessionUpdateError } = await supabase
+        .from('stripe_sessions')
+        .update({
+          payment_status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('session_id', session.id)
+        .select();
+
+      if (sessionUpdateError) {
+        console.error('ERROR: Erro ao atualizar stripe_sessions:', sessionUpdateError);
+        console.error('DEBUG: Detalhes do erro stripe_sessions:', JSON.stringify(sessionUpdateError, null, 2));
+        console.error('DEBUG: Código do erro stripe_sessions:', sessionUpdateError.code);
+        console.error('DEBUG: Mensagem do erro stripe_sessions:', sessionUpdateError.message);
+        // Não falhar se isso der erro, apenas log
+      } else {
+        console.log('DEBUG: stripe_sessions atualizado com sucesso para completed');
+        console.log('DEBUG: Dados atualizados stripe_sessions:', JSON.stringify(sessionUpdateData, null, 2));
+      }
+    } catch (sessionError) {
+      console.error('ERROR: Exceção ao atualizar stripe_sessions:', sessionError);
+      // Não falhar se isso der erro
+    }
+
+    // Criar registro na tabela payments
+    try {
+      console.log('DEBUG: Criando registro na tabela payments');
+      console.log('DEBUG: Cliente Supabase criado:', supabase ? '✅' : '❌');
+      
+      const paymentData = {
+        document_id: documentId,
+        user_id: userId,
+        stripe_session_id: session.id,
+        amount: parseFloat(totalPrice || '0'),
+        currency: 'USD',
+        status: 'completed',
+        payment_method: 'card',
+        payment_date: new Date().toISOString()
+      };
+
+      console.log('DEBUG: Dados do pagamento a serem inseridos:', JSON.stringify(paymentData, null, 2));
+      console.log('DEBUG: Tentando inserir na tabela payments...');
+      
+      const { data: paymentRecord, error: paymentError } = await supabase
+        .from('payments')
+        .insert(paymentData)
+        .select()
+        .single();
+
+      if (paymentError) {
+        console.error('ERROR: Erro ao criar registro na tabela payments:', paymentError);
+        console.error('DEBUG: Detalhes do erro:', JSON.stringify(paymentError, null, 2));
+        console.error('DEBUG: Código do erro:', paymentError.code);
+        console.error('DEBUG: Mensagem do erro:', paymentError.message);
+        console.error('DEBUG: Detalhes do erro:', paymentError.details);
+        throw new Error('Failed to create payment record');
+      } else {
+        console.log('DEBUG: Registro criado na tabela payments com sucesso:', paymentRecord.id);
+        console.log('DEBUG: Dados do registro criado:', JSON.stringify(paymentRecord, null, 2));
+      }
+      
+      // Enviar notificação de pagamento para admins
+      try {
+        console.log('DEBUG: Enviando notificação de pagamento Stripe para admins');
+        
+        // Buscar dados do usuário que fez o pagamento
+        const { data: user, error: userError } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', userId)
+          .single();
+        
+        // Buscar emails dos admins
+        const { data: adminProfiles } = await supabase
+          .from('profiles')
+          .select('email')
+          .in('role', ['admin', 'finance', 'lush-admin']);
+
+        if (!userError && user && adminProfiles && adminProfiles.length > 0) {
+          // Enviar notificação para cada admin
+          for (const admin of adminProfiles) {
+            const notificationPayload = {
+              user_name: user.name || 'Unknown User',
+              user_email: admin.email,
+              notification_type: 'Payment Stripe',
+              timestamp: new Date().toISOString(),
+              filename: filename || 'Unknown Document',
+              document_id: documentId,
+              status: 'pagamento aprovado automaticamente'
+            };
+            
+            try {
+              const webhookResponse = await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(notificationPayload)
+              });
+              
+              if (webhookResponse.ok) {
+                console.log(`SUCCESS: Notificação Stripe enviada para admin: ${admin.email}`);
+              } else {
+                console.error(`WARNING: Falha ao enviar notificação Stripe para ${admin.email}:`, webhookResponse.status);
+              }
+            } catch (adminNotificationError) {
+              console.error(`ERROR: Erro ao enviar notificação para admin ${admin.email}:`, adminNotificationError);
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('WARNING: Erro ao enviar notificações de pagamento Stripe:', notificationError);
+        // Não falhar o processo por causa da notificação
+      }
+      
+      // Notificar autenticadores sobre documento pendente (Stripe = aprovação automática)
+      try {
+        console.log('DEBUG: Enviando notificação para autenticadores sobre documento pendente');
+        
+        // Buscar todos os autenticadores
+        const { data: authenticators, error: authError } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .eq('role', 'authenticator');
+
+        if (!authError && authenticators && authenticators.length > 0) {
+          // Buscar dados do usuário que fez o pagamento
+          const { data: user } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('id', userId)
+            .single();
+
+          // Enviar notificação para cada autenticador
+          for (const authenticator of authenticators) {
+            const authNotificationPayload = {
+              user_name: authenticator.name || authenticator.email || 'Authenticator',
+              user_email: authenticator.email,
+              notification_type: 'Authenticator Pending Documents Notification',
+              timestamp: new Date().toISOString(),
+              filename: filename || 'Unknown Document',
+              document_id: documentId,
+              status: 'pending_authentication',
+              client_name: user?.name || 'Unknown Client',
+              client_email: user?.email || 'unknown@email.com'
+            };
+            
+            try {
+              const authWebhookResponse = await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(authNotificationPayload)
+              });
+              
+              if (authWebhookResponse.ok) {
+                console.log(`SUCCESS: Notificação para autenticador enviada: ${authenticator.email}`);
+              } else {
+                console.error(`WARNING: Falha ao enviar notificação para autenticador ${authenticator.email}:`, authWebhookResponse.status);
+              }
+            } catch (authNotificationError) {
+              console.error(`ERROR: Erro ao enviar notificação para autenticador ${authenticator.email}:`, authNotificationError);
+            }
+          }
+          
+          console.log(`SUCCESS: Notificações enviadas para ${authenticators.length} autenticadores`);
+        } else {
+          console.log('INFO: Nenhum autenticador encontrado para notificar');
+        }
+      } catch (authNotificationError) {
+        console.error('WARNING: Erro ao enviar notificações para autenticadores:', authNotificationError);
+        // Não falhar o processo por causa da notificação
+      }
+      
+    } catch (paymentError) {
+      console.error('ERROR: Erro ao criar registro na tabela payments:', paymentError);
+      throw paymentError;
+    }
+
     // Log do pagamento bem-sucedido
     console.log('SUCCESS: Pagamento processado com sucesso para documento:', documentId);
     console.log('SUCCESS: Documento atualizado para status processing.');
+    console.log('SUCCESS: Registro criado na tabela payments.');
+    console.log('SUCCESS: stripe_sessions atualizado para completed.');
 
   } catch (error) {
     console.error('ERROR: Erro ao processar checkout session:', error);
+    console.error('DEBUG: Stack trace:', error.stack);
     throw error;
   }
 } 

@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { User, Lock, Mail, UserPlus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../contexts/I18nContext';
 
 export function Register() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -28,27 +30,27 @@ export function Register() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('auth.firstNameRequired');
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('auth.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
+      newErrors.email = t('auth.invalidEmail');
     }
 
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = t('auth.phoneRequired');
     } else if (!/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/[\s\-\(\)]/g, ''))) {
-      newErrors.phone = 'Please enter a valid phone number';
+      newErrors.phone = t('auth.invalidPhone');
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('auth.passwordRequired');
     }
 
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('auth.passwordsDoNotMatch');
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -85,15 +87,15 @@ export function Register() {
       console.error('[Register] Erro no registro:', err);
       
       // Tratar diferentes tipos de erro
-      let errorMessage = 'Registration failed. Please try again.';
+      let errorMessage = t('auth.registrationFailed');
       
       if (err?.message) {
         if (err.message.includes('already registered')) {
-          errorMessage = 'This email is already registered. Please try logging in instead.';
+          errorMessage = t('auth.emailAlreadyRegistered');
         } else if (err.message.includes('password')) {
-          errorMessage = 'Password must be at least 6 characters long.';
+          errorMessage = t('auth.passwordTooShort');
         } else if (err.message.includes('email')) {
-          errorMessage = 'Please enter a valid email address.';
+          errorMessage = t('auth.invalidEmail');
         } else {
           errorMessage = err.message;
         }

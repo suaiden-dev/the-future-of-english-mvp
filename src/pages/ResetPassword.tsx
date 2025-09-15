@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../contexts/I18nContext';
 
 const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);

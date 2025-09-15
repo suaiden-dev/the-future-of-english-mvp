@@ -1,33 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { StatsCards } from './StatsCards';
 import { DocumentsTable } from './DocumentsTable';
-import { DocumentsToAuthenticateTable } from './DocumentsToAuthenticateTable';
-import { TranslatedDocumentsTable } from './TranslatedDocumentsTable';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
+import { ZelleReceiptsAdmin } from '../../components/ZelleReceiptsAdmin';
 import { Document } from '../../App';
-import { Home, FileText, CheckCircle } from 'lucide-react';
+import { Home, Receipt } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { DateRange } from '../../components/DateRangeFilter';
 
 interface AdminDashboardProps {
   documents: Document[];
-  onStatusUpdate: (documentId: string, status: Document['status']) => void;
 }
 
-export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProps) {
+export function AdminDashboard({ documents }: AdminDashboardProps) {
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'zelle-receipts'>('overview');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: null,
+    endDate: null,
+    preset: 'all'
+  });
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'to-authenticate' | 'translated'>('overview');
 
-  // Detectar se o usuário veio de um link específico da sidebar
+  // Detectar aba ativa pela URL (similar ao FinanceDashboard)
   useEffect(() => {
-    const hash = location.hash;
-    if (hash === '#to-authenticate') {
-      setActiveTab('to-authenticate');
-    } else if (hash === '#translated') {
-      setActiveTab('translated');
+    if (location.hash === '#zelle-receipts') {
+      setActiveTab('zelle-receipts');
     } else {
-      // Se não há hash específico, vai para Overview (padrão)
       setActiveTab('overview');
     }
   }, [location.hash]);
@@ -40,7 +40,7 @@ export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProp
     setSelectedDocument(null);
   };
 
-  const handleTabChange = (tab: 'overview' | 'to-authenticate' | 'translated') => {
+  const handleTabChange = (tab: 'overview' | 'zelle-receipts') => {
     setActiveTab(tab);
     // Atualizar a URL para refletir a aba ativa
     if (tab === 'overview') {
@@ -52,75 +52,82 @@ export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProp
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
-    { id: 'to-authenticate', label: 'To Authenticate', icon: FileText },
-    { id: 'translated', label: 'Translated', icon: CheckCircle },
+    { id: 'zelle-receipts', label: 'Zelle Receipts', icon: Receipt },
   ];
 
   return (
-    <div className="py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2 text-sm sm:text-base">Manage translation projects and monitor business metrics</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="p-3 sm:p-4 lg:p-6 w-full max-w-none">
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-sm sm:text-base lg:text-lg text-gray-600 mt-1 sm:mt-2">Manage translation projects and monitor business metrics</p>
         </div>
 
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabChange(tab.id as any)}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                      isActive
-                        ? 'border-tfe-blue-500 text-tfe-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
+        {/* Tab Navigation */}
+        <div className="mb-4 sm:mb-6">
+          {/* Mobile: Dropdown */}
+          <div className="sm:hidden">
+            <select
+              value={activeTab}
+              onChange={(e) => handleTabChange(e.target.value as 'overview' | 'zelle-receipts')}
+              className="block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-tfe-blue-500 focus:outline-none focus:ring-tfe-blue-500"
+            >
+              {tabs.map((tab) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label}
+                </option>
+              ))}
+            </select>
           </div>
+          
+          {/* Desktop: Horizontal tabs */}
+          <nav className="hidden sm:flex space-x-4 lg:space-x-8 overflow-x-auto" aria-label="Tabs">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id as 'overview' | 'zelle-receipts')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? 'border-tfe-blue-500 text-tfe-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="hidden lg:inline">{tab.label}</span>
+                  <span className="lg:hidden">{tab.label.split(' ')[0]}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'overview' && (
-          <>
-            <StatsCards documents={documents} />
-            <div className="mt-8">
+        <div className="w-full">
+          {activeTab === 'overview' && (
+            <div className="space-y-4 sm:space-y-6 w-full">
+              <StatsCards documents={documents} dateRange={dateRange} />
               <DocumentsTable 
                 documents={documents}
-                onStatusUpdate={onStatusUpdate}
                 onViewDocument={handleViewDocument}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
               />
             </div>
-          </>
-        )}
+          )}
 
-        {activeTab === 'to-authenticate' && (
-          <div className="space-y-6">
-            <DocumentsToAuthenticateTable />
-          </div>
-        )}
-
-        {activeTab === 'translated' && (
-          <div className="space-y-6">
-            <TranslatedDocumentsTable />
-          </div>
-        )}
-
-        <DocumentDetailsModal 
-          document={selectedDocument}
-          onClose={handleCloseModal}
-        />
+          {activeTab === 'zelle-receipts' && (
+            <div className="space-y-4 sm:space-y-6 w-full">
+              <ZelleReceiptsAdmin />
+            </div>
+          )}
+        </div>
       </div>
+      <DocumentDetailsModal 
+        document={selectedDocument}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 }

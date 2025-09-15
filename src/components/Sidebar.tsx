@@ -1,9 +1,10 @@
 import React from 'react';
-import { LogOut, User, Home } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import type { CustomUser } from '../hooks/useAuth';
 import { FileText as FileTextIcon } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Upload } from 'lucide-react';
+import LanguageSelector from './LanguageSelector';
 
 export interface NavItem {
   id: string;
@@ -39,7 +40,7 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
   };
 
   return (
-    <div className="w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen">
+    <div className="w-64 bg-white shadow-sm border-r border-gray-200 h-screen overflow-y-auto">
       <div className="p-6">
         <div className="mb-6">
           {/* Logo - apenas se showLogo for true */}
@@ -48,14 +49,16 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
               <button
                 onClick={() => navigate('/')}
                 className="focus:outline-none group"
-                aria-label="Go to Mentorship"
+                aria-label="Go to Home"
               >
                 <div className="text-center">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
                       <span className="text-white font-bold text-sm">TFE</span>
                     </div>
-                    <h3 className="text-xl font-bold">The Future of English</h3>
+                    <h3 className="text-xl font-bold text-tfe-blue-950">
+                      The Future of English
+                    </h3>
                   </div>
                 </div>
               </button>
@@ -85,7 +88,7 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
         
         <nav className="space-y-2">
           {/* Renderizar itens de navegação dinâmicos */}
-          {navItems.map((item) => {
+          {navItems && navItems.length > 0 && navItems.map((item) => {
             const Icon = item.icon;
             const isActive = isActivePage(item.page);
             
@@ -105,22 +108,18 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
             );
           })}
 
-          {/* Botão Back to Mentorship após os outros itens */}
-          {user && (
-            <button
-              onClick={() => {
-                navigate('/');
-              }}
-              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            >
-              <Home className="w-5 h-5 text-gray-400" />
-              <span className="font-medium">Back to Mentorship</span>
-            </button>
-          )}
+
+
+          {/* Seletor de idioma */}
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="px-3 py-2">
+              <LanguageSelector />
+            </div>
+          </div>
 
           {/* Seção de logout */}
           {user && (
-            <div className="mt-8 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={onLogout}
                 className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-tfe-red-600 hover:bg-tfe-red-50 hover:text-tfe-red-700"

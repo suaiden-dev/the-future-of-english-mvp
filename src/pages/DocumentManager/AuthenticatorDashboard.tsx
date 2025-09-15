@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { FileText, Check, X, Clock, ShieldCheck, Download, User, Mail, Calendar, DollarSign, AlertCircle, CheckCircle, XCircle, Eye, Trash2, Upload, RefreshCw, Upload as UploadIcon, Phone } from 'lucide-react';
-import { getValidFileUrl, normalizeFileName, generateCorrectionFileName } from '../../utils/fileUtils';
+import { FileText, Check, Clock, ShieldCheck, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone } from 'lucide-react';
+import { getValidFileUrl } from '../../utils/fileUtils';
+import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
 
 interface Document {
   id: string;
@@ -19,6 +20,8 @@ interface Document {
   target_language?: string;
   is_bank_statement?: boolean;
   verification_code?: string;
+  // ID da tabela documents_to_be_verified se existir
+  verification_id?: string | null;
   // Campos de auditoria
   authenticated_by?: string | null;
   authenticated_by_name?: string | null;
@@ -27,12 +30,7 @@ interface Document {
   // Dados do usuário
   user_name?: string | null;
   user_email?: string | null;
-  // ✅ NOVO CAMPO para rastrear correções
   client_name?: string | null;
-  is_correction?: boolean;
-  parent_document_id?: string | null;
-  original_document_id?: string | null;
-  correction_reason?: string | null;
 }
 
 interface UserProfile {
@@ -55,12 +53,22 @@ export default function AuthenticatorDashboard() {
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
   
-  // ✅ Estatísticas separadas (incluindo correções)
+  // Estados para modais de confirmação
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [modalDocumentId, setModalDocumentId] = useState('');
+  const [modalDocumentName, setModalDocumentName] = useState('');
+  
+  // Debug do estado do modal
+  useEffect(() => {
+    console.log('[AuthenticatorDashboard] Estado showApprovalModal:', showApprovalModal);
+    console.log('[AuthenticatorDashboard] Estado showCorrectionModal:', showCorrectionModal);
+  }, [showApprovalModal, showCorrectionModal]);
+  
+  // Estatísticas separadas
   const [stats, setStats] = useState({
     pending: 0,
-    approved: 0,
-    rejected: 0,
-    corrections: 0 // ✅ Nova métrica para correções
+    approved: 0
   });
   
   // Paginação
@@ -80,9 +88,9 @@ export default function AuthenticatorDashboard() {
       try {
         console.log('[AuthenticatorDashboard] Buscando documentos...');
         
-        // Buscar todos os documentos para estatísticas
-        const { data: allDocs, error: statsError } = await supabase
-          .from('documents_to_be_verified')
+        // Buscar documentos da tabela principal
+        const { data: mainDocs, error: mainError } = await supabase
+          .from('documents')
           .select(`
             *,
             profiles:user_id (
@@ -92,66 +100,107 @@ export default function AuthenticatorDashboard() {
           `)
           .order('created_at', { ascending: false });
         
-        if (statsError) {
-          console.error('[AuthenticatorDashboard] Error fetching all documents:', statsError);
-          if (statsError.code === '42501' || statsError.code === 'PGRST301') {
+        if (mainError) {
+          console.error('[AuthenticatorDashboard] Error fetching main documents:', mainError);
+          if (mainError.code === '42501' || mainError.code === 'PGRST301') {
             setError('You do not have permission to access this area.');
-          } else if (statsError.code === '409') {
-            setError('Conflict detected. Please refresh the page or contact support.');
-            console.error('[AuthenticatorDashboard] Conflict error details:', statsError);
           } else {
-            setError(statsError.message);
+            setError(mainError.message);
           }
           return;
         }
 
-        // Calcular estatísticas
-        const allDocuments = (allDocs as any[] || []).map(doc => ({
-          ...doc,
-          user_name: doc.profiles?.name || null,
-          user_email: doc.profiles?.email || null
-        })) as Document[];
+        console.log('[AuthenticatorDashboard] Main docs encontrados:', mainDocs?.length || 0);
+
+        // Buscar documentos de verificação
+        const { data: verifiedDocs, error: verifiedError } = await supabase
+          .from('documents_to_be_verified')
+          .select('*')
+          .order('created_at', { ascending: false });
         
-        // Log para debug do is_bank_statement
-        console.log('[AuthenticatorDashboard] Documentos com is_bank_statement:');
-        allDocuments.forEach((doc, index) => {
-          console.log(`  ${index + 1}. ${doc.filename}: is_bank_statement = ${doc.is_bank_statement}`);
+        if (verifiedError) {
+          console.error('[AuthenticatorDashboard] Error fetching verified documents:', verifiedError);
+          setError(verifiedError.message);
+          return;
+        }
+
+        // Mapear documentos principais com informações de verificação
+        const mainDocuments = (mainDocs as any[] || []).map(doc => {
+          const verifiedDoc = verifiedDocs?.find(v => v.filename === doc.filename && v.user_id === doc.user_id);
+          
+          console.log(`[AuthenticatorDashboard] Processando documento: ${doc.filename}`);
+          console.log(`[AuthenticatorDashboard] - Documento principal:`, doc);
+          console.log(`[AuthenticatorDashboard] - Documento verificado encontrado:`, verifiedDoc);
+          
+          // Determinar o status do documento para autenticação:
+          // - Se existe na tabela de verificação, usar o status de lá
+          // - Se não existe, consideramos como 'pending' para autenticação se não está 'completed'
+          let authStatus;
+          if (verifiedDoc) {
+            authStatus = verifiedDoc.status;
+            console.log(`[AuthenticatorDashboard] - Usando status da tabela verificada: ${authStatus}`);
+          } else {
+            // Se o documento da tabela principal não está 'completed', ele pode estar pendente para autenticação
+            authStatus = doc.status === 'completed' ? 'completed' : 'pending';
+            console.log(`[AuthenticatorDashboard] - Usando status calculado: ${authStatus} (original era: ${doc.status})`);
+          }
+          
+          const finalDoc = {
+            ...doc,
+            user_name: doc.profiles?.name || null,
+            user_email: doc.profiles?.email || null,
+            // Status para autenticação
+            status: authStatus,
+            // Manter ID da tabela de verificação se existir para operações
+            verification_id: verifiedDoc ? verifiedDoc.id : null,
+            // Dados da verificação se existir
+            translated_file_url: verifiedDoc ? verifiedDoc.translated_file_url : doc.translated_file_url,
+            authenticated_by: verifiedDoc?.authenticated_by,
+            authenticated_by_name: verifiedDoc?.authenticated_by_name,
+            authenticated_by_email: verifiedDoc?.authenticated_by_email,
+            authentication_date: verifiedDoc?.authentication_date,
+            // ✅ CORREÇÃO: Pegar idiomas da tabela correta
+            source_language: verifiedDoc?.source_language || doc.idioma_raiz,
+            target_language: verifiedDoc?.target_language || doc.idioma_destino
+          };
+          
+          console.log(`[AuthenticatorDashboard] - Documento final:`, finalDoc);
+          return finalDoc;
+        }) as Document[];
+        
+        // Log para debug detalhado
+        console.log('[AuthenticatorDashboard] Documentos principais:', mainDocuments.length);
+        console.log('[AuthenticatorDashboard] Documentos de verificação:', verifiedDocs?.length || 0);
+        console.log('[AuthenticatorDashboard] Sample main document:', mainDocuments[0]);
+        console.log('[AuthenticatorDashboard] Sample verified document:', verifiedDocs?.[0]);
+        
+        // Log detalhado dos status
+        mainDocuments.forEach((doc, index) => {
+          console.log(`[AuthenticatorDashboard] Doc ${index + 1}: ${doc.filename} - Original Status: ${(mainDocs as any[])?.[index]?.status} - Auth Status: ${doc.status}`);
         });
         
-        // ✅ Calcular estatísticas diferenciadas (documentos vs correções)
-        // Tratar valores null como false para documentos existentes
-        const pendingCount = allDocuments.filter(doc => 
-          doc.status === 'pending' && (doc.is_correction !== true)
-        ).length;
+        // Calcular estatísticas
+        const pendingCount = mainDocuments.filter(doc => doc.status === 'pending').length;
+        const approvedCount = mainDocuments.filter(doc => doc.status === 'completed').length;
         
-        const approvedCount = allDocuments.filter(doc => 
-          doc.status === 'completed' && (doc.is_correction !== true)
-        ).length;
-        
-        const rejectedCount = allDocuments.filter(doc => 
-          doc.status === 'rejected' && (doc.is_correction !== true)
-        ).length;
-        
-        // ✅ Métrica para correções (agora funcional após migração)
-        const correctionsCount = allDocuments.filter(doc => 
-          doc.is_correction === true
-        ).length;
+        console.log('[AuthenticatorDashboard] Status breakdown:', {
+          pending: mainDocuments.filter(doc => doc.status === 'pending').map(d => d.filename),
+          completed: mainDocuments.filter(doc => doc.status === 'completed').map(d => d.filename),
+          other: mainDocuments.filter(doc => doc.status !== 'pending' && doc.status !== 'completed').map(d => ({ filename: d.filename, status: d.status }))
+        });
         
         setStats({
           pending: pendingCount,
-          approved: approvedCount,
-          rejected: rejectedCount,
-          corrections: correctionsCount // ✅ Incluir correções
+          approved: approvedCount
         });
 
-        // Filtrar apenas documentos pendentes para a lista (excluir correções)
-        const pendingDocs = allDocuments.filter(doc => 
-          doc.status === 'pending' && (doc.is_correction !== true)
-        );
+        // Filtrar apenas documentos pendentes para a lista
+        const pendingDocs = mainDocuments.filter(doc => doc.status === 'pending');
         setDocuments(pendingDocs);
         
-        console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount, rejectedCount });
-        console.log('[AuthenticatorDashboard] Documentos pendentes:', pendingDocs.length);
+        console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount });
+        console.log('[AuthenticatorDashboard] Documentos pendentes para exibir:', pendingDocs.length);
+        console.log('[AuthenticatorDashboard] Documentos pendentes:', pendingDocs.map(d => ({ filename: d.filename, status: d.status, id: d.id })));
         
       } catch (err) {
         console.error('[AuthenticatorDashboard] Unexpected error:', err);
@@ -163,17 +212,94 @@ export default function AuthenticatorDashboard() {
     fetchDocuments();
   }, []);
 
+  // Função para abrir modal de confirmação de aprovação
+  function showApprovalConfirmation(id: string) {
+    const document = documents.find(doc => doc.id === id);
+    if (!document) {
+      console.log('[AuthenticatorDashboard] Documento não encontrado:', id);
+      return;
+    }
+    
+    console.log('[AuthenticatorDashboard] Abrindo modal de confirmação para:', document.filename);
+    console.log('[AuthenticatorDashboard] Estado atual showApprovalModal ANTES:', showApprovalModal);
+    
+    setModalDocumentId(id);
+    setModalDocumentName(document.filename);
+    
+    console.log('[AuthenticatorDashboard] Definindo showApprovalModal como true');
+    setShowApprovalModal(true);
+    
+    // Verificar estado depois de um pequeno delay
+    setTimeout(() => {
+      console.log('[AuthenticatorDashboard] Estado showApprovalModal APÓS timeout:', showApprovalModal);
+    }, 100);
+    
+    // Forçar re-render (teste)
+    console.log('[AuthenticatorDashboard] Forçando re-render...');
+  }
+
+  // Função para abrir modal de confirmação de envio de correção
+  function showSendCorrectionConfirmation(doc: Document) {
+    console.log('[AuthenticatorDashboard] Abrindo modal de correção para:', doc.filename);
+    
+    setModalDocumentId(doc.id);
+    setModalDocumentName(doc.filename);
+    setShowCorrectionModal(true);
+  }
+
   async function handleApprove(id: string) {
     if (!currentUser) return;
     
     console.log('[AuthenticatorDashboard] Aprovando documento:', id);
     
-    // Buscar o documento original
+    // Encontrar o documento na lista atual
+    const document = documents.find(doc => doc.id === id);
+    if (!document) {
+      console.error('[AuthenticatorDashboard] Documento não encontrado na lista');
+      return;
+    }
+    
+    // Se tem verification_id, usar ele; senão, primeiro inserir na tabela de verificação
+    let verificationId = document.verification_id;
+    
+    if (!verificationId) {
+      // Documento ainda não está na tabela de verificação, vamos inserir
+      const { data: newVerificationDoc, error: insertError } = await supabase
+        .from('documents_to_be_verified')
+        .insert({
+          user_id: document.user_id,
+          filename: document.filename,
+          file_url: document.file_url,
+          translated_file_url: document.translated_file_url || document.file_url, // Usar arquivo original se não há tradução
+          source_language: document.source_language || (document as any).idioma_raiz || 'Portuguese',
+          target_language: document.target_language || (document as any).idioma_destino || 'English',
+          pages: document.pages,
+          total_cost: document.total_cost || (document as any).valor || 0,
+          status: 'pending',
+          is_bank_statement: document.is_bank_statement,
+          verification_code: document.verification_code,
+          translation_status: document.translation_status || 'completed'
+        })
+        .select()
+        .single();
+      
+      if (insertError) {
+        console.error('[AuthenticatorDashboard] Erro ao inserir documento na tabela de verificação:', insertError);
+        alert('Erro ao processar documento. Tente novamente.');
+        return;
+      }
+      
+      verificationId = newVerificationDoc.id;
+      console.log('[AuthenticatorDashboard] Documento inserido na tabela de verificação:', verificationId);
+    }
+    
+    // Buscar o documento de verificação
     const { data: doc, error: fetchError } = await supabase
       .from('documents_to_be_verified')
       .select('*')
-      .eq('id', id)
+      .eq('id', verificationId)
       .single();
+      
     if (fetchError || !doc) {
       console.error('[AuthenticatorDashboard] Erro ao buscar documento:', fetchError);
       return;
@@ -194,7 +320,7 @@ export default function AuthenticatorDashboard() {
         status: 'completed',
         ...authData
       })
-      .eq('id', id);
+      .eq('id', verificationId);
     
     if (updateError) {
       console.error('[AuthenticatorDashboard] Erro ao atualizar documento:', updateError);
@@ -207,9 +333,9 @@ export default function AuthenticatorDashboard() {
       original_document_id: doc.id,
       user_id: doc.user_id,
       filename: doc.filename,
-      translated_file_url: doc.translated_file_url,
-      source_language: doc.source_language,
-      target_language: doc.target_language,
+      translated_file_url: doc.translated_file_url || doc.file_url || '', // ✅ Fix: usar arquivo original se não há tradução
+      source_language: doc.source_language || 'portuguese', // ✅ Fix: garantir valor não-nulo
+      target_language: doc.target_language || 'english', // ✅ Fix: garantir valor não-nulo
       pages: doc.pages,
       status: 'completed',
       total_cost: doc.total_cost,
@@ -221,7 +347,15 @@ export default function AuthenticatorDashboard() {
     if (insertError) {
       console.error('[AuthenticatorDashboard] Erro ao inserir em translated_documents:', insertError);
     }
-    
+
+    // Notificar que a tradução foi completada
+    try {
+      await notifyTranslationCompleted(doc.user_id, doc.filename, doc.id);
+    } catch (error) {
+      console.error('[AuthenticatorDashboard] Erro ao enviar notificação de tradução completada:', error);
+      // Não interrompemos o processo mesmo se a notificação falhar
+    }
+
     // Atualizar estatísticas
     setStats(prev => ({
       ...prev,
@@ -235,104 +369,105 @@ export default function AuthenticatorDashboard() {
     console.log('[AuthenticatorDashboard] Documento aprovado com sucesso');
   }
 
-  async function handleReject(id: string) {
-    if (!currentUser) return;
-    
-    console.log('[AuthenticatorDashboard] Rejeitando documento:', id);
-    
-    // Dados do autenticador
-    const authData = {
-      authenticated_by: currentUser.id,
-      authenticated_by_name: currentUser.user_metadata?.name || currentUser.email,
-      authenticated_by_email: currentUser.email,
-      authentication_date: new Date().toISOString()
-    };
-    
-    const { error: updateError } = await supabase
-      .from('documents_to_be_verified')
-      .update({ 
-        status: 'rejected',
-        ...authData
-      })
-      .eq('id', id);
-    
-    if (updateError) {
-      console.error('[AuthenticatorDashboard] Erro ao rejeitar documento:', updateError);
-      alert('Erro ao rejeitar documento. Tente novamente.');
-      return;
-    }
-    
-    // Atualizar estatísticas
-    setStats(prev => ({
-      ...prev,
-      pending: prev.pending - 1,
-      rejected: prev.rejected + 1
-    }));
-    
-    // Remover documento da lista
-    setDocuments(docs => docs.filter(doc => doc.id !== id));
-    
-    console.log('[AuthenticatorDashboard] Documento rejeitado com sucesso');
-  }
 
   async function handleCorrectionUpload(doc: Document) {
     const state = uploadStates[doc.id];
     if (!state || !state.file) return;
+    
     setUploadStates(prev => ({ ...prev, [doc.id]: { ...state, uploading: true, error: null, success: false } }));
     try {
-      console.log('🔍 [AuthenticatorDashboard] Iniciando upload de correção para documento:', doc.id);
-      console.log('📄 [AuthenticatorDashboard] Arquivo selecionado:', state.file.name, 'Tamanho:', state.file.size);
-      console.log('👤 [AuthenticatorDashboard] Usuário atual:', currentUser?.id, currentUser?.email);
-      
-      // ✅ Usar função de normalização robusta para aceitar qualquer caractere especial
-      const normalizedFileName = normalizeFileName(state.file.name);
-      const uploadPath = generateCorrectionFileName(state.file.name, doc.id);
-      
-      console.log('🔧 [AuthenticatorDashboard] Nome do arquivo normalizado:', normalizedFileName);
-      console.log('📁 [AuthenticatorDashboard] Tentando upload para:', uploadPath);
-      
+      // Upload para Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
-        .upload(uploadPath, state.file, { 
-          upsert: true,
-          cacheControl: '3600'
-        });
-      
-      if (uploadError) {
-        console.error('❌ [AuthenticatorDashboard] Erro no upload para storage:', uploadError);
-        console.error('❌ [AuthenticatorDashboard] Mensagem do erro:', uploadError.message);
-        
-        // ✅ Mensagem de erro amigável para o usuário em inglês
-        let userFriendlyMessage = 'An error occurred while uploading the file.';
-        
-        // ✅ Detectar erros específicos e dar mensagens mais claras
-        if (uploadError.message.includes('invalid key') || uploadError.message.includes('400')) {
-          userFriendlyMessage = 'File upload failed. Please contact support for assistance.';
-        } else if (uploadError.message.includes('permission') || uploadError.message.includes('403')) {
-          userFriendlyMessage = 'Permission denied. Please contact support to verify your access.';
-        } else if (uploadError.message.includes('storage') || uploadError.message.includes('bucket')) {
-          userFriendlyMessage = 'Storage service error. Please contact support.';
-        }
-        
-        throw new Error(userFriendlyMessage);
-      }
-      
+        .upload(`corrections/${doc.id}_${Date.now()}_${state.file.name}`, state.file, { upsert: true });
+      if (uploadError) throw uploadError;
       const filePath = uploadData?.path;
       const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath);
       const publicUrl = publicUrlData.publicUrl;
       
-      console.log('📁 [AuthenticatorDashboard] Arquivo enviado para storage:', filePath);
-      console.log('🔗 [AuthenticatorDashboard] URL pública gerada:', publicUrl);
+      // Se tem verification_id, usar ele; senão, usar o id principal do documento
+      const verificationId = doc.verification_id || doc.id;
       
-      // Buscar dados do documento original
-      const { data: originalDoc, error: fetchError } = await supabase
-        .from('documents_to_be_verified')
-        .select('*')
-        .eq('id', doc.id)
-        .single();
-      if (fetchError || !originalDoc) throw new Error('Não foi possível obter os dados do documento original.');
+      // Buscar verification_code do documento original
+      let originalDoc;
+      let fetchError;
+      let finalVerificationId = verificationId;
       
-      console.log('📋 [AuthenticatorDashboard] Dados do documento original:', originalDoc);
+      if (doc.verification_id) {
+        // Documento já está na tabela documents_to_be_verified
+        const { data, error } = await supabase
+          .from('documents_to_be_verified')
+          .select('verification_code')
+          .eq('id', verificationId)
+          .single();
+        originalDoc = data;
+        fetchError = error;
+      } else {
+        // Documento existe apenas na tabela documents - precisa criar entrada em documents_to_be_verified
+        const { data: docData, error: docError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('id', doc.id)
+          .single();
+          
+        if (docError || !docData) {
+          console.error('[AuthenticatorDashboard] Erro ao buscar documento original:', docError);
+          throw new Error('Não foi possível obter dados do documento original.');
+        }
+
+        // Validar campos obrigatórios
+        if (!docData.user_id) {
+          throw new Error('user_id é obrigatório para criar entrada na tabela de verificação.');
+        }
+        if (!docData.filename) {
+          throw new Error('filename é obrigatório para criar entrada na tabela de verificação.');
+        }
+        if (!docData.verification_code) {
+          throw new Error('verification_code é obrigatório para criar entrada na tabela de verificação.');
+        }
+        
+        // Criar entrada na tabela documents_to_be_verified
+        const insertData = {
+          user_id: docData.user_id,
+          filename: docData.filename,
+          pages: parseInt(docData.pages) || 1,
+          total_cost: parseFloat(docData.total_cost || docData.valor || 0),
+          status: 'pending',
+          verification_code: docData.verification_code,
+          source_language: docData.idioma_raiz || 'Portuguese',
+          target_language: docData.idioma_destino || 'English',
+          is_bank_statement: Boolean(docData.is_bank_statement),
+          client_name: docData.client_name || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        console.log('[AuthenticatorDashboard] Dados para inserção na tabela documents_to_be_verified:', insertData);
+        console.log('[AuthenticatorDashboard] docData completo:', docData);
+
+        const { data: newVerifiedDoc, error: createError } = await supabase
+          .from('documents_to_be_verified')
+          .insert(insertData)
+          .select('id, verification_code')
+          .single();
+          
+        if (createError) {
+          console.error('[AuthenticatorDashboard] Erro detalhado ao inserir na tabela documents_to_be_verified:', createError);
+          throw new Error(`Não foi possível criar entrada na tabela de verificação: ${createError.message}`);
+        }
+        
+        if (!newVerifiedDoc) {
+          throw new Error('Não foi possível criar entrada na tabela de verificação: resposta vazia do servidor.');
+        }
+        
+        finalVerificationId = newVerifiedDoc.id;
+        originalDoc = newVerifiedDoc;
+        fetchError = null;
+      }
+      
+      if (fetchError || !originalDoc) {
+        throw new Error('Não foi possível obter o verification_code do documento original.');
+      }
       
       // Dados do autenticador
       const authData = {
@@ -342,140 +477,66 @@ export default function AuthenticatorDashboard() {
         authentication_date: new Date().toISOString()
       };
       
-      console.log('🔐 [AuthenticatorDashboard] Dados do autenticador:', authData);
+      // Debug: verificar os valores dos idiomas antes da inserção
+      console.log('DEBUG: Idiomas antes da inserção em translated_documents:');
+      console.log('doc.source_language:', doc.source_language);
+      console.log('doc.target_language:', doc.target_language);
+      console.log('Valores finais que serão inseridos:');
+      console.log('source_language:', doc.source_language || 'Portuguese');
+      console.log('target_language:', doc.target_language || 'English');
       
-      // Inserir correção diretamente na tabela translated_documents
-      // ✅ Usar o verification_code original do documento, não gerar um novo
-      const verificationCode = originalDoc.verification_code || 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase();
-      
-      const insertData = {
-        original_document_id: doc.id,
+      // Inserir na tabela translated_documents com dados do autenticador
+      const { error: insertError } = await supabase.from('translated_documents').insert({
+        original_document_id: finalVerificationId, // Usar o ID da tabela documents_to_be_verified
         user_id: doc.user_id,
-        filename: normalizedFileName, // ✅ Usar nome normalizado
+        filename: state.file.name,
         translated_file_url: publicUrl,
         source_language: doc.source_language || 'Portuguese',
         target_language: doc.target_language || 'English',
-        pages: doc.pages || 1,
+        pages: doc.pages,
         status: 'completed',
-        total_cost: doc.total_cost || 0,
-        verification_code: verificationCode, // ✅ Usar o código original
+        total_cost: doc.total_cost,
         is_authenticated: true,
-        upload_date: new Date().toISOString(),
-        authenticated_by: currentUser?.id,
-        authenticated_by_name: currentUser?.user_metadata?.name || currentUser?.email,
-        authenticated_by_email: currentUser?.email,
-        authentication_date: new Date().toISOString()
-      };
+        verification_code: originalDoc.verification_code,
+        ...authData
+      } as any);
+      if (insertError) throw insertError;
       
-      console.log('📤 [AuthenticatorDashboard] Tentando inserir em translated_documents:', insertData);
-      console.log('🔑 [AuthenticatorDashboard] Verification code usado:', verificationCode);
-      console.log('🔑 [AuthenticatorDashboard] Verification code original:', originalDoc.verification_code);
-      
-      const { data: insertResult, error: insertError } = await supabase
-        .from('translated_documents')
-        .insert(insertData)
-        .select()
-        .single();
-      
-      if (insertError) {
-        console.error('❌ [AuthenticatorDashboard] Erro ao inserir correção:', insertError);
-        console.error('❌ [AuthenticatorDashboard] Código do erro:', insertError.code);
-        console.error('❌ [AuthenticatorDashboard] Mensagem do erro:', insertError.message);
-        console.error('❌ [AuthenticatorDashboard] Detalhes do erro:', insertError.details);
-        
-        // ✅ Mensagem de erro amigável para o usuário em inglês
-        let userFriendlyMessage = 'Failed to save correction. Please contact support for assistance.';
-        
-        // ✅ Detectar erros específicos do banco de dados
-        if (insertError.code === '23505') { // Unique violation
-          userFriendlyMessage = 'Document already exists. Please contact support for assistance.';
-        } else if (insertError.code === '23503') { // Foreign key violation
-          userFriendlyMessage = 'Invalid document reference. Please contact support for assistance.';
-        } else if (insertError.code === '23514') { // Check violation
-          userFriendlyMessage = 'Invalid document data. Please contact support for assistance.';
-        } else if (insertError.message.includes('permission') || insertError.message.includes('403')) {
-          userFriendlyMessage = 'Permission denied. Please contact support to verify your access.';
-        }
-        
-        throw new Error(userFriendlyMessage);
+      // Atualizar status do documento original para 'completed' com dados do autenticador
+      if (doc.verification_id) {
+        // Documento estava na tabela documents_to_be_verified
+        await supabase
+          .from('documents_to_be_verified')
+          .update({ 
+            status: 'completed',
+            ...authData
+          })
+          .eq('id', doc.verification_id);
+      } else {
+        // Documento foi criado em documents_to_be_verified, atualizar ambas as tabelas
+        await supabase
+          .from('documents_to_be_verified')
+          .update({ 
+            status: 'completed',
+            ...authData
+          })
+          .eq('id', finalVerificationId);
+          
+        await supabase
+          .from('documents')
+          .update({ 
+            status: 'completed',
+            ...authData
+          })
+          .eq('id', doc.id);
       }
-      
-      console.log('✅ [AuthenticatorDashboard] Correção inserida com sucesso em translated_documents:', insertResult);
-      
-      // Atualizar documento original para 'rejected' (não completed)
-      const { error: updateError } = await supabase
-        .from('documents_to_be_verified')
-        .update({ 
-          status: 'rejected',
-          ...authData
-        })
-        .eq('id', doc.id);
-      
-      if (updateError) {
-        console.error('❌ [AuthenticatorDashboard] Erro ao atualizar documento original:', updateError);
-        console.error('❌ [AuthenticatorDashboard] Código do erro:', updateError.code);
-        console.error('❌ [AuthenticatorDashboard] Mensagem do erro:', updateError.message);
-        
-        // ✅ Mensagem de erro amigável para o usuário em inglês
-        let userFriendlyMessage = 'Failed to update original document. Please contact support for assistance.';
-        
-        // ✅ Detectar erros específicos
-        if (updateError.code === '23503') { // Foreign key violation
-          userFriendlyMessage = 'Invalid document reference. Please contact support for assistance.';
-        } else if (updateError.message.includes('permission') || updateError.message.includes('403')) {
-          userFriendlyMessage = 'Permission denied. Please contact support to verify your access.';
-        }
-        
-        throw new Error(userFriendlyMessage);
-      }
-      
-      console.log('✅ [AuthenticatorDashboard] Documento original atualizado para rejected');
-      
-      // ✅ Atualizar estatísticas corretamente
-      setStats(prev => ({
-        ...prev,
-        pending: prev.pending - 1, // ✅ -1 para documento removido da lista
-        rejected: prev.rejected + 1, // ✅ +1 para o original rejeitado
-        corrections: prev.corrections + 1 // ✅ +1 para total de correções
-      }));
       
       // Remover o documento da lista após sucesso
       setDocuments(docs => docs.filter(d => d.id !== doc.id));
       setUploadStates(prev => ({ ...prev, [doc.id]: { file: null, uploading: false, success: false, error: null } }));
       setRejectedRows(prev => ({ ...prev, [doc.id]: false }));
-      
-      console.log('🎉 [AuthenticatorDashboard] Processo de correção concluído com sucesso - documento enviado para translated_documents');
-      
     } catch (err: any) {
-      console.error('💥 [AuthenticatorDashboard] Erro no processo de correção:', err);
-      console.error('💥 [AuthenticatorDashboard] Stack trace:', err.stack);
-      console.error('💥 [AuthenticatorDashboard] Tipo do erro:', typeof err);
-      console.error('💥 [AuthenticatorDashboard] Mensagem do erro:', err.message);
-      
-      // ✅ Mensagem de erro amigável para o usuário
-      let userFriendlyError = 'An error occurred during the correction process.';
-      
-      // ✅ Detectar erros específicos e dar mensagens mais claras
-      if (err.message.includes('contact support')) {
-        // ✅ Se já é uma mensagem amigável, usar ela
-        userFriendlyError = err.message;
-      } else if (err.message.includes('permission') || err.message.includes('403')) {
-        userFriendlyError = 'Permission denied. Please contact support to verify your access.';
-      } else if (err.message.includes('database') || err.message.includes('insert')) {
-        userFriendlyError = 'Database error. Please contact support for assistance.';
-      } else if (err.message.includes('network') || err.message.includes('fetch')) {
-        userFriendlyError = 'Network error. Please check your connection and try again.';
-      }
-      
-      setUploadStates(prev => ({ 
-        ...prev, 
-        [doc.id]: { 
-          ...state, 
-          uploading: false, 
-          success: false, 
-          error: userFriendlyError
-        } 
-      }));
+      setUploadStates(prev => ({ ...prev, [doc.id]: { ...state, uploading: false, success: false, error: err.message || 'Upload failed' } }));
     }
   }
 
@@ -527,10 +588,10 @@ export default function AuthenticatorDashboard() {
         </div>
 
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-10">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Clock className="w-6 h-6 sm:w-7 sm:w-7 text-yellow-900" />
+              <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-900" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.pending}</div>
@@ -546,26 +607,6 @@ export default function AuthenticatorDashboard() {
               <div className="text-sm sm:text-base text-gray-600 font-medium">Approved</div>
             </div>
           </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-tfe-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <X className="w-6 h-6 sm:w-7 sm:h-7 text-tfe-red-950" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.rejected}</div>
-              <div className="text-sm sm:text-base text-gray-600 font-medium">Rejected</div>
-            </div>
-          </div>
-          
-          {/* ✅ NOVO CARD: Correções */}
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Upload className="w-6 h-6 sm:w-7 sm:h-7 text-blue-900" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.corrections}</div>
-              <div className="text-sm sm:text-base text-gray-600 font-medium">Corrections</div>
-            </div>
-          </div>
         </div>
 
         {/* Documents Table */}
@@ -573,6 +614,29 @@ export default function AuthenticatorDashboard() {
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center gap-3">
             <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-tfe-blue-700" /> Documents to Authenticate
           </h2>
+          
+          {/* Instructions for Authenticators */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4" />
+              Authentication Instructions
+            </h3>
+            <div className="space-y-2 text-sm text-blue-800">
+              <div className="flex items-start gap-2">
+                <span className="font-medium min-w-fit">• View Original:</span>
+                <span>Document is being translated. Wait 1-2 minutes and refresh the page to view the translated document.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-medium min-w-fit">• View Original (persistent):</span>
+                <span>If the "View Original" button persists for a long time, the automatic AI translation failed and only the original document will be shown.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-medium min-w-fit">• View PDF:</span>
+                <span>Translation was successful. Please verify the document for any errors before approval.</span>
+              </div>
+            </div>
+          </div>
+          
           {loading && <p className="text-tfe-blue-700 text-base sm:text-lg">Loading documents...</p>}
           {error && <p className="text-tfe-red-500 text-base sm:text-lg">Error: {error}</p>}
           
@@ -586,6 +650,66 @@ export default function AuthenticatorDashboard() {
                     <a href={doc.file_url || ''} target="_blank" rel="noopener noreferrer" className="text-tfe-blue-700 underline font-medium hover:text-tfe-blue-950 transition-colors text-sm">
                       {doc.filename}
                     </a>
+                    
+                    {/* View and Download Buttons */}
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            // Preferir documento traduzido se existir, senão mostrar o original
+                            const urlToView = doc.translated_file_url || doc.file_url;
+                            if (!urlToView) {
+                              alert('No document available to view.');
+                              return;
+                            }
+                            
+                            // Tentar obter uma URL válida
+                            const validUrl = await getValidFileUrl(urlToView);
+                            window.open(validUrl, '_blank', 'noopener,noreferrer');
+                          } catch (error) {
+                            console.error('Error opening document:', error);
+                            alert((error as Error).message || 'Failed to open document. The file may be corrupted or inaccessible.');
+                          }
+                        }}
+                        className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
+                        title={doc.translated_file_url ? "View Translated PDF" : "View Original Document"}
+                      >
+                        <FileText className="w-3 h-3" /> View {doc.translated_file_url ? "PDF" : "Original"}
+                      </button>
+                      
+                      <button
+                        className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
+                        onClick={async e => {
+                          e.preventDefault();
+                          try {
+                            // Preferir documento traduzido se existir, senão baixar o original
+                            const urlToDownload = doc.translated_file_url || doc.file_url;
+                            if (!urlToDownload) {
+                              alert('No document available to download.');
+                              return;
+                            }
+                            
+                            const validUrl = await getValidFileUrl(urlToDownload);
+                            const response = await fetch(validUrl);
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                          } catch (err) {
+                            console.error('Error downloading file:', err);
+                            alert((err as Error).message || 'Failed to download file.');
+                          }
+                        }}
+                        title={doc.translated_file_url ? "Download Translated PDF" : "Download Original Document"}
+                      >
+                        <Download className="w-3 h-3" /> Download
+                      </button>
+                    </div>
                   </div>
 
 
@@ -683,7 +807,7 @@ export default function AuthenticatorDashboard() {
                         <button
                           className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-4 py-3 font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
                           disabled={!uploadStates[doc.id]?.file || uploadStates[doc.id]?.uploading}
-                          onClick={() => handleCorrectionUpload(doc)}
+                          onClick={() => showSendCorrectionConfirmation(doc)}
                         >
                           {uploadStates[doc.id]?.uploading ? (
                             <div className="flex items-center justify-center gap-2">
@@ -714,7 +838,10 @@ export default function AuthenticatorDashboard() {
                       </div>
                     ) : (
                       <div className="flex gap-2">
-                        <button onClick={() => handleApprove(doc.id)} className="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded text-xs hover:bg-green-700 transition-colors font-medium">
+                        <button onClick={() => {
+                          console.log('Botão Approve clicado para documento:', doc.id);
+                          showApprovalConfirmation(doc.id);
+                        }} className="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded text-xs hover:bg-green-700 transition-colors font-medium">
                           <CheckCircle className="w-3 h-3" />Approve
                         </button>
                         <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex-1 flex items-center justify-center gap-1 bg-tfe-red-600 text-white px-3 py-2 rounded text-xs hover:bg-tfe-red-700 transition-colors font-medium">
@@ -754,56 +881,66 @@ export default function AuthenticatorDashboard() {
                               {doc.filename}
                             </a>
                           </div>
-                          {doc.translated_file_url && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={async () => {
-                              try {
-                                if (!doc.translated_file_url) {
-                                  alert('No PDF file available to view.');
-                                  return;
+                          <div className="flex gap-2">
+                            {/* Botão View - sempre disponível */}
+                            <button
+                              onClick={async () => {
+                                try {
+                                  // Preferir documento traduzido se existir, senão mostrar o original
+                                  const urlToView = doc.translated_file_url || doc.file_url;
+                                  if (!urlToView) {
+                                    alert('No document available to view.');
+                                    return;
+                                  }
+                                  
+                                  // Tentar obter uma URL válida
+                                  const validUrl = await getValidFileUrl(urlToView);
+                                  window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                } catch (error) {
+                                  console.error('Error opening document:', error);
+                                  alert((error as Error).message || 'Failed to open document. The file may be corrupted or inaccessible.');
                                 }
-                                
-                                // Tentar obter uma URL válida
-                                const validUrl = await getValidFileUrl(doc.translated_file_url);
-                                window.open(validUrl, '_blank', 'noopener,noreferrer');
-                              } catch (error) {
-                                console.error('Error opening PDF:', error);
-                                alert((error as Error).message || 'Failed to open PDF. The file may be corrupted or inaccessible.');
-                              }
-                            }}
-                                className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
-                            title="View PDF"
-                          >
-                                <FileText className="w-3 h-3" /> View
-                          </button>
-                          <button
-                                className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
-                            onClick={async e => {
-                              e.preventDefault();
-                              try {
-                                const validUrl = await getValidFileUrl(doc.translated_file_url || '');
-                                const response = await fetch(validUrl);
-                                const blob = await response.blob();
-                                const url = window.URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                window.URL.revokeObjectURL(url);
-                              } catch (err) {
-                                console.error('Error downloading file:', err);
-                                alert((err as Error).message || 'Failed to download file.');
-                              }
-                            }}
-                            title="Download PDF"
-                          >
-                                <Download className="w-3 h-3" /> Download
-                          </button>
-                        </div>
-                          )}
+                              }}
+                              className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
+                              title={doc.translated_file_url ? "View Translated PDF" : "View Original Document"}
+                            >
+                              <FileText className="w-3 h-3" /> View {doc.translated_file_url ? "PDF" : "Original"}
+                            </button>
+                            
+                            {/* Botão Download - sempre disponível */}
+                            <button
+                              className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
+                              onClick={async e => {
+                                e.preventDefault();
+                                try {
+                                  // Preferir documento traduzido se existir, senão baixar o original
+                                  const urlToDownload = doc.translated_file_url || doc.file_url;
+                                  if (!urlToDownload) {
+                                    alert('No document available to download.');
+                                    return;
+                                  }
+                                  
+                                  const validUrl = await getValidFileUrl(urlToDownload);
+                                  const response = await fetch(validUrl);
+                                  const blob = await response.blob();
+                                  const url = window.URL.createObjectURL(blob);
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                  window.URL.revokeObjectURL(url);
+                                } catch (err) {
+                                  console.error('Error downloading file:', err);
+                                  alert((err as Error).message || 'Failed to download file.');
+                                }
+                              }}
+                              title={doc.translated_file_url ? "Download Translated PDF" : "Download Original Document"}
+                            >
+                              <Download className="w-3 h-3" /> Download
+                            </button>
+                          </div>
                         </div>
                     </td>
                       <td className="px-4 py-3">
@@ -846,7 +983,10 @@ export default function AuthenticatorDashboard() {
                             <button
                               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-3 py-2 font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm hover:shadow-md"
                               disabled={!uploadStates[doc.id]?.file || uploadStates[doc.id]?.uploading}
-                              onClick={() => handleCorrectionUpload(doc)}
+                              onClick={() => {
+                                console.log('Botão Send Correction (versão 2) clicado para documento:', doc.id);
+                                showSendCorrectionConfirmation(doc);
+                              }}
                             >
                               {uploadStates[doc.id]?.uploading ? (
                                 <div className="flex items-center justify-center gap-2">
@@ -877,7 +1017,10 @@ export default function AuthenticatorDashboard() {
                           </div>
                       ) : (
                           <div className="flex gap-2">
-                            <button onClick={() => handleApprove(doc.id)} className="flex items-center gap-1 bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors font-medium">
+                            <button onClick={() => {
+                              console.log('Botão Approve (versão 1) clicado para documento:', doc.id);
+                              showApprovalConfirmation(doc.id);
+                            }} className="flex items-center gap-1 bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors font-medium">
                               <CheckCircle className="w-3 h-3" />Approve
                             </button>
                             <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex items-center gap-1 bg-tfe-red-600 text-white px-3 py-1 rounded text-xs hover:bg-tfe-red-700 transition-colors font-medium">
@@ -986,6 +1129,185 @@ export default function AuthenticatorDashboard() {
         </div>
       </div>
 
+      {/* Modal de confirmação de aprovação */}
+      {showApprovalModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            maxWidth: '400px',
+            width: '100%',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              margin: '0 auto 1rem',
+              width: '48px',
+              height: '48px',
+              backgroundColor: '#dcfce7',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <CheckCircle style={{ width: '24px', height: '24px', color: '#16a34a' }} />
+            </div>
+            
+            <h3 style={{ fontSize: '18px', fontWeight: '500', color: '#111827', marginBottom: '8px' }}>
+              Confirm Approval
+            </h3>
+            
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
+              Are you sure you want to approve the document "{modalDocumentName}"? This action cannot be undone.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  console.log('[AuthenticatorDashboard] Cancelando aprovação');
+                  setShowApprovalModal(false);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={() => {
+                  console.log('[AuthenticatorDashboard] Confirmando aprovação');
+                  setShowApprovalModal(false);
+                  handleApprove(modalDocumentId);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: 'white',
+                  backgroundColor: '#16a34a',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de envio de correção */}
+      {showCorrectionModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            maxWidth: '400px',
+            width: '100%',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              margin: '0 auto 1rem',
+              width: '48px',
+              height: '48px',
+              backgroundColor: '#dbeafe',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <UploadIcon style={{ width: '24px', height: '24px', color: '#2563eb' }} />
+            </div>
+            
+            <h3 style={{ fontSize: '18px', fontWeight: '500', color: '#111827', marginBottom: '8px' }}>
+              Confirm Send Correction
+            </h3>
+            
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
+              Are you sure you want to send the correction for the document "{modalDocumentName}"? This action cannot be undone.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  console.log('[AuthenticatorDashboard] Cancelando envio de correção');
+                  setShowCorrectionModal(false);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={() => {
+                  console.log('[AuthenticatorDashboard] Confirmando envio de correção');
+                  setShowCorrectionModal(false);
+                  const doc = documents.find(d => d.id === modalDocumentId);
+                  if (doc) {
+                    handleCorrectionUpload(doc);
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: 'white',
+                  backgroundColor: '#2563eb',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Send Correction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de informações do usuário */}
       {userModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
@@ -1004,26 +1326,26 @@ export default function AuthenticatorDashboard() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700">Name:</span>
-                  <span className="text-gray-900">{selectedUser?.name || 'N/A'}</span>
+                  <span className="text-gray-900">{selectedUser.name}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700">Email:</span>
-                  <span className="text-gray-900">{selectedUser?.email || 'N/A'}</span>
+                  <span className="text-gray-900">{selectedUser.email}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700 flex items-center gap-2">
                     <Phone className="w-4 h-4" />
                     Phone:
                   </span>
-                  <span className="text-gray-900">{selectedUser?.phone || 'Not provided'}</span>
+                  <span className="text-gray-900">{selectedUser.phone || 'Not provided'}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="font-medium text-gray-700">Role:</span>
-                  <span className="text-gray-900">{selectedUser?.role || 'N/A'}</span>
+                  <span className="text-gray-900">{selectedUser.role}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="font-medium text-gray-700">ID:</span>
-                  <span className="text-gray-900 font-mono text-sm">{selectedUser?.id || 'N/A'}</span>
+                  <span className="text-gray-900 font-mono text-sm">{selectedUser.id}</span>
                 </div>
               </div>
             )}

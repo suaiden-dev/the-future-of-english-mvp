@@ -1,5 +1,5 @@
 /*
-  # Initial Schema Setup for The Future of English
+  # Initial Schema Setup for Lush America Translations
 
   1. New Tables
     - `profiles` - User profiles with roles

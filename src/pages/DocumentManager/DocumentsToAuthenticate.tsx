@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { CheckCircle, XCircle, Clock, AlertTriangle, FileText, User, Calendar, DollarSign, Globe, FileImage, Phone, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, FileText, User, Calendar, FileImage, Phone, Eye } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -22,7 +22,7 @@ interface Document {
 }
 
 interface Props {
-  user: { id: string; role: string };
+  user: { id: string; role: string; user_metadata?: { name?: string }; email?: string };
 }
 
 // Opções de motivo de rejeição
@@ -92,15 +92,87 @@ export default function DocumentsToAuthenticate({ user }: Props) {
     try {
       console.log('[DocumentsToAuthenticate] Aprovando documento:', docId);
       
-      const { error } = await supabase
+      // Primeiro, buscar o documento para obter todos os dados necessários
+      const { data: doc, error: fetchError } = await supabase
         .from('documents_to_be_verified')
-        .update({ status: 'approved' })
+        .select('*')
+        .eq('id', docId)
+        .single();
+      
+      if (fetchError || !doc) {
+        console.error('[DocumentsToAuthenticate] Erro ao buscar documento:', fetchError);
+        alert('Erro ao buscar documento. Tente novamente.');
+        return;
+      }
+
+      // Atualizar status para 'completed' (seguindo o padrão do AuthenticatorDashboard)
+      const { error: updateError } = await supabase
+        .from('documents_to_be_verified')
+        .update({ 
+          status: 'completed',
+          authenticated_by: user?.id,
+          authenticated_by_name: user?.user_metadata?.name || user?.email,
+          authenticated_by_email: user?.email,
+          authentication_date: new Date().toISOString()
+        })
         .eq('id', docId);
       
-      if (error) {
-        console.error('[DocumentsToAuthenticate] Erro ao aprovar:', error);
+      if (updateError) {
+        console.error('[DocumentsToAuthenticate] Erro ao aprovar:', updateError);
         alert('Erro ao aprovar documento. Tente novamente.');
         return;
+      }
+
+      // Inserir em translated_documents com dados do autenticador
+      const authData = {
+        authenticated_by: user?.id,
+        authenticated_by_name: user?.user_metadata?.name || user?.email,
+        authenticated_by_email: user?.email,
+        authentication_date: new Date().toISOString()
+      };
+
+      const { error: insertError } = await supabase.from('translated_documents').insert({
+        original_document_id: doc.id,
+        user_id: doc.user_id,
+        filename: doc.filename,
+        translated_file_url: doc.translated_file_url || doc.file_url || '',
+        source_language: doc.source_language || 'portuguese',
+        target_language: doc.target_language || 'english',
+        pages: doc.pages,
+        status: 'completed',
+        total_cost: doc.total_cost,
+        is_authenticated: true,
+        verification_code: doc.verification_code,
+        ...authData
+      } as any);
+      
+      if (insertError) {
+        console.error('[DocumentsToAuthenticate] Erro ao inserir em translated_documents:', insertError);
+        // Não interrompemos o processo, mas logamos o erro
+      }
+
+      // Atualizar o documento original na tabela documents para completed
+      // Isso garante que ele não apareça mais no dashboard do usuário como processing
+      // Primeiro, vamos buscar o documento original na tabela documents usando o verification_code
+      const { data: originalDoc, error: findOriginalError } = await supabase
+        .from('documents')
+        .select('id')
+        .eq('verification_code', doc.verification_code)
+        .single();
+      
+      if (findOriginalError) {
+        console.error('[DocumentsToAuthenticate] Erro ao buscar documento original:', findOriginalError);
+      } else if (originalDoc) {
+        const { error: updateOriginalError } = await supabase
+          .from('documents')
+          .update({ status: 'completed' })
+          .eq('id', originalDoc.id);
+        
+        if (updateOriginalError) {
+          console.error('[DocumentsToAuthenticate] Erro ao atualizar documento original:', updateOriginalError);
+        } else {
+          console.log('[DocumentsToAuthenticate] Documento original atualizado para completed');
+        }
       }
 
       setDocuments(prev => prev.filter(doc => doc.id !== docId));

@@ -1,5 +1,5 @@
-import React from 'react';
-import { ChatCircle, Envelope, Phone, WhatsappLogo } from '@phosphor-icons/react';
+﻿import React from 'react';
+import { Envelope, Phone, WhatsappLogo } from '@phosphor-icons/react';
 
 export function ContactSection() {
   return (
@@ -15,36 +15,39 @@ export function ContactSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Phone Card */}
           <div 
-            className="bg-gray-50 p-8 rounded-2xl shadow-lg text-center cursor-pointer hover:bg-gray-100 transition-all duration-300"
+            className="bg-white p-8 rounded-xl shadow-lg text-center cursor-pointer hover:shadow-xl transition-all duration-300 border border-gray-100"
             onClick={() => window.location.href = 'tel:+13237883117'}
           >
-            <div className="w-16 h-16 bg-tfe-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Phone className="w-8 h-8 text-tfe-blue-600" weight="fill" />
+            <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-6">
+              <Phone className="w-8 h-8 text-blue-600" weight="fill" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Phone</h3>
-            <p className="text-gray-600">(323) 788-3117</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Phone</h3>
+            <p className="text-gray-600 text-lg">(323) 788-3117</p>
             <p className="text-sm text-gray-500 mt-2">Mon-Fri: 9AM-6PM EST</p>
           </div>
           
-          <div className="bg-gray-50 p-8 rounded-2xl shadow-lg text-center">
-            <div className="w-16 h-16 bg-tfe-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Envelope className="w-8 h-8 text-tfe-red-600" weight="fill" />
+          {/* Email Card */}
+          <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-gray-100">
+            <div className="w-16 h-16 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-6">
+              <Envelope className="w-8 h-8 text-red-600" weight="fill" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Email</h3>
-            <p className="text-gray-600">info@thefutureofenglish.com</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Email</h3>
+            <p className="text-gray-600 text-lg">info@thefutureofenglish.com</p>
             <p className="text-sm text-gray-500 mt-2">24/7 support</p>
           </div>
           
+          {/* WhatsApp Card */}
           <div 
-            className="bg-gray-50 p-8 rounded-2xl shadow-lg text-center cursor-pointer hover:bg-gray-100 transition-all duration-300"
+            className="bg-white p-8 rounded-xl shadow-lg text-center cursor-pointer hover:shadow-xl transition-all duration-300 border border-gray-100"
             onClick={() => window.open('https://wa.me/13237883117?text=Hello%20The%20Future%20of%20English,%20I%20would%20like%20to%20know%20more%20about%20the%20visa%20consulting%20service.', '_blank')}
           >
-            <div className="w-16 h-16 bg-gradient-to-br from-tfe-blue-100 to-tfe-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <WhatsappLogo className="w-8 h-8 text-tfe-blue-600" weight="fill" />
+            <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-pink-100 rounded-xl flex items-center justify-center mx-auto mb-6">
+              <WhatsappLogo className="w-8 h-8 text-green-600" weight="fill" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">WhatsApp</h3>
-            <p className="text-gray-600">(323) 788-3117</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">WhatsApp</h3>
+            <p className="text-gray-600 text-lg">(323) 788-3117</p>
             <p className="text-sm text-gray-500 mt-2">Instant messaging</p>
           </div>
         </div>

@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../contexts/I18nContext';
 
 const ForgotPassword: React.FC = () => {
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,14 +17,14 @@ const ForgotPassword: React.FC = () => {
     e.preventDefault();
     
     if (!email.trim()) {
-      setError('Please enter your email address');
+      setError(t('auth.emailRequired'));
       return;
     }
     
     // Validar formato do email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address');
+      setError(t('auth.invalidEmail'));
       return;
     }
     
