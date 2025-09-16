@@ -84,6 +84,16 @@ export default function AuthenticatorUpload() {
   function mapTipoTradToDatabase(tipoTrad: 'Certified' | 'Notarized'): string {
     return tipoTrad === 'Certified' ? 'Certificado' : 'Notorizado';
   }
+
+  // Função para gerar nome único do arquivo
+  function generateUniqueFilename(originalFilename: string): string {
+    const timestamp = Date.now();
+    const randomCode = Math.random().toString(36).substr(2, 8).toUpperCase();
+    const fileExtension = originalFilename.split('.').pop();
+    const baseName = originalFilename.replace(/\.[^/.]+$/, ""); // Remove extensão
+    
+    return `${baseName}_${timestamp}_${randomCode}.${fileExtension}`;
+  }
   const valor = calcularValor(pages, tipoTrad);
 
   // PDF page count
@@ -227,80 +237,86 @@ export default function AuthenticatorUpload() {
 
       // Verificar se o documento já existe na tabela documents
       console.log('DEBUG: Verificando se documento já existe na tabela documents...');
-      const { data: existingDocs, error: checkError } = await supabase
+      // Gerar nome único para o arquivo (disponível para todo o escopo)
+      const uniqueFilename = generateUniqueFilename(selectedFile?.name || 'document');
+      console.log('DEBUG: Nome original:', selectedFile?.name);
+      console.log('DEBUG: Nome único gerado:', uniqueFilename);
+
+      // Como agora usamos nomes únicos, não precisamos verificar duplicatas
+      // Sempre criaremos um novo documento
+      
+      // Criar documento na tabela documents primeiro (para que a edge function possa puxar client_name)
+      console.log('DEBUG: Criando documento na tabela documents...');
+      const { data: { publicUrl } } = supabase.storage
         .from('documents')
-        .select('id, filename, user_id, created_at')
-        .eq('user_id', user?.id)
-        .eq('filename', selectedFile?.name)
-        .order('created_at', { ascending: false });
+        .getPublicUrl(payload.filePath);
 
-      let newDocument;
-      if (existingDocs && existingDocs.length > 0 && !checkError) {
-        console.log('DEBUG: Documento já existe na tabela documents:', existingDocs.length, 'entradas encontradas');
-        existingDocs.forEach((doc, index) => {
-          console.log(`DEBUG: Documento ${index + 1}:`, doc.id, doc.created_at);
-        });
-        newDocument = existingDocs[0]; // Usar o mais recente
-        console.log('DEBUG: Usando documento existente:', newDocument.id);
-      } else {
-        // Criar documento na tabela documents primeiro (para que a edge function possa puxar client_name)
-        console.log('DEBUG: Criando documento na tabela documents...');
-        const { data: { publicUrl } } = supabase.storage
-          .from('documents')
-          .getPublicUrl(payload.filePath);
+      console.log('DEBUG: Dados para inserção na tabela documents:');
+      console.log('DEBUG: user:', user);
+      console.log('DEBUG: user_id:', user?.id);
+      console.log('DEBUG: filename:', selectedFile?.name);
+      console.log('DEBUG: pages:', pages);
+      console.log('DEBUG: valor:', valor);
+      console.log('DEBUG: tipo_trad:', mapTipoTradToDatabase(tipoTrad));
+      console.log('DEBUG: idioma_raiz:', idiomaRaiz);
+      console.log('DEBUG: idioma_destino:', idiomaDestino);
+      console.log('DEBUG: isExtrato:', isExtrato);
+      console.log('DEBUG: clientName:', clientName);
 
-        console.log('DEBUG: Dados para inserção na tabela documents:');
-        console.log('DEBUG: user_id:', user?.id);
-        console.log('DEBUG: filename:', selectedFile?.name);
-        console.log('DEBUG: pages:', pages);
-        console.log('DEBUG: valor:', valor);
-        console.log('DEBUG: tipo_trad:', mapTipoTradToDatabase(tipoTrad));
-        console.log('DEBUG: idioma_raiz:', idiomaRaiz);
-        console.log('DEBUG: idioma_destino:', idiomaDestino);
-        console.log('DEBUG: isExtrato:', isExtrato);
+      const documentData: any = {
+        user_id: user?.id,
+        filename: uniqueFilename, // Nome único para evitar conflitos
+        original_filename: selectedFile?.name || 'unknown', // Nome original para exibição
+        pages: pages,
+        status: 'pending',
+        total_cost: valor,
+        tipo_trad: mapTipoTradToDatabase(tipoTrad),
+        valor: valor,
+        idioma_raiz: idiomaRaiz,
+        idioma_destino: idiomaDestino,
+        is_bank_statement: isExtrato,
+        file_url: publicUrl,
+        verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
+        client_name: clientName.trim()
+      };
 
-        const documentData: any = {
-          user_id: user?.id,
-          filename: selectedFile?.name,
-          pages: pages,
-          status: 'pending',
-          total_cost: valor,
-          tipo_trad: mapTipoTradToDatabase(tipoTrad),
-          valor: valor,
-          idioma_raiz: idiomaRaiz,
-          idioma_destino: idiomaDestino,
-          is_bank_statement: isExtrato,
-          file_url: publicUrl,
-          verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
-          client_name: clientName.trim()
-        };
-
-        // Adicionar campos condicionais apenas se necessário
-        if (isExtrato) {
-          documentData.source_currency = sourceCurrency;
-          documentData.target_currency = targetCurrency;
-        }
-
-        console.log('DEBUG: Document data to insert:', documentData);
-
-        const { data: createdDoc, error: createError } = await supabase
-          .from('documents')
-          .insert(documentData)
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('ERROR: Erro ao criar documento na tabela documents:', createError);
-          throw new Error('Error saving document to database');
-        }
-
-        console.log('DEBUG: Documento criado na tabela documents:', createdDoc);
-        newDocument = createdDoc;
+      // Adicionar campos condicionais apenas se necessário
+      if (isExtrato) {
+        documentData.source_currency = sourceCurrency;
+        documentData.target_currency = targetCurrency;
       }
+
+      console.log('DEBUG: Document data to insert:', documentData);
+      console.log('DEBUG: Verificação dos campos no documentData:');
+      console.log('DEBUG: - documentData.filename:', documentData.filename);
+      console.log('DEBUG: - documentData.original_filename:', documentData.original_filename);
+
+      const { data: createdDoc, error: createError } = await supabase
+        .from('documents')
+        .insert(documentData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('ERROR: Erro ao criar documento na tabela documents:', createError);
+        console.error('ERROR: Detalhes do erro:', {
+          code: createError.code,
+          message: createError.message,
+          details: createError.details,
+          hint: createError.hint
+        });
+        throw new Error(`Error saving document to database: ${createError.message}`);
+      }
+
+      console.log('DEBUG: Documento criado na tabela documents:', createdDoc);
+      console.log('DEBUG: createdDoc?.id:', createdDoc?.id);
+      console.log('DEBUG: selectedFile?.name:', selectedFile?.name);
 
       // Preparar dados para o webhook
       const webhookData = {
-        filename: selectedFile?.name,
+        filename: uniqueFilename, // Nome único para processamento interno
+        original_filename: selectedFile?.name || 'unknown', // Nome original para exibição
+        original_document_id: createdDoc?.id, // ID do documento criado na tabela documents
         url: payload.filePath, // Sempre o caminho completo
         user_id: user?.id,
         paginas: pages,
@@ -320,6 +336,14 @@ export default function AuthenticatorUpload() {
       };
 
       console.log('DEBUG: Dados enviados para webhook:', webhookData);
+      console.log('DEBUG: Verificação dos campos específicos:');
+      console.log('DEBUG: - webhookData.original_filename:', webhookData.original_filename);
+      console.log('DEBUG: - webhookData.original_document_id:', webhookData.original_document_id);
+      console.log('DEBUG: - webhookData.filename:', webhookData.filename);
+      console.log('DEBUG: Nome original vs único no webhook:');
+      console.log('DEBUG: - Nome original:', selectedFile?.name);
+      console.log('DEBUG: - Nome único (webhook):', uniqueFilename);
+      console.log('DEBUG: - ID do documento original:', createdDoc?.id);
 
       // Enviar direto para o webhook de tradução (SEM Stripe)
       console.log('DEBUG: === ENVIANDO PARA WEBHOOK ===');
@@ -328,6 +352,8 @@ export default function AuthenticatorUpload() {
       const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-translation-webhook`;
       console.log('DEBUG: Webhook URL:', webhookUrl);
       console.log('DEBUG: Webhook data:', JSON.stringify(webhookData, null, 2));
+      
+      console.log('DEBUG: JSON sendo enviado para webhook:', JSON.stringify(webhookData, null, 2));
       
       const response = await fetch(webhookUrl, {
         method: 'POST',

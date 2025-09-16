@@ -262,6 +262,16 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+  // Função para gerar nome único do arquivo (igual ao autenticador)
+  function generateUniqueFilename(originalFilename: string): string {
+    const timestamp = Date.now();
+    const randomCode = Math.random().toString(36).substr(2, 8).toUpperCase();
+    const fileExtension = originalFilename.split('.').pop();
+    const baseName = originalFilename.replace(/\.[^/.]+$/, ""); // Remove extensão
+    
+    return `${baseName}_${timestamp}_${randomCode}.${fileExtension}`;
+  }
+
   const handleUpload = async () => {
     if (!selectedFile) return;
     setError(null);
@@ -269,13 +279,19 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
     setIsUploading(true);
     
     try {
+      // Gerar nome único para o arquivo (igual ao autenticador)
+      const uniqueFilename = generateUniqueFilename(selectedFile.name);
+      console.log('DEBUG: Nome original:', selectedFile.name);
+      console.log('DEBUG: Nome único gerado:', uniqueFilename);
+
       // Criar documento no banco primeiro
       console.log('DEBUG: Criando documento no banco antes do pagamento');
       const { data: newDocument, error: createError } = await supabase
         .from('documents')
         .insert({
           user_id: userId,
-          filename: selectedFile.name,
+          filename: uniqueFilename, // Nome único para evitar conflitos
+          original_filename: selectedFile.name, // Nome original para exibição
           pages: pages,
           status: 'pending',
           total_cost: calculateValue(pages, isExtrato, tipoTrad),
@@ -301,6 +317,9 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
       }
 
       console.log('DEBUG: Documento criado no banco:', newDocument.id);
+      console.log('DEBUG: - filename (único):', uniqueFilename);
+      console.log('DEBUG: - original_filename:', selectedFile.name);
+      console.log('DEBUG: - document_id:', newDocument.id);
       
       // Armazenar o ID do documento para usar nos modais de pagamento
       setCurrentDocumentId(newDocument.id);

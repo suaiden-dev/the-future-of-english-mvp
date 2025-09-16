@@ -399,7 +399,9 @@ export function PaymentSuccess() {
       console.log('DEBUG: URL final para n8n:', finalUrl);
       
       const webhookPayload = {
-        filename: filename,
+        filename: filename, // Nome único gerado pelo generateUniqueFileName
+        original_filename: sessionData.metadata.originalFilename || filename, // Nome original do arquivo
+        original_document_id: finalDocumentId, // ID do documento original
         url: finalUrl,
         mimetype: 'application/pdf',
         size: storedFile?.file?.size || 0,

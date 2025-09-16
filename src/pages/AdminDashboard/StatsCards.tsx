@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react';
 import { FileText, CheckCircle, Clock, DollarSign, Users, AlertCircle } from 'lucide-react';
 import { Document } from '../../App';
 import { supabase } from '../../lib/supabase';
-import { DateRange } from '../../components/DateRangeFilter';
 
 interface StatsCardsProps {
   documents: Document[];
-  dateRange?: DateRange;
 }
 
-export function StatsCards({ documents, dateRange }: StatsCardsProps) {
+export function StatsCards({ documents }: StatsCardsProps) {
   const [extendedStats, setExtendedStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   
@@ -32,8 +30,8 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
     try {
       // Buscar estatísticas de todas as tabelas relevantes
       const [documentsResult, verifiedResult, translatedResult, profilesResult] = await Promise.all([
-        supabase.from('documents').select('id, status, total_cost, user_id, filename, profiles!inner(role)'),
-        supabase.from('documents_to_be_verified').select('id, status, user_id, filename'),
+        supabase.from('documents').select('id, status, total_cost, user_id, filename, created_at, profiles!inner(role)'),
+        supabase.from('documents_to_be_verified').select('id, status, user_id, filename, created_at'),
         supabase.from('translated_documents').select('status, user_id'),
         supabase.from('profiles').select('id, role, created_at')
       ]);
@@ -47,34 +45,51 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
         console.log('Total documents in documents table:', mainDocuments.length);
         console.log('Total documents in verified table:', verifiedDocuments.length);
         console.log('Total users in profiles table:', allProfiles.length);
-        console.log('Verified documents:', verifiedDocuments);
 
-        // Para cada documento principal, verificar primeiro se existe em documents_to_be_verified
-        // Relacionamento por filename ao invés de document_id
+        // Lógica corrigida: Usar documents como base (documentos únicos) e verificar status em documents_to_be_verified
+        // Criar um mapa dos documentos verificados para verificação rápida
+        const verifiedDocsMap = new Map();
+        verifiedDocuments.forEach((doc: any) => {
+          const key = `${doc.filename}_${doc.user_id}`;
+          const existing = verifiedDocsMap.get(key);
+          
+          // Se já existe, manter o mais recente
+          if (!existing || new Date(doc.created_at) > new Date(existing.created_at)) {
+            verifiedDocsMap.set(key, doc);
+          }
+        });
+
+        // Para cada documento em documents, verificar se tem status atualizado em documents_to_be_verified
         const documentsWithCorrectStatus = mainDocuments.map((doc: any) => {
-          const verifiedDoc = verifiedDocuments.find((vDoc: any) => vDoc.filename === doc.filename && vDoc.user_id === doc.user_id);
-          const actualStatus = verifiedDoc ? verifiedDoc.status : doc.status;
+          const key = `${doc.filename}_${doc.user_id}`;
+          const verifiedDoc = verifiedDocsMap.get(key);
           
-          console.log(`Document ${doc.filename}: original status = ${doc.status}, verified status = ${verifiedDoc?.status || 'not found'}, final status = ${actualStatus}`);
-          
+          // Se existe em documents_to_be_verified, usar esse status (mais atual)
+          // Senão, usar o status original de documents
           return {
             ...doc,
-            actualStatus: actualStatus
+            finalStatus: verifiedDoc ? verifiedDoc.status : doc.status
           };
         });
 
-        // Calcular estatísticas estendidas usando o status correto
-        // Active Users agora é o número real de usuários do sistema
+        // Contar status corretos
+        const statusCounts = documentsWithCorrectStatus.reduce((acc: any, doc: any) => {
+          acc[doc.finalStatus] = (acc[doc.finalStatus] || 0) + 1;
+          return acc;
+        }, {});
+
         const stats = {
-          total_documents: mainDocuments.length,
-          completed: documentsWithCorrectStatus.filter((d: any) => d.actualStatus === 'completed').length,
-          pending: documentsWithCorrectStatus.filter((d: any) => d.actualStatus === 'pending').length,
-          processing: documentsWithCorrectStatus.filter((d: any) => d.actualStatus === 'processing').length,
+          total_documents: mainDocuments.length, // Total de documentos únicos da tabela documents
+          completed: (statusCounts.completed || 0) + (statusCounts.rejected || 0), // Incluir rejeitados como completados
+          pending: statusCounts.pending || 0,
+          processing: statusCounts.processing || 0,
+          rejected: statusCounts.rejected || 0, // Manter para referência
           translated: translatedResult.data.length,
           active_users: allProfiles.length
         };
 
-        console.log('Final stats:', stats);
+        console.log('Final stats (using latest status per unique document):', stats);
+        console.log('Status breakdown:', statusCounts);
         setExtendedStats(stats);
       }
     } catch (error) {
@@ -203,29 +218,6 @@ export function StatsCards({ documents, dateRange }: StatsCardsProps) {
           })}
         </div>
 
-        {/* Summary Information */}
-        {extendedStats && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-gray-900">{extendedStats.total_documents}</p>
-                <p className="text-xs text-gray-500 truncate">Total Documents</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-green-600">{extendedStats.translated}</p>
-                <p className="text-xs text-gray-500 truncate">Translated</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-blue-600">{((extendedStats.completed / extendedStats.total_documents) * 100).toFixed(1)}%</p>
-                <p className="text-xs text-gray-500 truncate">Success Rate</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-purple-600">{extendedStats.active_users}</p>
-                <p className="text-xs text-gray-500 truncate">Active Users</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

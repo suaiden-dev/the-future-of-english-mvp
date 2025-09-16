@@ -8,6 +8,7 @@ import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
 interface Document {
   id: string;
   filename: string;
+  original_filename?: string | null; // Nome original para exibição
   user_id: string;
   pages?: number | null;
   status?: string;
@@ -46,6 +47,11 @@ export default function AuthenticatorDashboard() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Função helper para obter o nome de exibição do arquivo
+  const getDisplayFilename = (doc: Document): string => {
+    return doc.original_filename || doc.filename;
+  };
   const [uploadStates, setUploadStates] = useState<{ [docId: string]: { file: File | null, uploading: boolean, success: boolean, error: string | null } }>({});
   const [rejectedRows, setRejectedRows] = useState<{ [docId: string]: boolean }>({});
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -88,8 +94,8 @@ export default function AuthenticatorDashboard() {
       try {
         console.log('[AuthenticatorDashboard] Buscando documentos...');
         
-        // Buscar documentos da tabela principal
-        const { data: mainDocs, error: mainError } = await supabase
+        // 🔧 LÓGICA INVERSA: Primeiro buscar da tabela documents (fonte principal)
+        const { data: allMainDocs, error: mainError } = await supabase
           .from('documents')
           .select(`
             *,
@@ -110,10 +116,10 @@ export default function AuthenticatorDashboard() {
           return;
         }
 
-        console.log('[AuthenticatorDashboard] Main docs encontrados:', mainDocs?.length || 0);
+        console.log('[AuthenticatorDashboard] Todos os documentos da tabela documents:', allMainDocs?.length || 0);
 
-        // Buscar documentos de verificação
-        const { data: verifiedDocs, error: verifiedError } = await supabase
+        // Buscar documentos da tabela documents_to_be_verified para verificar status
+        const { data: allVerifiedDocs, error: verifiedError } = await supabase
           .from('documents_to_be_verified')
           .select('*')
           .order('created_at', { ascending: false });
@@ -124,25 +130,38 @@ export default function AuthenticatorDashboard() {
           return;
         }
 
-        // Mapear documentos principais com informações de verificação
-        const mainDocuments = (mainDocs as any[] || []).map(doc => {
-          const verifiedDoc = verifiedDocs?.find(v => v.filename === doc.filename && v.user_id === doc.user_id);
+        console.log('[AuthenticatorDashboard] Todos os documentos da tabela documents_to_be_verified:', allVerifiedDocs?.length || 0);
+
+        // Mapear documentos principais e verificar se existem na tabela de verificação
+        const mainDocuments = (allMainDocs as any[] || []).map(doc => {
+          // Buscar documento correspondente na tabela de verificação usando user_id + filename + client_name
+          const matchingVerifiedDocs = allVerifiedDocs?.filter(v => 
+            v.user_id === doc.user_id && 
+            v.filename === doc.filename &&
+            (v.client_name === doc.client_name || (v.client_name === null && doc.client_name === null))
+          );
           
-          console.log(`[AuthenticatorDashboard] Processando documento: ${doc.filename}`);
-          console.log(`[AuthenticatorDashboard] - Documento principal:`, doc);
-          console.log(`[AuthenticatorDashboard] - Documento verificado encontrado:`, verifiedDoc);
+          // Se há duplicatas, pegar o mais recente
+          const verifiedDoc = matchingVerifiedDocs?.length > 0 
+            ? matchingVerifiedDocs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+            : null;
           
-          // Determinar o status do documento para autenticação:
-          // - Se existe na tabela de verificação, usar o status de lá
-          // - Se não existe, consideramos como 'pending' para autenticação se não está 'completed'
+          console.log(`[AuthenticatorDashboard] Processando documento: ${doc.filename} - Client: ${doc.client_name}`);
+          console.log(`[AuthenticatorDashboard] - Documentos verificados encontrados:`, matchingVerifiedDocs?.length || 0);
+          
+          if (matchingVerifiedDocs && matchingVerifiedDocs.length > 1) {
+            console.warn(`🚨 DUPLICATAS DETECTADAS para ${doc.filename}: ${matchingVerifiedDocs.length} documentos`);
+          }
+          
+          // Determinar status: se existe na verificação, usar o status de lá; senão, não incluir (já foi processado)
           let authStatus;
           if (verifiedDoc) {
             authStatus = verifiedDoc.status;
             console.log(`[AuthenticatorDashboard] - Usando status da tabela verificada: ${authStatus}`);
           } else {
-            // Se o documento da tabela principal não está 'completed', ele pode estar pendente para autenticação
-            authStatus = doc.status === 'completed' ? 'completed' : 'pending';
-            console.log(`[AuthenticatorDashboard] - Usando status calculado: ${authStatus} (original era: ${doc.status})`);
+            // Se não existe na verificação, significa que já foi processado e não deve aparecer no dashboard
+            authStatus = 'processed';
+            console.log(`[AuthenticatorDashboard] - Documento já processado, não incluindo no dashboard`);
           }
           
           const finalDoc = {
@@ -153,54 +172,112 @@ export default function AuthenticatorDashboard() {
             status: authStatus,
             // Manter ID da tabela de verificação se existir para operações
             verification_id: verifiedDoc ? verifiedDoc.id : null,
-            // Dados da verificação se existir
-            translated_file_url: verifiedDoc ? verifiedDoc.translated_file_url : doc.translated_file_url,
+            // Dados da verificação se existir (priorizar tradução da tabela de verificação)
+            // Se status for 'processing', não mostrar tradução ainda (forçar View Original)
+            translated_file_url: (authStatus === 'processing') ? null : (verifiedDoc?.translated_file_url || doc.translated_file_url),
             authenticated_by: verifiedDoc?.authenticated_by,
             authenticated_by_name: verifiedDoc?.authenticated_by_name,
             authenticated_by_email: verifiedDoc?.authenticated_by_email,
             authentication_date: verifiedDoc?.authentication_date,
-            // ✅ CORREÇÃO: Pegar idiomas da tabela correta
+            // Usar idiomas da tabela de verificação se existir, senão usar da tabela principal
             source_language: verifiedDoc?.source_language || doc.idioma_raiz,
-            target_language: verifiedDoc?.target_language || doc.idioma_destino
-          };
+            target_language: verifiedDoc?.target_language || doc.idioma_destino,
+            // Client name sempre da tabela principal (fonte de verdade)
+            client_name: doc.client_name
+          } as Document;
           
-          console.log(`[AuthenticatorDashboard] - Documento final:`, finalDoc);
+          console.log(`[AuthenticatorDashboard] - Documento final: ${doc.filename} - Status: ${authStatus} - Client: ${doc.client_name}`);
           return finalDoc;
-        }) as Document[];
-        
-        // Log para debug detalhado
-        console.log('[AuthenticatorDashboard] Documentos principais:', mainDocuments.length);
-        console.log('[AuthenticatorDashboard] Documentos de verificação:', verifiedDocs?.length || 0);
-        console.log('[AuthenticatorDashboard] Sample main document:', mainDocuments[0]);
-        console.log('[AuthenticatorDashboard] Sample verified document:', verifiedDocs?.[0]);
-        
-        // Log detalhado dos status
-        mainDocuments.forEach((doc, index) => {
-          console.log(`[AuthenticatorDashboard] Doc ${index + 1}: ${doc.filename} - Original Status: ${(mainDocs as any[])?.[index]?.status} - Auth Status: ${doc.status}`);
         });
-        
-        // Calcular estatísticas
-        const pendingCount = mainDocuments.filter(doc => doc.status === 'pending').length;
-        const approvedCount = mainDocuments.filter(doc => doc.status === 'completed').length;
-        
-        console.log('[AuthenticatorDashboard] Status breakdown:', {
-          pending: mainDocuments.filter(doc => doc.status === 'pending').map(d => d.filename),
-          completed: mainDocuments.filter(doc => doc.status === 'completed').map(d => d.filename),
-          other: mainDocuments.filter(doc => doc.status !== 'pending' && doc.status !== 'completed').map(d => ({ filename: d.filename, status: d.status }))
+
+        // Buscar documentos que existem APENAS na tabela documents_to_be_verified
+        const verifiedOnlyDocs = (allVerifiedDocs as any[] || []).filter(verifiedDoc => {
+          // Verificar se este documento NÃO existe na tabela documents
+          const existsInMain = allMainDocs?.some(mainDoc => 
+            mainDoc.user_id === verifiedDoc.user_id && 
+            mainDoc.filename === verifiedDoc.filename &&
+            (mainDoc.client_name === verifiedDoc.client_name || (mainDoc.client_name === null && verifiedDoc.client_name === null))
+          );
+          
+          return !existsInMain;
         });
+
+        // Buscar perfis dos usuários para documentos que só existem na verificação
+        const userIds = [...new Set(verifiedOnlyDocs.map(doc => doc.user_id))];
+        let userProfiles = {};
+        
+        if (userIds.length > 0) {
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, name, email')
+            .in('id', userIds);
+          
+          if (profilesError) {
+            console.error('[AuthenticatorDashboard] Error fetching user profiles:', profilesError);
+          } else {
+            userProfiles = profiles?.reduce((acc, profile) => {
+              acc[profile.id] = profile;
+              return acc;
+            }, {}) || {};
+          }
+        }
+
+        const verifiedOnlyDocsMapped = verifiedOnlyDocs.map(verifiedDoc => {
+          // Buscar dados do usuário para documentos que só existem na verificação
+          const userProfile = userProfiles[verifiedDoc.user_id];
+          
+          const finalDoc = {
+            id: verifiedDoc.id, // Usar ID da tabela de verificação
+            filename: verifiedDoc.filename,
+            original_filename: verifiedDoc.original_filename, // Nome original para exibição
+            user_id: verifiedDoc.user_id,
+            pages: verifiedDoc.pages,
+            status: verifiedDoc.status,
+            // Se status for 'processing', não mostrar tradução ainda (forçar View Original)
+            translated_file_url: (verifiedDoc.status === 'processing') ? null : verifiedDoc.translated_file_url,
+            file_url: verifiedDoc.file_url,
+            created_at: verifiedDoc.created_at,
+            translation_status: verifiedDoc.translation_status,
+            total_cost: verifiedDoc.total_cost,
+            source_language: verifiedDoc.source_language,
+            target_language: verifiedDoc.target_language,
+            is_bank_statement: verifiedDoc.is_bank_statement,
+            verification_code: verifiedDoc.verification_code,
+            verification_id: verifiedDoc.id,
+            authenticated_by: verifiedDoc.authenticated_by,
+            authenticated_by_name: verifiedDoc.authenticated_by_name,
+            authenticated_by_email: verifiedDoc.authenticated_by_email,
+            authentication_date: verifiedDoc.authentication_date,
+            user_name: userProfile?.name || null,
+            user_email: userProfile?.email || null,
+            client_name: verifiedDoc.client_name
+          } as Document;
+          
+          console.log(`[AuthenticatorDashboard] - Documento apenas na verificação: ${verifiedDoc.filename} - Status: ${verifiedDoc.status} - Client: ${verifiedDoc.client_name}`);
+          return finalDoc;
+        });
+
+        // Combinar todos os documentos (da tabela principal + apenas da verificação)
+        const allDocuments = [...mainDocuments, ...verifiedOnlyDocsMapped];
+        
+        // Filtrar documentos pendentes e em processamento para a lista (excluir documentos já processados)
+        const pendingDocs = allDocuments.filter(doc => doc.status === 'pending' || doc.status === 'processing');
+        
+        // Calcular estatísticas usando apenas documentos relevantes (excluir processados)
+        const relevantDocs = allDocuments.filter(doc => doc.status !== 'processed');
+        const pendingCount = relevantDocs.filter(doc => doc.status === 'pending' || doc.status === 'processing').length;
+        const approvedCount = relevantDocs.filter(doc => doc.status === 'completed').length;
+        
+        console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount });
+        console.log('[AuthenticatorDashboard] Documentos pendentes e em processamento para exibir:', pendingDocs.length);
         
         setStats({
           pending: pendingCount,
           approved: approvedCount
         });
-
-        // Filtrar apenas documentos pendentes para a lista
-        const pendingDocs = mainDocuments.filter(doc => doc.status === 'pending');
-        setDocuments(pendingDocs);
         
-        console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount });
-        console.log('[AuthenticatorDashboard] Documentos pendentes para exibir:', pendingDocs.length);
-        console.log('[AuthenticatorDashboard] Documentos pendentes:', pendingDocs.map(d => ({ filename: d.filename, status: d.status, id: d.id })));
+        setDocuments(pendingDocs);
+        console.log('[AuthenticatorDashboard] Documentos carregados para exibição:', pendingDocs.length);
         
       } catch (err) {
         console.error('[AuthenticatorDashboard] Unexpected error:', err);
@@ -243,7 +320,7 @@ export default function AuthenticatorDashboard() {
     console.log('[AuthenticatorDashboard] Abrindo modal de correção para:', doc.filename);
     
     setModalDocumentId(doc.id);
-    setModalDocumentName(doc.filename);
+    setModalDocumentName(getDisplayFilename(doc));
     setShowCorrectionModal(true);
   }
 
@@ -648,7 +725,7 @@ export default function AuthenticatorDashboard() {
                   {/* Document Name */}
                   <div>
                     <a href={doc.file_url || ''} target="_blank" rel="noopener noreferrer" className="text-tfe-blue-700 underline font-medium hover:text-tfe-blue-950 transition-colors text-sm">
-                      {doc.filename}
+                      {getDisplayFilename(doc)}
                     </a>
                     
                     {/* View and Download Buttons */}
@@ -695,7 +772,7 @@ export default function AuthenticatorDashboard() {
                             const url = window.URL.createObjectURL(blob);
                             const link = document.createElement('a');
                             link.href = url;
-                            link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
+                            link.download = (getDisplayFilename(doc) ? String(getDisplayFilename(doc)) : 'document.pdf');
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
@@ -878,7 +955,7 @@ export default function AuthenticatorDashboard() {
                         <div className="space-y-2">
                           <div>
                             <a href={doc.file_url || ''} target="_blank" rel="noopener noreferrer" className="text-tfe-blue-700 underline font-medium hover:text-tfe-blue-950 transition-colors text-sm">
-                              {doc.filename}
+                              {getDisplayFilename(doc)}
                             </a>
                           </div>
                           <div className="flex gap-2">
@@ -926,7 +1003,7 @@ export default function AuthenticatorDashboard() {
                                   const url = window.URL.createObjectURL(blob);
                                   const link = document.createElement('a');
                                   link.href = url;
-                                  link.download = (doc.filename ? String(doc.filename) : 'document.pdf');
+                                  link.download = (getDisplayFilename(doc) ? String(getDisplayFilename(doc)) : 'document.pdf');
                                   document.body.appendChild(link);
                                   link.click();
                                   document.body.removeChild(link);
