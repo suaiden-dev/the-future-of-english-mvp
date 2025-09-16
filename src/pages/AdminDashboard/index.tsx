@@ -107,7 +107,7 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
         <div className="w-full">
           {activeTab === 'overview' && (
             <div className="space-y-4 sm:space-y-6 w-full">
-              <StatsCards documents={documents} dateRange={dateRange} />
+              <StatsCards documents={documents} />
               <DocumentsTable 
                 documents={documents}
                 onViewDocument={handleViewDocument}

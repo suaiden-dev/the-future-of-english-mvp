@@ -65,6 +65,8 @@ Deno.serve(async (req: Request) => {
     // Recebe o evento do Supabase Storage ou do frontend
     const { 
       filename, 
+      original_filename,
+      original_document_id,
       url, 
       mimetype, 
       size, 
@@ -92,6 +94,11 @@ Deno.serve(async (req: Request) => {
     console.log("target_language:", target_language);
     console.log("idioma_raiz:", idioma_raiz);
     console.log("idioma_destino:", idioma_destino);
+    
+    // Debug logs para campos originais
+    console.log("=== ORIGINAL FIELDS DEBUG ===");
+    console.log("original_filename:", original_filename);
+    console.log("original_document_id:", original_document_id);
     console.log("source_currency:", source_currency);
     console.log("target_currency:", target_currency);
     console.log("is_bank_statement:", is_bank_statement);
@@ -178,6 +185,8 @@ Deno.serve(async (req: Request) => {
       
       payload = { 
         filename: filename, 
+        original_filename: original_filename || null, // Nome original para exibição
+        original_document_id: original_document_id || null, // ID do documento original
         url: finalUrl, 
         mimetype, 
         size, 
