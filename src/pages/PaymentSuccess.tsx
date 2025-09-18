@@ -58,7 +58,30 @@ export function PaymentSuccess() {
       const sessionData = await response.json();
       console.log('DEBUG: Dados da sessão:', sessionData);
 
-      const { fileId, userId, filename, documentId, isMobile: sessionIsMobile } = sessionData.metadata;
+      const { fileId, userId, filename: sessionFilename, originalFilename, documentId, isMobile: sessionIsMobile } = sessionData.metadata;
+
+      // Buscar o filename correto da tabela documents
+      let correctFilename = sessionFilename;
+      if (documentId) {
+        try {
+          const { data: documentData, error: docError } = await supabase
+            .from('documents')
+            .select('filename')
+            .eq('id', documentId)
+            .single();
+          
+          if (!docError && documentData) {
+            correctFilename = documentData.filename;
+            console.log('🔍 DEBUG: Filename da sessão:', sessionFilename);
+            console.log('🔍 DEBUG: Filename correto do banco:', correctFilename);
+            console.log('🔍 DEBUG: Filenames são diferentes?', sessionFilename !== correctFilename);
+          } else {
+            console.warn('⚠️ Não foi possível buscar filename do banco, usando da sessão');
+          }
+        } catch (error) {
+          console.error('❌ Erro ao buscar filename do banco:', error);
+        }
+      }
 
       let storedFile = null;
       let filePath = null;
@@ -69,7 +92,8 @@ export function PaymentSuccess() {
             setIsUploading(true);
             setUploadProgress(0);
 
-        const uploadPath = generateUniqueFileName(file.name, userId);
+        // Usar o filename correto da tabela documents
+        const uploadPath = correctFilename;
 
         console.log('DEBUG: Fazendo upload para:', uploadPath);
         console.log('DEBUG: Nome do arquivo:', file.name);
@@ -154,7 +178,7 @@ export function PaymentSuccess() {
           // Criar objeto simulado para compatibilidade
           storedFile = {
             file: { 
-              name: filename, 
+              name: correctFilename, 
               type: 'application/pdf', 
               size: fileSize 
             },
@@ -288,7 +312,7 @@ export function PaymentSuccess() {
               setError('Document not found in database. Please contact support.');
               return;
             }
-            documentData = { file: { name: filename, type: 'application/pdf', size: 0 }, metadata: { pageCount: 0, documentType: 'Unknown' } }; // Placeholder for now
+            documentData = { file: { name: correctFilename, type: 'application/pdf', size: 0 }, metadata: { pageCount: 0, documentType: 'Unknown' } }; // Placeholder for now
             console.log('DEBUG: Documento encontrado no banco (mas sem arquivo):', existingDoc);
           }
         } catch (indexedDBError) {
@@ -343,7 +367,7 @@ export function PaymentSuccess() {
           documentId: finalDocumentId,
           fileUrl: publicUrl,
           userId: userId,
-          filename: filename,
+          filename: correctFilename,
           pages: parseInt(sessionData.metadata.pages),
           totalCost: parseFloat(sessionData.metadata.totalPrice),
           documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified',
@@ -399,8 +423,8 @@ export function PaymentSuccess() {
       console.log('DEBUG: URL final para n8n:', finalUrl);
       
       const webhookPayload = {
-        filename: filename, // Nome único gerado pelo generateUniqueFileName
-        original_filename: sessionData.metadata.originalFilename || filename, // Nome original do arquivo
+        filename: correctFilename, // Nome único correto da tabela documents
+        original_filename: originalFilename || correctFilename, // Nome original do arquivo
         original_document_id: finalDocumentId, // ID do documento original
         url: finalUrl,
         mimetype: 'application/pdf',

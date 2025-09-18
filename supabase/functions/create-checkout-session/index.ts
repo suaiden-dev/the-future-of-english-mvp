@@ -22,6 +22,7 @@ interface RequestBody {
   userId: string;
   userEmail: string;
   filename: string;
+  originalFilename?: string; // Nome original do arquivo
   fileSize?: number;
   fileType?: string;
   originalLanguage?: string;
@@ -73,6 +74,7 @@ Deno.serve(async (req: Request) => {
       userId,
       userEmail,
       filename,
+      originalFilename,
       fileSize,
       fileType,
       originalLanguage,
@@ -84,9 +86,10 @@ Deno.serve(async (req: Request) => {
       targetCurrency
     } = await req.json() as RequestBody;
 
-    console.log('DEBUG: Dados recebidos:', {
+    console.log('🔍 DEBUG: Dados recebidos:', {
       pages, isCertified, isNotarized, isBankStatement, fileId, filePath, isMobile, userId, userEmail, filename, fileSize, fileType, originalLanguage, targetLanguage, documentType, clientName, sourceCurrency, targetCurrency
     });
+    console.log('🔍 DEBUG: Filename recebido:', filename);
 
     console.log('DEBUG: VERIFICAÇÃO CRÍTICA - CAMPOS IMPORTANTES:');
     console.log('DEBUG: documentType type:', typeof documentType, 'value:', documentType);
@@ -163,7 +166,8 @@ Deno.serve(async (req: Request) => {
         fileId: fileIdentifier,
         userId,
         userEmail,
-        filename: filename || '',
+        filename: filename || '', // Nome único gerado
+        originalFilename: originalFilename || filename || '', // Nome original do arquivo
         pages: pages.toString(),
         isCertified: (isCertified || false).toString(),
         isNotarized: (isNotarized || false).toString(),

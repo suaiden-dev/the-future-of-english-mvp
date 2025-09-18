@@ -217,64 +217,97 @@ export function useTranslatedDocuments(userId?: string) {
     try {
       setLoading(true);
       
-      // Buscar documentos pending/processing da tabela documents
-      const { data: pendingDocs, error: pendingError } = await supabase
+      // 1. Buscar documentos já processados pelo autenticador na tabela translated_documents (PRIORIDADE MÁXIMA)
+      const { data: translatedDocs, error: translatedError } = await supabase
+        .from('translated_documents')
+        .select('*')
+        .eq('user_id', userId)
+        .in('status', ['completed', 'finished', 'rejected'])
+        .order('created_at', { ascending: false });
+      
+      if (translatedError) throw translatedError;
+      
+      // 2. Buscar documentos na tabela documents_to_be_verified (PRIORIDADE MÉDIA)
+      // Incluir TODOS os status para pegar o status real da tabela
+      const { data: verifiedDocs, error: verifiedError } = await supabase
+        .from('documents_to_be_verified')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (verifiedError) throw verifiedError;
+      
+      // 3. Buscar documentos na tabela documents (PRIORIDADE MÍNIMA)
+      const { data: originalDocs, error: originalError } = await supabase
         .from('documents')
         .select('*')
         .eq('user_id', userId)
         .in('status', ['pending', 'processing'])
         .order('created_at', { ascending: false });
       
-      if (pendingError) throw pendingError;
+      if (originalError) throw originalError;
       
-      // Buscar documentos já processados da tabela translated_documents
-      const { data: translatedDocs, error: translatedError } = await supabase
-        .from('translated_documents')
-        .select('*')
-        .eq('user_id', userId)
-        .in('status', ['completed', 'finished'])
-        .order('created_at', { ascending: false });
+      console.log('[useTranslatedDocuments] DEBUG - Documentos translated_documents encontrados:', translatedDocs?.length || 0);
+      console.log('[useTranslatedDocuments] DEBUG - Documentos documents_to_be_verified encontrados:', verifiedDocs?.length || 0);
+      console.log('[useTranslatedDocuments] DEBUG - Documentos documents encontrados:', originalDocs?.length || 0);
       
-      if (translatedError) throw translatedError;
+      // Aplicar lógica de prioridade em cascata usando as relações corretas entre tabelas
+      const allDocs: any[] = [];
+      const processedFilenames = new Set<string>();
+      const processedVerifiedIds = new Set<string>();
       
-      // Buscar documentos completed na tabela documents_to_be_verified
-      const { data: verifiedDocs, error: verifiedError } = await supabase
-        .from('documents_to_be_verified')
-        .select('filename, status')
-        .eq('user_id', userId)
-        .eq('status', 'completed');
-      
-      if (verifiedError) {
-        console.error('[useTranslatedDocuments] Erro ao buscar documentos verificados:', verifiedError);
+      // PRIORIDADE 1: Documentos já processados (translated_documents)
+      if (translatedDocs && translatedDocs.length > 0) {
+        translatedDocs.forEach(doc => {
+          if (!processedFilenames.has(doc.filename)) {
+            allDocs.push({ ...doc, source: 'translated_documents' });
+            processedFilenames.add(doc.filename);
+            // Marcar o ID do documento verificado como processado
+            if (doc.original_document_id) {
+              processedVerifiedIds.add(doc.original_document_id);
+            }
+            console.log(`[useTranslatedDocuments] DEBUG - Adicionado da translated_documents: ${doc.filename} (original_document_id: ${doc.original_document_id}, status: ${doc.status})`);
+          }
+        });
       }
       
-      console.log('[useTranslatedDocuments] DEBUG - Documentos pending/processing encontrados:', pendingDocs?.length || 0);
-      console.log('[useTranslatedDocuments] DEBUG - Documentos verificados encontrados:', verifiedDocs?.length || 0);
-      console.log('[useTranslatedDocuments] DEBUG - Documentos traduzidos encontrados:', translatedDocs?.length || 0);
-      console.log('[useTranslatedDocuments] DEBUG - Documentos verificados:', verifiedDocs);
+      // PRIORIDADE 2: Documentos em verificação (documents_to_be_verified) que NÃO foram processados
+      // Incluir TODOS os status para mostrar o status real da tabela
+      if (verifiedDocs && verifiedDocs.length > 0) {
+        verifiedDocs.forEach(verifiedDoc => {
+          // Verificar se este documento já foi processado (existe em translated_documents)
+          const alreadyProcessed = processedVerifiedIds.has(verifiedDoc.id);
+          
+          if (!alreadyProcessed && !processedFilenames.has(verifiedDoc.filename)) {
+            allDocs.push({ ...verifiedDoc, source: 'documents_to_be_verified' });
+            processedFilenames.add(verifiedDoc.filename);
+            console.log(`[useTranslatedDocuments] DEBUG - Adicionado da documents_to_be_verified: ${verifiedDoc.filename} (id: ${verifiedDoc.id}, status: ${verifiedDoc.status})`);
+          }
+        });
+      }
       
-      // Filtrar documentos processing que já foram aprovados
-      const filteredPendingDocs = (pendingDocs || []).filter(doc => {
-        // Se o documento está processing, verificar se não foi aprovado
-        if (doc.status === 'processing') {
-          const isApproved = verifiedDocs?.some(verified => {
-            const match = verified.filename === doc.filename && verified.status === 'completed';
-            console.log(`[useTranslatedDocuments] DEBUG - Comparando: ${verified.filename} === ${doc.filename} && ${verified.status} === 'completed' = ${match}`);
-            return match;
-          });
-          console.log(`[useTranslatedDocuments] DEBUG - Doc ${doc.filename} (${doc.id}): isApproved = ${isApproved}`);
-          return !isApproved; // Só incluir se NÃO foi aprovado
-        }
-        return true; // Incluir documentos pending normalmente
-      });
+      // PRIORIDADE 3: Documentos originais (documents) que NÃO foram enviados para verificação
+      if (originalDocs && originalDocs.length > 0) {
+        originalDocs.forEach(originalDoc => {
+          // Verificar se este documento já foi enviado para verificação (existe em documents_to_be_verified)
+          const alreadyInVerification = verifiedDocs?.some(verifiedDoc => 
+            verifiedDoc.filename === originalDoc.filename && verifiedDoc.user_id === originalDoc.user_id
+          );
+          
+          if (!alreadyInVerification && !processedFilenames.has(originalDoc.filename)) {
+            allDocs.push({ ...originalDoc, source: 'documents' });
+            processedFilenames.add(originalDoc.filename);
+            console.log(`[useTranslatedDocuments] DEBUG - Adicionado da documents: ${originalDoc.filename}`);
+          }
+        });
+      }
       
-      console.log('[useTranslatedDocuments] DEBUG - Documentos filtrados:', filteredPendingDocs?.length || 0);
+      // Ordenar por data de criação
+      allDocs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
-      // Combinar e ordenar por data de criação
-      const allDocs = [
-        ...filteredPendingDocs.map(doc => ({ ...doc, source: 'documents' })),
-        ...(translatedDocs || []).map(doc => ({ ...doc, source: 'translated_documents' }))
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      console.log('[useTranslatedDocuments] DEBUG - Total de documentos únicos:', allDocs.length);
+      console.log('[useTranslatedDocuments] DEBUG - Filenames processados:', Array.from(processedFilenames));
+      console.log('[useTranslatedDocuments] DEBUG - IDs de documentos verificados processados:', Array.from(processedVerifiedIds));
       
       setDocuments(allDocs);
       setError(null);

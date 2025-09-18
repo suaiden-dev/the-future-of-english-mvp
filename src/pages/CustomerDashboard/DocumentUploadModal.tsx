@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { Upload, XCircle, FileText, CheckCircle, AlertCircle, Info, Shield, DollarSign, Award, Globe } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { fileStorage } from '../../utils/fileStorage';
-import { generateUniqueFileName } from '../../utils/fileUtils';
 import { PaymentMethodModal } from '../../components/PaymentMethodModal';
 import { ZellePaymentModal } from '../../components/ZellePaymentModal';
 import { useI18n } from '../../contexts/I18nContext';
@@ -125,7 +124,7 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
   };
 
   // Função para processar pagamento direto com Stripe
-  const handleDirectPayment = async (fileId: string, customPayload?: any) => {
+  const handleDirectPayment = async (fileId: string, customPayload?: any, uniqueFilename?: string) => {
     try {
       console.log('DEBUG: Iniciando processamento do pagamento');
       
@@ -133,6 +132,22 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
       if (!selectedFile) {
         throw new Error('Nenhum arquivo selecionado');
       }
+
+      // Usar o uniqueFilename passado como parâmetro (deve vir do banco de dados)
+      if (!uniqueFilename || uniqueFilename === '' || uniqueFilename === null || uniqueFilename === undefined) {
+        console.error('❌ ERRO: Filename único inválido recebido:', uniqueFilename);
+        throw new Error('Filename único não fornecido - deve vir do banco de dados');
+      }
+      const finalUniqueFilename = uniqueFilename;
+      console.log('🔍 DEBUG: Nome original:', selectedFile.name);
+      console.log('🔍 DEBUG: Nome único recebido como parâmetro:', uniqueFilename);
+      console.log('🔍 DEBUG: Nome único final usado:', finalUniqueFilename);
+      console.log('🔍 DEBUG: VERIFICAÇÃO CRÍTICA - Usando filename do banco no handleDirectPayment:', finalUniqueFilename);
+      console.log('🔍 DEBUG: uniqueFilename === finalUniqueFilename?', uniqueFilename === finalUniqueFilename);
+      console.log('🔍 DEBUG: Tipo do uniqueFilename recebido:', typeof uniqueFilename);
+      console.log('🔍 DEBUG: uniqueFilename é string vazia?', uniqueFilename === '');
+      console.log('🔍 DEBUG: uniqueFilename é null?', uniqueFilename === null);
+      console.log('🔍 DEBUG: uniqueFilename é undefined?', uniqueFilename === undefined);
 
       // Usar payload customizado se fornecido, senão usar o padrão
       const payload = customPayload || {
@@ -143,7 +158,8 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
         fileId, // Usar o ID do arquivo no IndexedDB
         userId,
         userEmail, // Adicionar email do usuário
-        filename: selectedFile?.name,
+        filename: finalUniqueFilename, // Usar nome único em vez do original
+        originalFilename: selectedFile?.name, // Nome original para referência
         originalLanguage: idiomaRaiz,
         targetLanguage: idiomaDestino,
         documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente
@@ -151,70 +167,21 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
         targetCurrency: isExtrato ? targetCurrency : null,
         isMobile: false // Desktop
       };
-      console.log('Payload enviado para checkout:', payload);
+      console.log('🔍 DEBUG: Payload enviado para checkout:', payload);
+      console.log('🔍 DEBUG: Filename no payload:', payload.filename);
 
-      // CRIAR DOCUMENTO NO BANCO ANTES DO PAGAMENTO
-      console.log('DEBUG: Criando documento no banco antes do pagamento');
-      console.log('DEBUG: Dados do documento a ser criado:', {
-        userId,
-        filename: selectedFile.name,
-        pages,
-        status: 'pending',
-        total_cost: calculateValue(pages, isExtrato, tipoTrad)
-      });
-
-      const { data: newDocument, error: createError } = await supabase
-        .from('documents')
-        .insert({
-          user_id: userId,
-          filename: selectedFile.name,
-          pages: pages,
-          status: 'pending', // Criar como pending até o pagamento ser confirmado
-          total_cost: calculateValue(pages, isExtrato, tipoTrad),
-          verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-          is_authenticated: true,
-          upload_date: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          tipo_trad: mapTipoTradToDatabase(tipoTrad),
-          idioma_raiz: idiomaRaiz,
-          idioma_destino: idiomaDestino,
-          is_bank_statement: isExtrato,
-          source_currency: isExtrato ? sourceCurrency : null,
-          target_currency: isExtrato ? targetCurrency : null
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('ERROR: Erro ao criar documento no banco:', createError);
-        console.error('ERROR: Detalhes do erro:', {
-          code: createError.code,
-          message: createError.message,
-          details: createError.details
-        });
-        throw new Error('Erro ao criar documento no banco de dados');
-      }
-
-      if (!newDocument) {
-        console.error('ERROR: Documento não foi criado (sem erro, mas sem retorno)');
-        throw new Error('Erro ao criar documento no banco de dados');
-      }
-
-      console.log('DEBUG: Documento criado no banco:', {
-        id: newDocument.id,
-        status: newDocument.status,
-        filename: newDocument.filename
-      });
-
-      // Adicionar o documentId ao payload
+      // O documento já foi criado em handleUpload, apenas processar o pagamento
+      console.log('DEBUG: Processando pagamento para documento existente');
+      console.log('DEBUG: Usando filename:', finalUniqueFilename);
+      
+      // Adicionar o documentId ao payload (deve vir do customPayload ou ser passado como parâmetro)
       const payloadWithDocumentId = {
         ...payload,
-        documentId: newDocument.id
+        documentId: customPayload?.documentId || currentDocumentId
       };
 
       console.log('DEBUG: Criando sessão do Stripe com payload:', payloadWithDocumentId);
-      console.log('DEBUG: URL de cancelamento esperada:', `${window.location.origin}/payment-cancelled?document_id=${newDocument.id}`);
+      console.log('DEBUG: URL de cancelamento esperada:', `${window.location.origin}/payment-cancelled?document_id=${payloadWithDocumentId.documentId}`);
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const { data: { session } } = await supabase.auth.getSession();
@@ -343,6 +310,28 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
       setIsUploading(true);
       setError(null);
       
+      // Buscar o filename que foi salvo na tabela documents
+      const { data: documentData, error: docError } = await supabase
+        .from('documents')
+        .select('filename')
+        .eq('id', currentDocumentId)
+        .single();
+      
+      if (docError || !documentData) {
+        throw new Error('Documento não encontrado no banco de dados');
+      }
+      
+      const uniqueFilename = documentData.filename;
+      console.log('🔍 DEBUG: Nome original:', selectedFile.name);
+      console.log('🔍 DEBUG: Nome único recuperado do banco:', uniqueFilename);
+      console.log('🔍 DEBUG: currentDocumentId:', currentDocumentId);
+      console.log('🔍 DEBUG: VERIFICAÇÃO CRÍTICA - Usando filename do banco:', uniqueFilename);
+      console.log('🔍 DEBUG: DocumentData completo:', documentData);
+      console.log('🔍 DEBUG: Tipo do uniqueFilename:', typeof uniqueFilename);
+      console.log('🔍 DEBUG: uniqueFilename é string vazia?', uniqueFilename === '');
+      console.log('🔍 DEBUG: uniqueFilename é null?', uniqueFilename === null);
+      console.log('🔍 DEBUG: uniqueFilename é undefined?', uniqueFilename === undefined);
+      
       if (isMobile) {
         // Mobile: Tentar usar IndexedDB primeiro
         try {
@@ -360,10 +349,11 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
             currentFolderId
           });
           
-          await handleDirectPayment(fileId);
+          await handleDirectPayment(fileId, undefined, uniqueFilename);
         } catch (indexedDBError) {
           // Fallback: Upload direto para Supabase Storage
-          const filePath = generateUniqueFileName(selectedFile.name, userId);
+          // Usar o filename do banco de dados para manter consistência
+          const filePath = `${userId}/${uniqueFilename}`;
           const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
           if (uploadError) throw uploadError;
           
@@ -375,7 +365,8 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
             filePath,
             userId: userId,
             userEmail: userEmail,
-            filename: selectedFile?.name,
+            filename: uniqueFilename, // Usar nome único do banco
+            originalFilename: selectedFile?.name, // Nome original para referência
             originalLanguage: idiomaRaiz,
             targetLanguage: idiomaDestino,
             documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente
@@ -385,7 +376,10 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
             documentId: currentDocumentId
           };
           
-          await handleDirectPayment('', payload);
+          console.log('🔍 DEBUG: Fallback mobile - filename do banco:', uniqueFilename);
+          console.log('🔍 DEBUG: Fallback mobile - filePath:', filePath);
+          
+          await handleDirectPayment('', payload, uniqueFilename);
         }
       } else {
         // Desktop: Usar IndexedDB
@@ -403,7 +397,7 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
           currentFolderId
         });
         
-        await handleDirectPayment(fileId);
+        await handleDirectPayment(fileId, undefined, uniqueFilename);
       }
       
     } catch (err: any) {
