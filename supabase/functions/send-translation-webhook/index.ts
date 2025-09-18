@@ -210,6 +210,8 @@ Deno.serve(async (req: Request) => {
         schema: 'public'
       };
       
+      console.log("🔍 DEBUG: Filename recebido no webhook:", filename);
+      console.log("🔍 DEBUG: Original filename recebido:", original_filename);
       console.log("Final payload for frontend:", JSON.stringify(payload, null, 2));
     }
 

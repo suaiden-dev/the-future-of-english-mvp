@@ -153,6 +153,11 @@ export default function UploadDocument() {
 
       console.log('DEBUG: Usando documentId fornecido:', customPayload.documentId);
       
+      // Gerar nome único para o arquivo (igual ao autenticador)
+      const uniqueFilename = generateUniqueFilename(selectedFile.name);
+      console.log('DEBUG: Nome original:', selectedFile.name);
+      console.log('DEBUG: Nome único gerado:', uniqueFilename);
+
       // Criar payload completo igual ao DocumentUploadModal
       const payload = {
         pages,
@@ -162,7 +167,8 @@ export default function UploadDocument() {
         fileId: fileId || '', // Usar o ID do arquivo no IndexedDB
         userId: user?.id,
         userEmail: user?.email, // Adicionar email do usuário
-        filename: selectedFile?.name,
+        filename: uniqueFilename, // Usar nome único em vez do original
+        originalFilename: selectedFile?.name, // Nome original para referência
         originalLanguage: idiomaRaiz,
         targetLanguage: idiomaDestino,
         documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente baseado na seleção

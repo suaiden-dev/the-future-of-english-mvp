@@ -67,13 +67,10 @@ export default function DocumentProgress() {
   };
 
   const getStatusColor = (doc: any) => {
-    // Se tem translated_file_url, significa que foi traduzido e está disponível para download/view
-    if (doc.translated_file_url) {
-      return 'bg-green-100 text-green-800';
-    }
+    // Usar o status real da tabela de origem para determinar a cor
+    const status = doc.status?.toLowerCase();
     
-    // Caso contrário, usar o status original
-    switch (doc.status?.toLowerCase()) {
+    switch (status) {
       case 'completed':
       case 'finished':
         return 'bg-green-100 text-green-800';
@@ -86,18 +83,81 @@ export default function DocumentProgress() {
       case 'error':
       case 'failed':
         return 'bg-tfe-red-100 text-tfe-red-800';
+      case 'rejected':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusText = (doc: any) => {
-    // Se tem translated_file_url, significa que foi traduzido e está disponível para download/view
-    if (doc.translated_file_url) {
-      return 'Completed';
+    // Usar o status real da tabela de origem
+    console.log(`[getStatusText] Documento: ${doc.filename}, Source: ${doc.source}, Status: ${doc.status}`);
+    
+    // Se é da tabela translated_documents, usar o status dela
+    if (doc.source === 'translated_documents') {
+      switch (doc.status?.toLowerCase()) {
+        case 'completed':
+        case 'finished':
+          return 'Completed';
+        case 'rejected':
+          return 'Rejected';
+        case 'processing':
+        case 'in_progress':
+          return 'Processing';
+        case 'pending':
+        case 'waiting':
+          return 'Pending';
+        case 'error':
+        case 'failed':
+          return 'Error';
+        default:
+          return 'Pending';
+      }
     }
     
-    // Caso contrário, usar o status original
+    // Se é da tabela documents_to_be_verified, usar o status real dela
+    if (doc.source === 'documents_to_be_verified') {
+      switch (doc.status?.toLowerCase()) {
+        case 'completed':
+          return 'Completed';
+        case 'processing':
+        case 'in_progress':
+          return 'Processing';
+        case 'pending':
+        case 'waiting':
+          return 'Pending';
+        case 'rejected':
+          return 'Rejected';
+        case 'error':
+        case 'failed':
+          return 'Error';
+        default:
+          return 'Pending';
+      }
+    }
+    
+    // Se é da tabela documents (original), usar o status dela
+    if (doc.source === 'documents') {
+      switch (doc.status?.toLowerCase()) {
+        case 'completed':
+        case 'finished':
+          return 'Completed';
+        case 'processing':
+        case 'in_progress':
+          return 'Processing';
+        case 'pending':
+        case 'waiting':
+          return 'Pending';
+        case 'error':
+        case 'failed':
+          return 'Error';
+        default:
+          return 'Pending';
+      }
+    }
+    
+    // Fallback: usar o status original
     switch (doc.status?.toLowerCase()) {
       case 'completed':
       case 'finished':
@@ -111,6 +171,8 @@ export default function DocumentProgress() {
       case 'error':
       case 'failed':
         return 'Error';
+      case 'rejected':
+        return 'Rejected';
       default:
         return 'Pending';
     }
