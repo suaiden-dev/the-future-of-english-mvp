@@ -674,35 +674,35 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
           </div>
 
           {/* Desktop: Table View */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="w-full">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     USER/CLIENT
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Document
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Payment Method
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Payment Status
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     TRANSLATIONS
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     AUTHENTICATOR
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Details
                   </th>
                 </tr>
@@ -711,23 +711,22 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                 {paginatedDocuments.map((doc) => (
                   <tr key={doc.id} className="hover:bg-gray-50">
                     {/* USER/CLIENT */}
-                    <td className="px-3 py-3 text-xs">
+                    <td className="px-3 py-3 text-xs align-top">
                       <div>
-                        <div className="font-medium text-gray-900 truncate">
+                        <div className="font-medium text-gray-900 truncate max-w-[180px]" title={doc.display_name || doc.user_name || 'N/A'}>
                           {doc.display_name || doc.user_name || 'N/A'}
                         </div>
-                        <div className="text-gray-500 truncate">
+                        <div className="text-gray-500 truncate max-w-[180px]" title={doc.user_email || 'No email'}>
                           {doc.user_email || 'No email'}
                         </div>
                       </div>
                     </td>
-                    
                     {/* Document */}
-                    <td className="px-3 py-3 text-xs">
+                    <td className="px-3 py-3 text-xs align-top">
                       <div className="flex items-center">
                         <FileText className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
                         <div className="min-w-0">
-                          <div className="font-medium text-gray-900 truncate">
+                          <div className="font-medium text-gray-900 truncate max-w-[220px]" title={doc.filename}>
                             {doc.filename}
                           </div>
                           <div className="text-gray-500">
