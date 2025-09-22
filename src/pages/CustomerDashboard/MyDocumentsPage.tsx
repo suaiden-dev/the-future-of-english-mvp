@@ -563,7 +563,7 @@ export default function MyDocumentsPage() {
                 ? 'text-green-700' 
                 : 'text-gray-800'
             }`}>
-              {item.filename}
+              {item.original_filename || item.filename}
             </span>
           </div>
         ))}
@@ -709,7 +709,7 @@ export default function MyDocumentsPage() {
                     ? 'text-green-700' 
                     : 'text-gray-800'
                 }`}>
-                  {item.filename}
+                  {item.original_filename || item.filename}
                 </span>
                 <span className="text-xs sm:text-sm text-gray-500">
                   {item.created_at ? formatDate(item.created_at) : 'Unknown date'}
