@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FileText, Eye, Download, Filter } from 'lucide-react';
+import { FileText, Eye, Download, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Document } from '../../App';
 import { DateRange } from '../../components/DateRangeFilter';
@@ -37,6 +37,10 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  // Estados para paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   
   // Debug log para verificar mudanças no statusFilter
   useEffect(() => {
@@ -410,6 +414,23 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
     return filtered;
   }, [extendedDocuments, searchTerm, statusFilter, roleFilter]);
 
+  // Lógica de paginação
+  const totalItems = filteredDocuments.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDocuments = filteredDocuments.slice(startIndex, endIndex);
+
+  // Cálculo do valor total dos documentos filtrados
+  const totalValue = filteredDocuments.reduce((sum, doc) => {
+    return sum + (doc.total_cost || 0);
+  }, 0);
+
+  // Reset para primeira página quando filtros mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, roleFilter]);
+
   // Define a cor de fundo e texto com base no status de pagamento
   const getPaymentStatusColor = (paymentStatus: string | null | undefined) => {
     switch (paymentStatus) {
@@ -448,7 +469,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
 
   // Gera e inicia o download de um relatório CSV dos documentos filtrados
   const downloadDocumentsReport = useCallback(() => {
-    const csvContent = [
+    const csvRows = [
       ['Document Name', 'User Name', 'User Email', 'Document Type', 'Status', 'Pages', 'Cost', 'Source Language', 'Target Language', 'Authenticator', 'Created At'],
       ...filteredDocuments.map(doc => [
         doc.filename,
@@ -462,8 +483,15 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         doc.target_language || '',
         doc.authenticated_by_name || '',
         new Date(doc.created_at || '').toLocaleDateString()
-      ])
-    ].map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+      ]),
+      // Adicionar linha vazia e totais
+      [],
+      ['TOTALS', '', '', '', '', '', totalValue.toFixed(2), '', '', '', `${filteredDocuments.length} documents`]
+    ];
+
+    const csvContent = csvRows.map(row => 
+      row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
@@ -474,7 +502,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-  }, [filteredDocuments]);
+  }, [filteredDocuments, totalValue]);
 
   // Renderiza um esqueleto de carregamento enquanto os dados são buscados
   if (loading) {
@@ -496,9 +524,14 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h3 className="text-lg font-medium text-gray-900">All Documents</h3>
-            <p className="text-sm text-gray-500">
-              Showing {filteredDocuments.length} of {extendedDocuments.length} documents
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 gap-1">
+              <p className="text-sm text-gray-500">
+                Showing {filteredDocuments.length} of {extendedDocuments.length} documents
+              </p>
+              <p className="text-sm font-medium text-green-600">
+                Total Value: ${totalValue.toFixed(2)}
+              </p>
+            </div>
           </div>
           <button
             onClick={downloadDocumentsReport}
@@ -675,7 +708,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredDocuments.map((doc) => (
+                {paginatedDocuments.map((doc) => (
                   <tr key={doc.id} className="hover:bg-gray-50">
                     {/* USER/CLIENT */}
                     <td className="px-3 py-3 text-xs">
@@ -771,6 +804,175 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
               </tbody>
             </table>
           </div>
+          
+          {/* Controles de Paginação */}
+          {totalItems > 0 && (
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+              {/* Informações de itens - versão mobile */}
+              <div className="flex-1 flex flex-col sm:hidden">
+                <div className="flex justify-between items-center mb-2">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Próxima
+                  </button>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-700">
+                    {totalItems} resultados • <span className="font-medium text-green-600">${totalValue.toFixed(2)}</span>
+                  </p>
+                </div>
+              </div>
+              
+              {/* Controles completos para telas maiores */}
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="text-sm text-gray-700">
+                    <p>
+                      Mostrando <span className="font-medium">{startIndex + 1}</span> a{' '}
+                      <span className="font-medium">{Math.min(endIndex, totalItems)}</span> de{' '}
+                      <span className="font-medium">{totalItems}</span> resultados
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Valor total: <span className="font-medium text-green-600">${totalValue.toFixed(2)}</span>
+                    </p>
+                  </div>
+                  
+                  {/* Seletor de itens por página */}
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="ml-4 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value={10}>10 por página</option>
+                    <option value={20}>20 por página</option>
+                    <option value={50}>50 por página</option>
+                    <option value={100}>100 por página</option>
+                  </select>
+                </div>
+                
+                {/* Navegação de páginas */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-5 w-5 -ml-1" />
+                  </button>
+                  
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  
+                  {/* Números de página */}
+                  <div className="flex items-center space-x-1">
+                    {(() => {
+                      const pages = [];
+                      const maxVisiblePages = 5;
+                      
+                      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                      
+                      if (endPage - startPage + 1 < maxVisiblePages) {
+                        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                      }
+                      
+                      if (startPage > 1) {
+                        pages.push(
+                          <button
+                            key={1}
+                            onClick={() => setCurrentPage(1)}
+                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            1
+                          </button>
+                        );
+                        if (startPage > 2) {
+                          pages.push(
+                            <span key="start-ellipsis" className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                              ...
+                            </span>
+                          );
+                        }
+                      }
+                      
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(
+                          <button
+                            key={i}
+                            onClick={() => setCurrentPage(i)}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                              i === currentPage
+                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+                      
+                      if (endPage < totalPages) {
+                        if (endPage < totalPages - 1) {
+                          pages.push(
+                            <span key="end-ellipsis" className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                              ...
+                            </span>
+                          );
+                        }
+                        pages.push(
+                          <button
+                            key={totalPages}
+                            onClick={() => setCurrentPage(totalPages)}
+                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            {totalPages}
+                          </button>
+                        );
+                      }
+                      
+                      return pages;
+                    })()}
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                  
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-5 w-5 -ml-1" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
