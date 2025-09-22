@@ -11,11 +11,25 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
   const { t } = useI18n();
   
   const totalDocuments = documents.length;
-  const pendingDocuments = documents.filter(doc => doc.status === 'pending').length;
-  const processingDocuments = documents.filter(doc => doc.status === 'processing').length;
-  const completedDocuments = documents.filter(doc => doc.status === 'completed').length;
-  const totalSpent = documents.reduce((sum, doc) => sum + (doc.totalCost || 0), 0);
   const totalPages = documents.reduce((sum, doc) => sum + (doc.pages || 0), 0);
+
+  // Lógica de status considerando a origem (source) e status real
+  const completedDocuments = documents.filter(doc => {
+    if (doc.source === 'translated_documents') {
+      return ['completed', 'finished'].includes((doc.status || '').toLowerCase());
+    }
+    return false;
+  }).length;
+
+  const inProgressDocuments = documents.filter(doc => {
+    if (doc.source === 'documents_to_be_verified') {
+      return ['processing', 'in_progress'].includes((doc.status || '').toLowerCase());
+    }
+    if (doc.source === 'documents') {
+      return ['processing', 'in_progress'].includes((doc.status || '').toLowerCase());
+    }
+    return false;
+  }).length;
 
   // Calculate this month's activity
   const currentMonth = new Date().getMonth();
@@ -36,11 +50,11 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
     },
     {
       title: t('dashboard.statistics.cards.inProgress'),
-      value: pendingDocuments + processingDocuments || 0,
+      value: inProgressDocuments || 0,
       icon: Clock,
       bgColor: 'bg-yellow-100',
       iconColor: 'text-yellow-900',
-      description: `${pendingDocuments || 0} ${t('dashboard.statistics.cards.descriptions.pendingProgress')} ${processingDocuments || 0} ${t('dashboard.statistics.cards.descriptions.inProgressText')}`
+      description: `${inProgressDocuments} ${t('dashboard.statistics.cards.descriptions.inProgressText')}`
     },
     {
       title: t('dashboard.statistics.cards.completed'),
@@ -51,28 +65,12 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
       description: t('dashboard.statistics.cards.descriptions.readyDownload')
     },
     {
-      title: t('dashboard.statistics.cards.totalSpent'),
-      value: `$${isNaN(totalSpent) ? '0' : totalSpent}`,
-      icon: DollarSign,
-      bgColor: 'bg-purple-100',
-      iconColor: 'text-purple-900',
-      description: `$${totalDocuments > 0 ? (totalSpent / totalDocuments).toFixed(2) : '0'} ${t('dashboard.statistics.cards.descriptions.avgPerDocument')}`
-    },
-    {
       title: t('dashboard.statistics.cards.thisMonth'),
       value: thisMonthDocuments.length || 0,
       icon: Calendar,
       bgColor: 'bg-indigo-100',
       iconColor: 'text-indigo-900',
       description: t('dashboard.statistics.cards.descriptions.documentsUploaded')
-    },
-    {
-      title: t('dashboard.statistics.cards.successRate'),
-      value: totalDocuments > 0 ? `${Math.round((completedDocuments / totalDocuments) * 100)}%` : '0%',
-      icon: TrendingUp,
-      bgColor: 'bg-emerald-100',
-      iconColor: 'text-emerald-900',
-      description: t('dashboard.statistics.cards.descriptions.completionRate')
     }
   ];
 
@@ -115,7 +113,7 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
         <p className="text-gray-600 text-lg">{t('dashboard.statistics.description')}</p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (

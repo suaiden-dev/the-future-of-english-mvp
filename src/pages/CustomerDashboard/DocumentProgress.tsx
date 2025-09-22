@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Download, Eye, Clock, CheckCircle, AlertCircle, Loader2, Grid, List } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useTranslatedDocuments } from '../../hooks/useDocuments';
+import { useUserTranslatedDocuments } from '../../hooks/useDocuments';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
 import { db } from '../../lib/supabase';
@@ -9,7 +9,7 @@ import { getValidFileUrl } from '../../utils/fileUtils';
 
 export default function DocumentProgress() {
   const { user } = useAuth();
-  const { documents: translatedDocs, loading: loadingTranslated } = useTranslatedDocuments(user?.id);
+  const { documents: translatedDocs, loading: loadingTranslated } = useUserTranslatedDocuments(user?.id);
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
   const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -184,8 +184,8 @@ export default function DocumentProgress() {
         <div className="flex items-center gap-2 sm:gap-3">
           <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-tfe-blue-500" />
           <div>
-            <h3 className="font-semibold text-gray-900 truncate max-w-32 sm:max-w-48 text-sm sm:text-base" title={doc.filename}>
-              {doc.filename}
+            <h3 className="font-semibold text-gray-900 truncate max-w-32 sm:max-w-48 text-sm sm:text-base" title={doc.original_filename || doc.filename}>
+              {doc.original_filename || doc.filename}
             </h3>
             <p className="text-xs sm:text-sm text-gray-500">
               {doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-US') : 'Date not available'}
@@ -272,8 +272,8 @@ export default function DocumentProgress() {
         <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
           <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate text-sm sm:text-base" title={doc.filename}>
-              {doc.filename}
+            <h3 className="font-semibold text-gray-900 truncate text-sm sm:text-base" title={doc.original_filename || doc.filename}>
+              {doc.original_filename || doc.filename}
             </h3>
             <p className="text-xs sm:text-sm text-gray-500">
               {doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-US') : 'Date not available'}

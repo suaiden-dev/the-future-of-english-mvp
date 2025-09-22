@@ -228,11 +228,13 @@ export function useTranslatedDocuments(userId?: string) {
       if (translatedError) throw translatedError;
       
       // 2. Buscar documentos na tabela documents_to_be_verified (PRIORIDADE MÉDIA)
-      // Incluir TODOS os status para pegar o status real da tabela
+      // IMPORTANTE: Só incluir documentos com status que indicam conclusão do processo
+      // O cliente só deve ver documentos que foram processados pelo autenticador
       const { data: verifiedDocs, error: verifiedError } = await supabase
         .from('documents_to_be_verified')
         .select('*')
         .eq('user_id', userId)
+        .in('status', ['completed', 'rejected']) // APENAS status finais - remove 'pending' e 'processing'
         .order('created_at', { ascending: false });
       
       if (verifiedError) throw verifiedError;
@@ -271,8 +273,9 @@ export function useTranslatedDocuments(userId?: string) {
         });
       }
       
-      // PRIORIDADE 2: Documentos em verificação (documents_to_be_verified) que NÃO foram processados
-      // Incluir TODOS os status para mostrar o status real da tabela
+      // PRIORIDADE 2: Documentos em verificação (documents_to_be_verified) que foram FINALIZADOS
+      // Só incluir documentos com status 'completed' ou 'rejected' (processados pelo autenticador)
+      // Documentos com 'pending' ou 'processing' ainda estão aguardando e NÃO devem aparecer para o cliente
       if (verifiedDocs && verifiedDocs.length > 0) {
         verifiedDocs.forEach(verifiedDoc => {
           // Verificar se este documento já foi processado (existe em translated_documents)
@@ -363,6 +366,80 @@ export function useTranslatedDocuments(userId?: string) {
         (payload) => {
           console.log('[useTranslatedDocuments] Documento atualizado na tabela documents_to_be_verified:', payload);
           // Refetch para garantir que temos os dados mais recentes
+          fetchDocuments();
+        }
+      )
+      .subscribe();
+
+    setRealtime(channel);
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+    setupRealtime();
+
+    return () => {
+      if (realtime) {
+        supabase.removeChannel(realtime);
+      }
+    };
+  }, [userId]);
+
+  return {
+    documents,
+    loading,
+    error,
+    refetch: fetchDocuments
+  };
+}
+
+// Hook para buscar APENAS documentos da tabela translated_documents do usuário
+export function useUserTranslatedDocuments(userId?: string) {
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [realtime, setRealtime] = useState<any>(null);
+
+  const fetchDocuments = async () => {
+    if (!userId) {
+      setDocuments([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('translated_documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setDocuments(data || []);
+      setError(null);
+    } catch (err) {
+      console.error('[useUserTranslatedDocuments] Erro ao buscar documentos:', err);
+      setError('Failed to fetch translated documents');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setupRealtime = () => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel('translated_documents_only')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'translated_documents',
+          filter: `user_id=eq.${userId}`
+        },
+        () => {
           fetchDocuments();
         }
       )

@@ -93,9 +93,9 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
 
       // Buscar documentos da tabela documents_to_be_verified
       let verifiedDocumentsQuery = supabase
-        .from('documents_to_be_verified')
-        .select('*, profiles:profiles!documents_to_be_verified_user_id_fkey(name, email, phone)')
-        .order('created_at', { ascending: false });
+  .from('documents_to_be_verified')
+  .select('*')
+  .order('created_at', { ascending: false });
 
       // Aplicar filtros de data
       if (startDateParam) {
@@ -111,6 +111,98 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         console.error('Error loading verified documents:', verifiedError);
       }
 
+      // LOG DE DEPURAÇÃO DETALHADA
+      console.log('[DEBUG] 📊 Quantidade de documentos em documents:', mainDocuments?.length || 0);
+      console.log('[DEBUG] 📊 Quantidade de documentos em documents_to_be_verified:', verifiedDocuments?.length || 0);
+      
+      if (verifiedDocuments && verifiedDocuments.length > 0) {
+        console.log('[DEBUG] 📄 Exemplo de documento verificado:', verifiedDocuments[0]);
+      } else {
+        console.log('[DEBUG] ⚠️ Nenhum documento retornado de documents_to_be_verified');
+      }
+
+      // NOVA LÓGICA: Usar documents como base e verificar status nas outras tabelas
+      // 1. Todos os documentos começam com status da tabela documents
+      // 2. Se existir em documents_to_be_verified, usar esse status (mais atual)
+      // 3. Se não existir em documents_to_be_verified, manter como 'processing'
+      
+      console.log('[DEBUG] 📊 Implementando nova lógica de status...');
+      console.log('[DEBUG] 📊 Documents principais:', mainDocuments?.length || 0);
+      console.log('[DEBUG] 📊 Documents to be verified:', verifiedDocuments?.length || 0);
+
+      // Criar mapa dos documentos verificados para lookup rápido
+      const verifiedDocsMap = new Map();
+      (verifiedDocuments || []).forEach((verifiedDoc: any) => {
+        // Primeira prioridade: relacionar por original_document_id
+        if (verifiedDoc.original_document_id) {
+          verifiedDocsMap.set(verifiedDoc.original_document_id, {
+            ...verifiedDoc,
+            matchType: 'direct_id'
+          });
+        } else {
+          // Segunda prioridade: relacionar por user_id + filename
+          const key = `${verifiedDoc.user_id}_${verifiedDoc.filename}`;
+          verifiedDocsMap.set(key, {
+            ...verifiedDoc,
+            matchType: 'filename_fallback'
+          });
+        }
+      });
+
+      // Processar TODOS os documentos da tabela documents como base
+      const allDocuments = (mainDocuments || []).map(mainDoc => {
+        // Verificar se existe em documents_to_be_verified
+        let verifiedDoc = null;
+        let matchType = 'no_match';
+
+        // Primeira tentativa: buscar por ID direto
+        if (verifiedDocsMap.has(mainDoc.id)) {
+          verifiedDoc = verifiedDocsMap.get(mainDoc.id);
+          matchType = 'direct_id';
+        } else {
+          // Segunda tentativa: buscar por user_id + filename
+          const key = `${mainDoc.user_id}_${mainDoc.filename}`;
+          if (verifiedDocsMap.has(key)) {
+            verifiedDoc = verifiedDocsMap.get(key);
+            matchType = 'filename_fallback';
+          }
+        }
+
+        // Determinar status final
+        let finalStatus = 'processing'; // Default: se não está em documents_to_be_verified
+        let verificationData = {};
+
+        if (verifiedDoc) {
+          // Se existe em documents_to_be_verified, usar esse status
+          finalStatus = verifiedDoc.status;
+          verificationData = {
+            verification_id: verifiedDoc.id,
+            source_language: verifiedDoc.source_language,
+            target_language: verifiedDoc.target_language,
+            authenticated_by_name: verifiedDoc.authenticated_by_name,
+            authenticated_by_email: verifiedDoc.authenticated_by_email,
+            authentication_date: verifiedDoc.authentication_date,
+            rejection_reason: verifiedDoc.rejection_reason,
+            rejection_comment: verifiedDoc.rejection_comment,
+            rejected_by: verifiedDoc.rejected_by,
+            rejected_at: verifiedDoc.rejected_at
+          };
+        }
+
+        return {
+          ...mainDoc,
+          source: 'documents',
+          status: finalStatus, // Status final determinado pela lógica acima
+          matchType,
+          hasVerificationRecord: !!verifiedDoc,
+          ...verificationData
+        };
+      });
+      
+      console.log('[DEBUG] � Documentos processados:', allDocuments.length);
+      console.log('[DEBUG] 📊 Com registro de verificação:', allDocuments.filter(d => d.hasVerificationRecord).length);
+      console.log('[DEBUG] 📊 Sem registro (processing):', allDocuments.filter(d => !d.hasVerificationRecord).length);
+
       // Buscar dados de pagamentos para obter payment_method e status
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
@@ -121,6 +213,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       }
 
       // Buscar dados de traduções para obter status correto de tradução e autenticador
+      // OBS: Relacionamento via original_document_id (referencia documents_to_be_verified.id)
       const { data: translationsData, error: translationsError } = await supabase
         .from('translated_documents')
         .select(`
@@ -129,7 +222,8 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
           authenticated_by_name,
           authenticated_by_email,
           authentication_date,
-          documents_to_be_verified!inner(filename)
+          user_id,
+          filename
         `);
 
       if (translationsError) {
@@ -139,7 +233,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       // Buscar perfis de usuários para verificar roles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, role');
+        .select('id, role, name, email, phone');
 
       if (profilesError) {
         console.error('Error loading profiles data:', profilesError);
@@ -152,108 +246,71 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       console.log('🔍 Translations data loaded:', translationsData?.length || 0);
       console.log('🔍 Sample translations:', translationsData?.slice(0, 5));
 
-      // Criar lista combinada de todos os documentos
-      const allDocuments = [];
-      
-      // Adicionar documentos da tabela documents
-      if (mainDocuments) {
-        allDocuments.push(...mainDocuments.map(doc => ({ ...doc, source: 'documents' })));
-      }
-      
-      // Adicionar documentos da tabela documents_to_be_verified que não estão em documents
-      if (verifiedDocuments) {
-        const verifiedOnly = verifiedDocuments.filter(verifiedDoc => 
-          !mainDocuments?.some(mainDoc => 
-            mainDoc.filename === verifiedDoc.filename && mainDoc.user_id === verifiedDoc.user_id
-          )
-        );
-        allDocuments.push(...verifiedOnly.map(doc => ({ ...doc, source: 'documents_to_be_verified' })));
-      }
-      
-      // Processar todos os documentos
+      // Criar lista combinada usando a nova lógica baseada em documents
       const documentsWithCorrectStatus = allDocuments.map(doc => {
-        const isFromVerified = doc.source === 'documents_to_be_verified';
-        const verifiedDoc = isFromVerified ? doc : verifiedDocuments?.find(vDoc => vDoc.filename === doc.filename && vDoc.user_id === doc.user_id);
+        // Verificar se existe tradução para este documento
+        let translationStatus = 'pending';
+        let translationInfo = translationsData?.find(translation => 
+          translation.original_document_id === doc.verification_id || // Se tem verification_id, usar ele
+          (translation.user_id === doc.user_id && translation.filename === doc.filename) // Fallback por user_id + filename
+        );
+        if (translationInfo) {
+          translationStatus = 'completed';
+        }
         
+        // Dados de pagamento - usar ID do documento principal
         const paymentInfo = paymentsData?.find(payment => payment.document_id === doc.id);
         
-        // Buscar dados de tradução baseado no filename
-        const translationInfo = translationsData?.find(translation => 
-          (translation.documents_to_be_verified as any)?.filename === doc.filename
-        );
-        
-        // Verificar se o usuário tem role 'authenticator'
+        // Perfil do usuário
         const userProfile = profilesData?.find(profile => profile.id === doc.user_id);
-        const userRole = userProfile?.role || 'user'; // Default para 'user' se não encontrar
+        const userRole = userProfile?.role || 'user';
         const isAuthenticator = userRole === 'authenticator';
         
-        // Se é da tabela documents_to_be_verified ou existe em documents_to_be_verified, usar dados de lá
-        if (isFromVerified || verifiedDoc) {
-          return {
-            ...doc,
-            status: verifiedDoc?.status || doc.status,
-            user_name: verifiedDoc?.profiles?.name || doc.profiles?.name || null,
-            user_email: verifiedDoc?.profiles?.email || doc.profiles?.email || null,
-            user_phone: verifiedDoc?.profiles?.phone || doc.profiles?.phone || null,
-            document_type: 'verified' as const,
-            // Usar dados de tradução se disponível, senão usar dados de verificação
-            authenticated_by_name: translationInfo?.authenticated_by_name || verifiedDoc?.authenticated_by_name,
-            authenticated_by_email: translationInfo?.authenticated_by_email || verifiedDoc?.authenticated_by_email,
-            authentication_date: translationInfo?.authentication_date || verifiedDoc?.authentication_date,
-            source_language: verifiedDoc?.source_language,
-            target_language: verifiedDoc?.target_language,
-            // Status de tradução: primeiro translated_documents, depois documents_to_be_verified, depois 'pending'
-            translation_status: translationInfo?.status || verifiedDoc?.status || 'pending',
-            payment_method: paymentInfo?.payment_method || doc.payment_method || 'card',
-            // Status de pagamento baseado apenas no pagamento realizado, não na autenticação
-            payment_status: paymentInfo?.status || 'completed',
-            client_name: verifiedDoc?.client_name || doc.client_name || null,
-            // Para exibição na coluna USER/CLIENT: se for autenticador, usar client_name + (user_name)
-            display_name: isAuthenticator && verifiedDoc?.client_name && verifiedDoc.client_name !== 'Cliente Padrão'
-              ? `${verifiedDoc.client_name} (${verifiedDoc?.profiles?.name || doc.profiles?.name || 'N/A'})`
-              : verifiedDoc?.authenticated_by_name && verifiedDoc?.client_name && verifiedDoc.client_name !== 'Cliente Padrão'
-              ? `${verifiedDoc.client_name} (${verifiedDoc.authenticated_by_name})`
-              : verifiedDoc?.profiles?.name || doc.profiles?.name || null,
-            // Adicionar role do usuário para filtros
-            user_role: userRole,
-          };
-        } else {
-          // Se não existe em documents_to_be_verified, usar dados originais
-          return {
-            ...doc,
-            user_name: doc.profiles?.name || null,
-            user_email: doc.profiles?.email || null,
-            user_phone: doc.profiles?.phone || null,
-            document_type: 'regular' as const,
-            // Usar dados de tradução se disponível
-            authenticated_by_name: translationInfo?.authenticated_by_name || null,
-            authenticated_by_email: translationInfo?.authenticated_by_email || null,
-            authentication_date: translationInfo?.authentication_date || null,
-            // Status de tradução: primeiro translated_documents, depois documents_to_be_verified, depois 'pending'
-            translation_status: translationInfo?.status || verifiedDoc?.status || 'pending',
-            payment_method: paymentInfo?.payment_method || doc.payment_method || 'card',
-            // Status de pagamento baseado apenas no pagamento realizado, não na autenticação
-            payment_status: paymentInfo?.status || 'completed',
-            client_name: doc.client_name || null,
-            // Para exibição na coluna USER/CLIENT: se for autenticador, usar client_name + (user_name)
-            display_name: isAuthenticator && doc.client_name && doc.client_name !== 'Cliente Padrão'
-              ? `${doc.client_name} (${doc.profiles?.name || 'N/A'})`
-              : doc.profiles?.name || null,
-            // Adicionar role do usuário para filtros
-            user_role: userRole,
-          };
-        }
+        return {
+          ...doc,
+          user_name: userProfile?.name || null,
+          user_email: userProfile?.email || null,
+          user_phone: userProfile?.phone || null,
+          document_type: doc.hasVerificationRecord ? 'verified' : 'regular',
+          translation_status: translationStatus,
+          payment_method: paymentInfo?.payment_method || doc.payment_method || 'card',
+          payment_status: paymentInfo?.status || 'completed',
+          client_name: doc.client_name || null,
+          display_name: isAuthenticator && doc.client_name && doc.client_name !== 'Cliente Padrão'
+            ? `${doc.client_name} (${userProfile?.name || 'N/A'})`
+            : doc.authenticated_by_name && doc.client_name && doc.client_name !== 'Cliente Padrão'
+            ? `${doc.client_name} (${doc.authenticated_by_name})`
+            : userProfile?.name || null,
+          user_role: userRole,
+          // Adicionar informações de debug
+          _debug_match_type: doc.matchType,
+          _debug_has_verification_record: doc.hasVerificationRecord,
+          _debug_final_status: doc.status
+        };
       });
 
       setExtendedDocuments(documentsWithCorrectStatus);
       
-      // Debug log para verificar status dos documentos carregados
-      console.log('🔍 [Load Debug] Total documents loaded:', documentsWithCorrectStatus.length);
+      // Debug log para verificar a nova lógica de status
+      console.log('🔍 [NOVA LÓGICA] Total documents loaded:', documentsWithCorrectStatus.length);
+      
       const statusCounts = documentsWithCorrectStatus.reduce((acc, doc) => {
-        acc[doc.translation_status || 'pending'] = (acc[doc.translation_status || 'pending'] || 0) + 1;
+        acc[doc.status || 'pending'] = (acc[doc.status || 'pending'] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
-      console.log('🔍 [Load Debug] Translation status distribution:', statusCounts);
+      console.log('🔍 [NOVA LÓGICA] Status distribution (final):', statusCounts);
+      
+      const matchTypeCounts = documentsWithCorrectStatus.reduce((acc, doc) => {
+        acc[doc._debug_match_type || 'unknown'] = (acc[doc._debug_match_type || 'unknown'] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('🔍 [NOVA LÓGICA] Match type distribution:', matchTypeCounts);
+      
+      const verificationCounts = {
+        with_verification: documentsWithCorrectStatus.filter(d => d._debug_has_verification_record).length,
+        without_verification: documentsWithCorrectStatus.filter(d => !d._debug_has_verification_record).length
+      };
+      console.log('🔍 [NOVA LÓGICA] Verification record distribution:', verificationCounts);
 
     } catch (error) {
       console.error('Error loading extended documents:', error);
@@ -278,9 +335,11 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
     console.log(`🔍 [Filter Debug] Starting filter with statusFilter: "${statusFilter}", roleFilter: "${roleFilter}", searchTerm: "${searchTerm}"`);
     console.log(`🔍 [Filter Debug] Total documents to filter: ${extendedDocuments.length}`);
     
-    // Debug: mostrar todos os status únicos dos documentos (translation_status)
-    const uniqueStatuses = [...new Set(extendedDocuments.map(doc => doc.translation_status))];
-    console.log(`🔍 [Filter Debug] Unique translation_statuses in data:`, uniqueStatuses);
+    // Debug: mostrar todos os status únicos dos documentos (usar status da tabela documents_to_be_verified)
+    const uniqueStatuses = [...new Set(extendedDocuments.map(doc => doc.status))];
+    const uniqueTranslationStatuses = [...new Set(extendedDocuments.map(doc => doc.translation_status))];
+    console.log(`🔍 [Filter Debug] Unique status (documents_to_be_verified):`, uniqueStatuses);
+    console.log(`🔍 [Filter Debug] Unique translation_status (computed):`, uniqueTranslationStatuses);
     
     const filtered = extendedDocuments.filter(doc => {
       // Filtro de busca textual
@@ -292,14 +351,14 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         doc.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doc.display_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Filtro de status - usar translation_status (coluna TRANSLATIONS)
-      const matchesStatus = statusFilter === 'all' || doc.translation_status === statusFilter;
+      // Filtro de status - usar STATUS da tabela documents_to_be_verified (não translation_status)
+      const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
 
       // Debug log para status filter
       if (statusFilter !== 'all') {
-        console.log(`[Status Filter Debug] Document: ${doc.filename}, translation_status: "${doc.translation_status}", filter: "${statusFilter}", matches: ${matchesStatus}`);
-        if (doc.translation_status === statusFilter) {
-          console.log(`  ✅ MATCH FOUND: ${doc.filename} has translation_status "${doc.translation_status}"`);
+        console.log(`[Status Filter Debug] Document: ${doc.filename}, status: "${doc.status}", filter: "${statusFilter}", matches: ${matchesStatus}`);
+        if (doc.status === statusFilter) {
+          console.log(`  ✅ MATCH FOUND: ${doc.filename} has status "${doc.status}"`);
         }
       }
 
@@ -330,17 +389,17 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
     
     // Log específico para status filter
     if (statusFilter !== 'all') {
-      const statusMatches = filtered.filter(doc => doc.translation_status === statusFilter);
-      console.log(`[Status Filter Result] Found ${statusMatches.length} documents with translation_status "${statusFilter}"`);
+      const statusMatches = filtered.filter(doc => doc.status === statusFilter);
+      console.log(`[Status Filter Result] Found ${statusMatches.length} documents with status "${statusFilter}"`);
       statusMatches.forEach(doc => {
         console.log(`  - ${doc.filename} (${doc.user_name})`);
       });
       
       // Debug: verificar se há documentos com o status correto mas que não estão sendo filtrados
-      const allStatusMatches = extendedDocuments.filter(doc => doc.translation_status === statusFilter);
-      console.log(`[Status Filter Debug] Total documents with translation_status "${statusFilter}" in extendedDocuments: ${allStatusMatches.length}`);
+      const allStatusMatches = extendedDocuments.filter(doc => doc.status === statusFilter);
+      console.log(`[Status Filter Debug] Total documents with status "${statusFilter}" in extendedDocuments: ${allStatusMatches.length}`);
       if (allStatusMatches.length !== statusMatches.length) {
-        console.log(`[Status Filter Debug] WARNING: Some documents with translation_status "${statusFilter}" are not being filtered correctly!`);
+        console.log(`[Status Filter Debug] WARNING: Some documents with status "${statusFilter}" are not being filtered correctly!`);
         allStatusMatches.forEach(doc => {
           const isInFiltered = filtered.some(fDoc => fDoc.id === doc.id);
           console.log(`  - ${doc.filename}: in filtered=${isInFiltered}`);
@@ -674,10 +733,10 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                       </span>
                     </td>
                     
-                    {/* TRANSLATIONS */}
+                    {/* TRANSLATIONS - Status da tabela documents_to_be_verified */}
                     <td className="px-3 py-3 text-xs">
-                      <span className={`inline-flex px-2 py-1 font-semibold rounded-full ${getStatusColor(doc.translation_status || 'pending')}`}>
-                        {doc.translation_status || 'pending'}
+                      <span className={`inline-flex px-2 py-1 font-semibold rounded-full ${getStatusColor(doc.status || 'pending')}`}>
+                        {doc.status || 'pending'}
                       </span>
                     </td>
                     

@@ -30,8 +30,8 @@ export function StatsCards({ documents }: StatsCardsProps) {
     try {
       // Buscar estatísticas de todas as tabelas relevantes
       const [documentsResult, verifiedResult, translatedResult, profilesResult] = await Promise.all([
-        supabase.from('documents').select('id, status, total_cost, user_id, filename, created_at, profiles!inner(role)'),
-        supabase.from('documents_to_be_verified').select('id, status, user_id, filename, created_at'),
+        supabase.from('documents').select('id, status, total_cost, user_id, filename, original_filename, created_at, profiles!inner(role)'),
+        supabase.from('documents_to_be_verified').select('id, status, user_id, filename, original_filename, original_document_id, created_at'),
         supabase.from('translated_documents').select('status, user_id'),
         supabase.from('profiles').select('id, role, created_at')
       ]);
@@ -42,41 +42,66 @@ export function StatsCards({ documents }: StatsCardsProps) {
         const allProfiles = profilesResult.data;
 
         // Debug: mostrar os dados reais
-        console.log('Total documents in documents table:', mainDocuments.length);
-        console.log('Total documents in verified table:', verifiedDocuments.length);
-        console.log('Total users in profiles table:', allProfiles.length);
+        console.log('📊 [STATS] Total documents in documents table:', mainDocuments.length);
+        console.log('📊 [STATS] Total documents in verified table:', verifiedDocuments.length);
+        console.log('📊 [STATS] Total users in profiles table:', allProfiles.length);
 
-        // Lógica corrigida: Usar documents como base (documentos únicos) e verificar status em documents_to_be_verified
-        // Criar um mapa dos documentos verificados para verificação rápida
+        // USAR A MESMA LÓGICA DO DocumentsTable.tsx
+        // Criar mapa dos documentos verificados para lookup rápido
         const verifiedDocsMap = new Map();
-        verifiedDocuments.forEach((doc: any) => {
-          const key = `${doc.filename}_${doc.user_id}`;
-          const existing = verifiedDocsMap.get(key);
-          
-          // Se já existe, manter o mais recente
-          if (!existing || new Date(doc.created_at) > new Date(existing.created_at)) {
-            verifiedDocsMap.set(key, doc);
+        verifiedDocuments.forEach((verifiedDoc: any) => {
+          // Primeira prioridade: relacionar por original_document_id
+          if (verifiedDoc.original_document_id) {
+            verifiedDocsMap.set(verifiedDoc.original_document_id, verifiedDoc);
+          } else {
+            // Segunda prioridade: relacionar por user_id + filename
+            const key = `${verifiedDoc.user_id}_${verifiedDoc.filename}`;
+            verifiedDocsMap.set(key, verifiedDoc);
           }
         });
 
-        // Para cada documento em documents, verificar se tem status atualizado em documents_to_be_verified
-        const documentsWithCorrectStatus = mainDocuments.map((doc: any) => {
-          const key = `${doc.filename}_${doc.user_id}`;
-          const verifiedDoc = verifiedDocsMap.get(key);
-          
-          // Se existe em documents_to_be_verified, usar esse status (mais atual)
-          // Senão, usar o status original de documents
+        // Processar TODOS os documentos da tabela documents como base
+        const documentsWithCorrectStatus = mainDocuments.map((mainDoc: any) => {
+          // Verificar se existe em documents_to_be_verified
+          let verifiedDoc = null;
+
+          // Primeira tentativa: buscar por ID direto
+          if (verifiedDocsMap.has(mainDoc.id)) {
+            verifiedDoc = verifiedDocsMap.get(mainDoc.id);
+          } else {
+            // Segunda tentativa: buscar por user_id + filename
+            const key = `${mainDoc.user_id}_${mainDoc.filename}`;
+            if (verifiedDocsMap.has(key)) {
+              verifiedDoc = verifiedDocsMap.get(key);
+            }
+          }
+
+          // Determinar status final
+          let finalStatus = 'processing'; // Default: se não está em documents_to_be_verified
+
+          if (verifiedDoc) {
+            // Se existe em documents_to_be_verified, usar esse status
+            finalStatus = verifiedDoc.status;
+          }
+
           return {
-            ...doc,
-            finalStatus: verifiedDoc ? verifiedDoc.status : doc.status
+            ...mainDoc,
+            finalStatus,
+            hasVerificationRecord: !!verifiedDoc
           };
         });
 
-        // Contar status corretos
+        // Contar status corretos usando a MESMA lógica do DocumentsTable
         const statusCounts = documentsWithCorrectStatus.reduce((acc: any, doc: any) => {
           acc[doc.finalStatus] = (acc[doc.finalStatus] || 0) + 1;
           return acc;
         }, {});
+
+        // Log de debug detalhado
+        const matchStats = {
+          with_verification: documentsWithCorrectStatus.filter(d => d.hasVerificationRecord).length,
+          without_verification: documentsWithCorrectStatus.filter(d => !d.hasVerificationRecord).length
+        };
 
         const stats = {
           total_documents: mainDocuments.length, // Total de documentos únicos da tabela documents
@@ -88,12 +113,13 @@ export function StatsCards({ documents }: StatsCardsProps) {
           active_users: allProfiles.length
         };
 
-        console.log('Final stats (using latest status per unique document):', stats);
-        console.log('Status breakdown:', statusCounts);
+        console.log('📈 [STATS NOVA LÓGICA] Using same logic as DocumentsTable:', stats);
+        console.log('📊 [STATS STATUS BREAKDOWN]:', statusCounts);
+        console.log('🔗 [STATS MATCH BREAKDOWN]:', matchStats);
         setExtendedStats(stats);
       }
     } catch (error) {
-      console.error('Error fetching extended stats:', error);
+      console.error('❌ [STATS ERROR] Error fetching extended stats:', error);
     } finally {
       setLoading(false);
     }
