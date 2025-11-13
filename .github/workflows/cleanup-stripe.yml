@@ -1,0 +1,25 @@
+name: Cleanup Stripe Pending Documents
+
+on:
+  schedule:
+    # Executa a cada 2 minutos
+    - cron: '*/2 * * * *'
+  workflow_dispatch: # Permite execução manual
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Cleanup Stripe Pending Documents
+      run: |
+        echo "🧹 Executando limpeza de documentos Stripe pendentes..."
+        
+        # Chamar a Edge Function de limpeza
+        curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d "{}" \
+          "https://ywpogqwhwscbdhnoqsmv.functions.supabase.co/cleanup-stripe-pending"
+        
+        echo "✅ Limpeza concluída"

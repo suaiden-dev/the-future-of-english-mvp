@@ -238,52 +238,37 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
         console.log('DEBUG: Dados do registro criado:', JSON.stringify(paymentRecord, null, 2));
       }
       
-      // Enviar notificação de pagamento para admins
+      // Enviar notificação de pagamento para admins e autenticadores
       try {
-        console.log('DEBUG: Enviando notificação de pagamento Stripe para admins');
+        console.log('DEBUG: Enviando notificação de pagamento Stripe via payment-notifications function');
         
-        // Buscar dados do usuário que fez o pagamento
-        const { data: user, error: userError } = await supabase
-          .from('profiles')
-          .select('name, email')
-          .eq('id', userId)
-          .single();
+        const notificationPayload = {
+          payment_id: paymentRecord.id,
+          user_id: userId,
+          document_id: documentId,
+          payment_method: 'stripe',
+          amount: parseFloat(totalPrice || '0'),
+          filename: filename || 'Unknown Document',
+          notification_type: 'payment_received'
+        };
         
-        // Buscar emails dos admins
-        const { data: adminProfiles } = await supabase
-          .from('profiles')
-          .select('email')
-          .in('role', ['admin', 'finance', 'lush-admin']);
-
-        if (!userError && user && adminProfiles && adminProfiles.length > 0) {
-          // Enviar notificação para cada admin
-          for (const admin of adminProfiles) {
-            const notificationPayload = {
-              user_name: user.name || 'Unknown User',
-              user_email: admin.email,
-              notification_type: 'Payment Stripe',
-              timestamp: new Date().toISOString(),
-              filename: filename || 'Unknown Document',
-              document_id: documentId,
-              status: 'pagamento aprovado automaticamente'
-            };
-            
-            try {
-              const webhookResponse = await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush1', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(notificationPayload)
-              });
-              
-              if (webhookResponse.ok) {
-                console.log(`SUCCESS: Notificação Stripe enviada para admin: ${admin.email}`);
-              } else {
-                console.error(`WARNING: Falha ao enviar notificação Stripe para ${admin.email}:`, webhookResponse.status);
-              }
-            } catch (adminNotificationError) {
-              console.error(`ERROR: Erro ao enviar notificação para admin ${admin.email}:`, adminNotificationError);
-            }
-          }
+        console.log('DEBUG: Payload para payment-notifications:', JSON.stringify(notificationPayload, null, 2));
+        
+        const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/payment-notifications`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`
+          },
+          body: JSON.stringify(notificationPayload)
+        });
+        
+        if (notificationResponse.ok) {
+          const notificationResult = await notificationResponse.json();
+          console.log('SUCCESS: Notificações de pagamento Stripe enviadas:', notificationResult.message);
+        } else {
+          const errorText = await notificationResponse.text();
+          console.error('WARNING: Falha ao enviar notificações de pagamento Stripe:', notificationResponse.status, errorText);
         }
       } catch (notificationError) {
         console.error('WARNING: Erro ao enviar notificações de pagamento Stripe:', notificationError);

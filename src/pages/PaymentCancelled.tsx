@@ -2,26 +2,35 @@
 import { XCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useDocumentCleanup } from '../hooks/useDocumentCleanup';
 
 export function PaymentCancelled() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false); // ComeÃ§a como false pois agora limpamos ao clicar no botÃ£o
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cleanupComplete, setCleanupComplete] = useState(false);
 
+  // Hook para limpeza de documentos
+  const { cleanupAllPendingDocuments } = useDocumentCleanup({
+    isPaymentCompleted: false,
+    shouldCleanup: true,
+    onCleanupComplete: () => {
+      console.log('✅ Limpeza de documentos concluída');
+      setCleanupComplete(true);
+    }
+  });
+
   useEffect(() => {
-    // Chamar a funÃ§Ã£o de limpeza assim que a pÃ¡gina carregar
-    // Mas sÃ³ se nÃ£o foi executada ainda
+    // Chamar a função de limpeza assim que a página carregar
     if (!cleanupComplete) {
       cleanupDraftDocuments();
     }
   }, [cleanupComplete]);
 
-  // FunÃ§Ã£o para chamar a Edge Function que limpa o documento
+  // Função para chamar a limpeza usando o hook
   const cleanupDraftDocuments = async () => {
-    // Evitar chamadas duplas
     if (isLoading) {
-      console.log('DEBUG: cleanupDraftDocuments jÃ¡ estÃ¡ executando, ignorando');
+      console.log('DEBUG: cleanupDraftDocuments já está executando, ignorando');
       return;
     }
 
@@ -30,62 +39,10 @@ export function PaymentCancelled() {
     setCleanupComplete(false);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        throw new Error('UsuÃ¡rio nÃ£o autenticado. FaÃ§a login para continuar.');
-      }
-
-      const userId = session.user.id;
-      console.log('DEBUG: Iniciando limpeza para usuÃ¡rio:', {
-        userId: userId,
-        userEmail: session.user.email,
-        timestamp: new Date().toISOString()
-      });
-
-      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cleanup-draft-documents`;
-
-      const response = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ 
-          userId: userId  // Garantir que estamos usando o userId correto
-        }),
-      });
-
-      const result = await response.json();
-      console.log('DEBUG: Resposta da edge function:', {
-        status: response.status,
-        ok: response.ok,
-        userId: userId, // Log do userId que foi enviado
-        result
-      });
-
-      if (!response.ok) {
-        console.error('ERROR: Falha ao chamar edge function:', {
-          status: response.status,
-          statusText: response.statusText,
-          userId: userId, // Log do userId que foi enviado
-          result
-        });
-        throw new Error(result.error || 'Falha ao chamar a funÃ§Ã£o de limpeza.');
-      }
-
-      console.log('DEBUG: Documento de rascunho limpo com sucesso para usuÃ¡rio:', {
-        userId: userId,
-        result
-      });
-      setCleanupComplete(true);
-
+      await cleanupAllPendingDocuments();
     } catch (err: any) {
-      console.error('DEBUG: Erro detalhado ao limpar documento:', {
-        error: err,
-        message: err.message,
-        timestamp: new Date().toISOString()
-      });
-      setError(err.message || 'Ocorreu um erro ao limpar o documento. Por favor, contate o suporte.');
+      console.error('ERROR: Erro na limpeza de documentos:', err);
+      setError(err.message || 'Erro ao limpar documentos. Tente novamente.');
     } finally {
       setIsLoading(false);
     }

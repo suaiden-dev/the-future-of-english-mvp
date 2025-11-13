@@ -252,36 +252,40 @@ export function ZelleReceiptsAdmin() {
 
   const sendRejectionNotification = async (payment: ZellePayment, reason: string) => {
     try {
-      // Buscar email do usuário
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('name, email')
-        .eq('id', payment.user_id)
-        .single();
-
-      if (!userProfile) {
-        throw new Error('User profile not found');
-      }
-
-      const payload = {
-        user_email: userProfile.email,
-        message: reason,
-        notification_type: 'Zelle Payment Rejected',
-        user_name: userProfile.name,
-        document_name: payment.documents?.filename,
+      console.log('DEBUG: Enviando notificação de rejeição via payment-notifications function');
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const notificationPayload = {
+        payment_id: payment.id,
+        user_id: payment.user_id,
+        document_id: payment.document_id,
+        payment_method: 'zelle',
         amount: payment.amount,
-        timestamp: new Date().toISOString()
+        filename: payment.documents?.filename || 'Unknown Document',
+        notification_type: 'payment_rejected',
+        status: `pagamento rejeitado - ${reason}`
       };
-
-      console.log('📧 Enviando notificação de rejeição:', payload);
-
-      await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush1', {
+      
+      console.log('DEBUG: Payload para payment-notifications (rejection):', JSON.stringify(notificationPayload, null, 2));
+      
+      const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/payment-notifications`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
+        body: JSON.stringify(notificationPayload)
       });
-
-      console.log('✅ Notificação de rejeição enviada com sucesso');
+      
+      if (notificationResponse.ok) {
+        const result = await notificationResponse.json();
+        console.log('SUCCESS: Notificação de rejeição enviada:', result.message);
+      } else {
+        const errorText = await notificationResponse.text();
+        console.error('WARNING: Falha ao enviar notificação de rejeição:', notificationResponse.status, errorText);
+      }
     } catch (error) {
       console.error('Error sending rejection notification:', error);
       // Non-critical error, so we don't throw
@@ -290,36 +294,39 @@ export function ZelleReceiptsAdmin() {
 
   const sendApprovalNotification = async (payment: ZellePayment) => {
     try {
-      // Buscar email do usuário
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('name, email')
-        .eq('id', payment.user_id)
-        .single();
-
-      if (!userProfile) {
-        throw new Error('User profile not found');
-      }
-
-      const payload = {
-        user_email: userProfile.email,
-        message: 'Your Zelle payment has been approved and your document is now being processed.',
-        notification_type: 'Zelle Payment Approved',
-        user_name: userProfile.name,
-        document_name: payment.documents?.filename,
+      console.log('DEBUG: Enviando notificação de aprovação via payment-notifications function');
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const notificationPayload = {
+        payment_id: payment.id,
+        user_id: payment.user_id,
+        document_id: payment.document_id,
+        payment_method: 'zelle',
         amount: payment.amount,
-        timestamp: new Date().toISOString()
+        filename: payment.documents?.filename || 'Unknown Document',
+        notification_type: 'payment_approved'
       };
-
-      console.log('📧 Enviando notificação de aprovação:', payload);
-
-      await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush1', {
+      
+      console.log('DEBUG: Payload para payment-notifications (approval):', JSON.stringify(notificationPayload, null, 2));
+      
+      const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/payment-notifications`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
+        body: JSON.stringify(notificationPayload)
       });
-
-      console.log('✅ Notificação de aprovação enviada com sucesso');
+      
+      if (notificationResponse.ok) {
+        const result = await notificationResponse.json();
+        console.log('SUCCESS: Notificação de aprovação enviada:', result.message);
+      } else {
+        const errorText = await notificationResponse.text();
+        console.error('WARNING: Falha ao enviar notificação de aprovação:', notificationResponse.status, errorText);
+      }
     } catch (error) {
       console.error('Error sending approval notification:', error);
       // Non-critical error, so we don't throw

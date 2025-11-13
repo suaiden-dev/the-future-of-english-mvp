@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useDocuments, useAllDocuments } from './hooks/useDocuments';
 import { useFolders } from './hooks/useFolders';
@@ -24,7 +24,7 @@ import DocumentManager from './pages/DocumentManager';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentCancelled } from './pages/PaymentCancelled';
 import { ZelleCheckout } from './pages/ZelleCheckout';
-import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, LogOut, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, CheckCircle } from 'lucide-react';
+import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User } from 'lucide-react';
 
 import { Page } from './types/Page';
 import { Database } from './lib/database.types';
@@ -36,8 +36,6 @@ import MyDocumentsPage from './pages/CustomerDashboard/MyDocumentsPage';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import AuthRedirect from './components/AuthRedirect';
 import DocumentManagerPage from './pages/DocumentManager/index';
-import AuthenticatorDashboard from './pages/DocumentManager/AuthenticatorDashboard';
-import DocumentsToAuthenticate from './pages/DocumentManager/DocumentsToAuthenticate';
 
 type Document = Database['public']['Tables']['documents']['Row'];
 type Folder = Database['public']['Tables']['folders']['Row'];
@@ -51,6 +49,9 @@ function App() {
   
   // Auth hook
   const { user, loading: authLoading, signOut } = useAuth();
+  
+  // Limpeza automática agora é feita via cron job do Supabase
+  // Não precisa mais do agendador no frontend
   
   // Documents hooks
   const { documents, createDocument, updateDocumentStatus } = useDocuments(user?.id);

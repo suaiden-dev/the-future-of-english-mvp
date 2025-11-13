@@ -8,6 +8,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { PaymentMethodModal } from '../../components/PaymentMethodModal';
 import { ZellePaymentModal } from '../../components/ZellePaymentModal';
 import { useNavigate } from 'react-router-dom';
+import { useDocumentCleanup } from '../../hooks/useDocumentCleanup';
 
 export default function UploadDocument() {
   const { user } = useAuth();
@@ -32,6 +33,18 @@ export default function UploadDocument() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showZelleModal, setShowZelleModal] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+  const [isPaymentCompleted, setIsPaymentCompleted] = useState(false);
+
+  // Hook para limpeza de documentos
+  const { cleanupDocument, navigateWithCleanup } = useDocumentCleanup({
+    documentId: currentDocumentId || undefined,
+    isPaymentCompleted,
+    shouldCleanup: !isPaymentCompleted && !!currentDocumentId,
+    onCleanupComplete: () => {
+      console.log('✅ Limpeza de documento concluída');
+      setCurrentDocumentId(null);
+    }
+  });
   
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -335,10 +348,14 @@ export default function UploadDocument() {
 
       console.log('✅ Document uploaded successfully:', publicUrl);
 
-      // Atualizar o documento no banco com file_url
+      // Atualizar o documento no banco com file_url, payment_method e status zelle_pending
       const { error: updateError } = await supabase
         .from('documents')
-        .update({ file_url: publicUrl })
+        .update({ 
+          file_url: publicUrl,
+          payment_method: 'zelle',
+          status: 'zelle_pending'
+        })
         .eq('id', currentDocumentId);
 
       if (updateError) {

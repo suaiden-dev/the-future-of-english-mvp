@@ -68,11 +68,11 @@ export function ZellePaymentModal({
         throw new Error('Failed to record Zelle payment');
       }
 
-      // Atualizar status do documento para "pending_payment_verification"
+      // Atualizar status do documento para "processing" (pagamento confirmado)
       const { error: docError } = await supabase
         .from('documents')
         .update({ 
-          status: 'pending_payment_verification',
+          status: 'processing',
           payment_method: 'zelle'
         })
         .eq('id', documentId);

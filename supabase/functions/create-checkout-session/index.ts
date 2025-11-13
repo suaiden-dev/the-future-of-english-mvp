@@ -220,6 +220,23 @@ Deno.serve(async (req: Request) => {
           targetCurrency,
         };
 
+        // Marcar documento como aguardando pagamento Stripe
+        if (documentId) {
+          const { error: docError } = await supabaseClient
+            .from('documents')
+            .update({ 
+              status: 'stripe_pending',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', documentId);
+
+          if (docError) {
+            console.error('❌ Erro ao marcar documento como Stripe pending:', docError);
+          } else {
+            console.log('✅ Documento marcado como Stripe pending:', documentId);
+          }
+        }
+
         console.log('DEBUG: Tentando inserir na tabela stripe_sessions...');
         console.log('DEBUG: Dados a serem inseridos:', {
           session_id: session.id,
