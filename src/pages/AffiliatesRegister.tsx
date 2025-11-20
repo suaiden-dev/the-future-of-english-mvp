@@ -153,32 +153,13 @@ export function AffiliatesRegister() {
 
   if (success) {
     return (
-      <div className="min-h-screen relative bg-gradient-to-br from-tfe-blue-950 via-tfe-blue-950 to-black flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Wave Shapes Background */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute bottom-0 left-0 right-0" style={{ height: '300px', width: '100vw', marginLeft: '50%', transform: 'translateX(-50%)' }}>
-            <svg className="w-full h-full" viewBox="0 0 1200 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%', height: '100%' }}>
-              <path d="M-50,300 C50,200 150,180 350,200 C550,220 650,190 850,210 C950,220 1050,200 1250,180 L1250,300 L-50,300 Z" fill="white" opacity="1"/>
-            </svg>
-          </div>
-          <div className="absolute bottom-0 left-0 right-0" style={{ height: '300px', width: '100vw', marginLeft: '50%', transform: 'translateX(-50%) translateY(-30px)' }}>
-            <svg className="w-full h-full" viewBox="0 0 1200 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%', height: '100%' }}>
-              <path d="M-50,300 C100,190 250,170 450,195 C650,220 750,185 950,205 C1050,215 1100,195 1250,175 L1250,300 L-50,300 Z" fill="white" opacity="0.35"/>
-            </svg>
-          </div>
-          <div className="absolute bottom-0 left-0 right-0" style={{ height: '300px', width: '100vw', marginLeft: '50%', transform: 'translateX(-50%) translateY(-60px)' }}>
-            <svg className="w-full h-full" viewBox="0 0 1200 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%', height: '100%' }}>
-              <path d="M-50,300 C70,200 230,185 400,200 C600,220 700,195 900,210 C1000,220 1070,200 1250,185 L1250,300 L-50,300 Z" fill="white" opacity="0.25"/>
-            </svg>
-          </div>
-        </div>
-        
+      <div className="min-h-screen relative bg-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8 relative z-10">
           <div className="text-center">
             <div className="mx-auto h-16 w-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
               <CheckCircle className="h-8 w-8 text-white" />
             </div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
               {t('affiliates.registrationSuccessTitle')}
             </h2>
             <div className="mt-6 bg-white rounded-xl p-6 shadow-lg border border-gray-200">
@@ -224,26 +205,7 @@ export function AffiliatesRegister() {
   }
 
   return (
-    <div className="min-h-screen relative bg-gradient-to-br from-tfe-blue-950 via-tfe-blue-950 to-black flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Wave Shapes Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute bottom-0 left-0 right-0" style={{ height: '300px', width: '100vw', marginLeft: '50%', transform: 'translateX(-50%)' }}>
-          <svg className="w-full h-full" viewBox="0 0 1200 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%', height: '100%' }}>
-            <path d="M-50,300 C50,200 150,180 350,200 C550,220 650,190 850,210 C950,220 1050,200 1250,180 L1250,300 L-50,300 Z" fill="white" opacity="1"/>
-          </svg>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0" style={{ height: '300px', width: '100vw', marginLeft: '50%', transform: 'translateX(-50%) translateY(-30px)' }}>
-          <svg className="w-full h-full" viewBox="0 0 1200 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%', height: '100%' }}>
-            <path d="M-50,300 C100,190 250,170 450,195 C650,220 750,185 950,205 C1050,215 1100,195 1250,175 L1250,300 L-50,300 Z" fill="white" opacity="0.35"/>
-          </svg>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0" style={{ height: '300px', width: '100vw', marginLeft: '50%', transform: 'translateX(-50%) translateY(-60px)' }}>
-          <svg className="w-full h-full" viewBox="0 0 1200 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%', height: '100%' }}>
-            <path d="M-50,300 C70,200 230,185 400,200 C600,220 700,195 900,210 C1000,220 1070,200 1250,185 L1250,300 L-50,300 Z" fill="white" opacity="0.25"/>
-          </svg>
-        </div>
-      </div>
-      
+    <div className="min-h-screen relative bg-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full relative z-10">
         <div className="bg-white rounded-xl shadow-xl p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
