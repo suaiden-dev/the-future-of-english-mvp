@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useDocuments, useAllDocuments } from './hooks/useDocuments';
 import { useFolders } from './hooks/useFolders';
@@ -13,6 +13,7 @@ import { Translations } from './pages/Translations';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { UserManagement } from './pages/AdminDashboard/UserManagement';
 import { AuthenticatorControl } from './pages/AdminDashboard/AuthenticatorControl';
+import { AffiliateWithdrawals } from './pages/AdminDashboard/AffiliateWithdrawals';
 import { CustomerDashboard } from './pages/CustomerDashboard';
 import { FinanceDashboard } from './pages/FinanceDashboard';
 import { DocumentVerification } from './pages/DocumentVerification';
@@ -24,7 +25,10 @@ import DocumentManager from './pages/DocumentManager';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentCancelled } from './pages/PaymentCancelled';
 import { ZelleCheckout } from './pages/ZelleCheckout';
-import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, LogOut, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, CheckCircle } from 'lucide-react';
+import { AffiliatesRegister } from './pages/AffiliatesRegister';
+import { AffiliatesLogin } from './pages/AffiliatesLogin';
+import { AffiliateDashboard } from './pages/AffiliateDashboard';
+import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, DollarSign } from 'lucide-react';
 
 import { Page } from './types/Page';
 import { Database } from './lib/database.types';
@@ -36,8 +40,6 @@ import MyDocumentsPage from './pages/CustomerDashboard/MyDocumentsPage';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import AuthRedirect from './components/AuthRedirect';
 import DocumentManagerPage from './pages/DocumentManager/index';
-import AuthenticatorDashboard from './pages/DocumentManager/AuthenticatorDashboard';
-import DocumentsToAuthenticate from './pages/DocumentManager/DocumentsToAuthenticate';
 
 type Document = Database['public']['Tables']['documents']['Row'];
 type Folder = Database['public']['Tables']['folders']['Row'];
@@ -51,6 +53,9 @@ function App() {
   
   // Auth hook
   const { user, loading: authLoading, signOut } = useAuth();
+  
+  // Limpeza automática agora é feita via cron job do Supabase
+  // Não precisa mais do agendador no frontend
   
   // Documents hooks
   const { documents, createDocument, updateDocumentStatus } = useDocuments(user?.id);
@@ -170,7 +175,8 @@ function App() {
                            location.pathname.startsWith('/authenticator') ||
                            location.pathname.startsWith('/finance') ||
                            location.pathname === '/user-management' ||
-                           location.pathname === '/authenticator-control';
+                           location.pathname === '/authenticator-control' ||
+                           location.pathname === '/admin/affiliate-withdrawals';
     
     // Se estÃ¡ na Ã¡rea de Dashboard, mostrar apenas itens do Dashboard (botÃ£o Home Ã© separado)
     if (isDashboardArea) {
@@ -306,8 +312,9 @@ function App() {
       {/* Mobile menu */}
       <MobileMenu />
       
-      {/* Renderiza Header apenas em rotas pÃºblicas */}
-      {['/', '/translations', '/verify', '/login', '/register'].includes(location.pathname) && (
+      {/* Renderiza Header apenas em rotas públicas */}
+      {(['/', '/translations', '/verify', '/login', '/register', '/affiliates/register', '/affiliates/login'].includes(location.pathname) || 
+        (location.pathname.startsWith('/affiliates') && !location.pathname.startsWith('/affiliates/dashboard'))) && (
         <Header 
           user={user} 
           onLogout={handleLogout} 
@@ -323,6 +330,9 @@ function App() {
           <Route path="/verify" element={<DocumentVerification />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/affiliates/register" element={<AffiliatesRegister />} />
+          <Route path="/affiliates/login" element={<AffiliatesLogin />} />
+          <Route path="/affiliates/dashboard" element={<AffiliateDashboard />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
@@ -442,6 +452,18 @@ function App() {
               title="User Management"
             >
               <UserManagement />
+            </AdminLayout>
+          ) : <Navigate to="/login" />} />
+          
+          <Route path="/admin/affiliate-withdrawals" element={user && (user.role === 'admin' || user.role === 'finance') ? (
+            <AdminLayout 
+              user={user} 
+              onLogout={handleLogout} 
+              onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
+              navItems={getNavItems()}
+              title="Solicitações de Saque de Afiliados"
+            >
+              <AffiliateWithdrawals />
             </AdminLayout>
           ) : <Navigate to="/login" />} />
           

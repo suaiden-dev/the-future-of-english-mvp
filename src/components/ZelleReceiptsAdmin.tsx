@@ -252,36 +252,40 @@ export function ZelleReceiptsAdmin() {
 
   const sendRejectionNotification = async (payment: ZellePayment, reason: string) => {
     try {
-      // Buscar email do usuário
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('name, email')
-        .eq('id', payment.user_id)
-        .single();
-
-      if (!userProfile) {
-        throw new Error('User profile not found');
-      }
-
-      const payload = {
-        user_email: userProfile.email,
-        message: reason,
-        notification_type: 'Zelle Payment Rejected',
-        user_name: userProfile.name,
-        document_name: payment.documents?.filename,
+      console.log('DEBUG: Enviando notificação de rejeição via payment-notifications function');
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const notificationPayload = {
+        payment_id: payment.id,
+        user_id: payment.user_id,
+        document_id: payment.document_id,
+        payment_method: 'zelle',
         amount: payment.amount,
-        timestamp: new Date().toISOString()
+        filename: payment.documents?.filename || 'Unknown Document',
+        notification_type: 'payment_rejected',
+        status: `pagamento rejeitado - ${reason}`
       };
-
-      console.log('📧 Enviando notificação de rejeição:', payload);
-
-      await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush1', {
+      
+      console.log('DEBUG: Payload para payment-notifications (rejection):', JSON.stringify(notificationPayload, null, 2));
+      
+      const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/payment-notifications`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
+        body: JSON.stringify(notificationPayload)
       });
-
-      console.log('✅ Notificação de rejeição enviada com sucesso');
+      
+      if (notificationResponse.ok) {
+        const result = await notificationResponse.json();
+        console.log('SUCCESS: Notificação de rejeição enviada:', result.message);
+      } else {
+        const errorText = await notificationResponse.text();
+        console.error('WARNING: Falha ao enviar notificação de rejeição:', notificationResponse.status, errorText);
+      }
     } catch (error) {
       console.error('Error sending rejection notification:', error);
       // Non-critical error, so we don't throw
@@ -290,36 +294,39 @@ export function ZelleReceiptsAdmin() {
 
   const sendApprovalNotification = async (payment: ZellePayment) => {
     try {
-      // Buscar email do usuário
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('name, email')
-        .eq('id', payment.user_id)
-        .single();
-
-      if (!userProfile) {
-        throw new Error('User profile not found');
-      }
-
-      const payload = {
-        user_email: userProfile.email,
-        message: 'Your Zelle payment has been approved and your document is now being processed.',
-        notification_type: 'Zelle Payment Approved',
-        user_name: userProfile.name,
-        document_name: payment.documents?.filename,
+      console.log('DEBUG: Enviando notificação de aprovação via payment-notifications function');
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const notificationPayload = {
+        payment_id: payment.id,
+        user_id: payment.user_id,
+        document_id: payment.document_id,
+        payment_method: 'zelle',
         amount: payment.amount,
-        timestamp: new Date().toISOString()
+        filename: payment.documents?.filename || 'Unknown Document',
+        notification_type: 'payment_approved'
       };
-
-      console.log('📧 Enviando notificação de aprovação:', payload);
-
-      await fetch('https://nwh.thefutureofenglish.com/webhook/notthelush1', {
+      
+      console.log('DEBUG: Payload para payment-notifications (approval):', JSON.stringify(notificationPayload, null, 2));
+      
+      const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/payment-notifications`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
+        body: JSON.stringify(notificationPayload)
       });
-
-      console.log('✅ Notificação de aprovação enviada com sucesso');
+      
+      if (notificationResponse.ok) {
+        const result = await notificationResponse.json();
+        console.log('SUCCESS: Notificação de aprovação enviada:', result.message);
+      } else {
+        const errorText = await notificationResponse.text();
+        console.error('WARNING: Falha ao enviar notificação de aprovação:', notificationResponse.status, errorText);
+      }
     } catch (error) {
       console.error('Error sending approval notification:', error);
       // Non-critical error, so we don't throw
@@ -443,21 +450,11 @@ export function ZelleReceiptsAdmin() {
 
   const sendDocumentForTranslation = async (payment: ZellePayment) => {
     try {
-      console.log('🚀 Enviando documento para processo de tradução:', payment.documents?.filename);
+      console.log('🚀 Enviando documento(s) para processo de tradução');
+      console.log('🚀 Payment ID:', payment.id);
+      console.log('🚀 Payment document_id:', payment.document_id);
       
-      // Buscar dados completos do documento na tabela documents
-      const { data: documentData, error: docError } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('id', payment.document_id)
-        .single();
-
-      if (docError || !documentData) {
-        console.error('Erro ao buscar dados do documento:', docError);
-        throw new Error('Document not found');
-      }
-
-      // Buscar dados do usuário
+      // Buscar dados do usuário (comum para todos os documentos)
       const { data: userData, error: userError } = await supabase
         .from('profiles')
         .select('name, email')
@@ -468,6 +465,79 @@ export function ZelleReceiptsAdmin() {
         console.error('Erro ao buscar dados do usuário:', userError);
         throw new Error('User not found');
       }
+
+      // Buscar TODOS os documentos relacionados ao pagamento
+      // Documentos criados no mesmo período (5 minutos antes/depois) com mesmo user_id e payment_method zelle
+      const paymentCreatedAt = new Date(payment.created_at);
+      const timeWindowStart = new Date(paymentCreatedAt.getTime() - 5 * 60 * 1000); // 5 minutos antes
+      const timeWindowEnd = new Date(paymentCreatedAt.getTime() + 5 * 60 * 1000); // 5 minutos depois
+
+      console.log('🔍 Buscando documentos relacionados ao pagamento...');
+      console.log('🔍 Time window:', timeWindowStart.toISOString(), 'to', timeWindowEnd.toISOString());
+      
+      const { data: relatedDocuments, error: docsError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', payment.user_id)
+        .eq('payment_method', 'zelle')
+        .gte('created_at', timeWindowStart.toISOString())
+        .lte('created_at', timeWindowEnd.toISOString())
+        .in('status', ['pending_manual_review', 'processing', 'zelle_pending']);
+
+      if (docsError) {
+        console.error('Erro ao buscar documentos relacionados:', docsError);
+        // Fallback: usar apenas o documento do pagamento
+        const { data: documentData, error: docError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('id', payment.document_id)
+          .single();
+
+        if (docError || !documentData) {
+          console.error('Erro ao buscar dados do documento:', docError);
+          throw new Error('Document not found');
+        }
+
+        await sendSingleDocumentForTranslation(documentData, payment, userData);
+        return;
+      }
+
+      if (!relatedDocuments || relatedDocuments.length === 0) {
+        console.warn('⚠️ Nenhum documento relacionado encontrado, usando documento do pagamento');
+        // Fallback: usar apenas o documento do pagamento
+        const { data: documentData, error: docError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('id', payment.document_id)
+          .single();
+
+        if (docError || !documentData) {
+          console.error('Erro ao buscar dados do documento:', docError);
+          throw new Error('Document not found');
+        }
+
+        await sendSingleDocumentForTranslation(documentData, payment, userData);
+        return;
+      }
+
+      console.log(`✅ Encontrados ${relatedDocuments.length} documentos relacionados ao pagamento`);
+      
+      // Enviar cada documento para tradução
+      for (const documentData of relatedDocuments) {
+        await sendSingleDocumentForTranslation(documentData, payment, userData);
+      }
+
+      console.log(`✅ Todos os ${relatedDocuments.length} documentos enviados para tradução`);
+
+    } catch (error) {
+      console.error('Error sending document for translation:', error);
+      throw error; // Re-throw to be handled by verifyPayment
+    }
+  };
+
+  const sendSingleDocumentForTranslation = async (documentData: any, payment: ZellePayment, userData: any) => {
+    try {
+      console.log(`📄 Enviando documento ${documentData.id} para tradução:`, documentData.filename);
 
       // Gerar a URL pública do documento
       let publicUrl: string;
@@ -485,23 +555,33 @@ export function ZelleReceiptsAdmin() {
         console.log('📄 URL do documento (fallback):', publicUrl);
       }
 
+      // Calcular preço individual do documento
+      const docPrice = (documentData.pages || 1) * (documentData.tipo_trad === 'Notorizado' ? 20 : 15) + 
+                       (documentData.is_bank_statement ? 10 : 0);
+
       // Preparar payload para o webhook de tradução
       const translationPayload = {
         filename: documentData.filename,
+        original_filename: documentData.original_filename || documentData.filename,
+        original_document_id: documentData.id,
         url: publicUrl,
         mimetype: 'application/pdf',
         size: documentData.file_size || 0,
         user_id: payment.user_id,
         pages: documentData.pages || 1,
-        document_type: documentData.document_type || 'Certificado',
-        total_cost: payment.amount.toString(),
-        source_language: documentData.source_language || 'Portuguese',
-        target_language: documentData.target_language || 'English',
+        paginas: documentData.pages || 1,
+        document_type: documentData.document_type || documentData.tipo_trad || 'Certificado',
+        tipo_trad: documentData.tipo_trad === 'Notorizado' ? 'Notarized' : 'Certified',
+        total_cost: docPrice.toString(),
+        valor: docPrice.toString(),
+        source_language: documentData.source_language || documentData.idioma_raiz || 'Portuguese',
+        target_language: documentData.target_language || documentData.idioma_destino || 'English',
+        idioma_raiz: documentData.idioma_raiz || documentData.source_language || 'Portuguese',
+        idioma_destino: documentData.idioma_destino || documentData.target_language || 'English',
         is_bank_statement: documentData.is_bank_statement || false,
         client_name: documentData.client_name || userData.name,
         source_currency: documentData.source_currency || null,
         target_currency: documentData.target_currency || null,
-        document_id: payment.document_id,
         // Campos padronizados para compatibilidade com n8n
         isPdf: true,
         fileExtension: 'pdf',
@@ -527,15 +607,15 @@ export function ZelleReceiptsAdmin() {
       const result = await response.json();
 
       if (response.ok) {
-        console.log('✅ Documento enviado para tradução com sucesso:', result);
+        console.log(`✅ Documento ${documentData.id} enviado para tradução com sucesso:`, result);
       } else {
-        console.error('❌ Erro ao enviar documento para tradução:', result);
+        console.error(`❌ Erro ao enviar documento ${documentData.id} para tradução:`, result);
         throw new Error(result.error || 'Failed to send document for translation');
       }
 
     } catch (error) {
-      console.error('Error sending document for translation:', error);
-      throw error; // Re-throw to be handled by verifyPayment
+      console.error(`Error sending document ${documentData.id} for translation:`, error);
+      throw error;
     }
   };
 
