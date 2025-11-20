@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Lock, Mail, UserPlus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
+import { supabase } from '../lib/supabase';
+import { useAffiliateRef } from '../hooks/useAffiliateRef';
 
 export function Register() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const [searchParams] = useSearchParams();
+  
+  // Capturar código de referência usando o hook
+  const referralCodeFromHook = useAffiliateRef();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -20,6 +26,30 @@ export function Register() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+
+  // Atualizar estado quando o código mudar
+  useEffect(() => {
+    const refFromUrl = searchParams.get('ref');
+    const refFromStorage = localStorage.getItem('affiliate_ref');
+    const finalRef = refFromUrl || refFromStorage || referralCodeFromHook;
+    
+    console.log('[Register] Verificando código de referência:', {
+      refFromUrl,
+      refFromStorage,
+      referralCodeFromHook,
+      finalRef
+    });
+    
+    if (finalRef) {
+      setReferralCode(finalRef);
+      // Garantir que está salvo no localStorage
+      if (!localStorage.getItem('affiliate_ref')) {
+        localStorage.setItem('affiliate_ref', finalRef);
+      }
+      console.log('[Register] Código de referência definido:', finalRef);
+    }
+  }, [searchParams, referralCodeFromHook]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +97,47 @@ export function Register() {
       const result = await signUp(formData.email, formData.password, formData.name, formData.phone);
       
       console.log('[Register] Registro bem-sucedido:', result);
+      
+      // Se houver código de referência e o usuário foi criado, registrar a referência
+      // Verificar novamente o localStorage caso o código não tenha sido capturado no estado
+      const finalReferralCode = referralCode || localStorage.getItem('affiliate_ref');
+      
+      console.log('[Register] Código de referência:', finalReferralCode);
+      console.log('[Register] User ID:', result.user?.id);
+      
+      if (finalReferralCode && result.user) {
+        try {
+          console.log('[Register] Tentando registrar referência...');
+          const { data: referralData, error: referralError } = await supabase
+            .rpc('register_affiliate_referral', {
+              p_referred_user_id: result.user.id,
+              p_referral_code: finalReferralCode
+            });
+
+          if (referralError) {
+            console.error('[Register] Erro ao registrar referência:', referralError);
+            console.error('[Register] Detalhes do erro:', {
+              code: referralError.code,
+              message: referralError.message,
+              details: referralError.details,
+              hint: referralError.hint
+            });
+            // Não bloquear o registro se houver erro na referência
+          } else {
+            console.log('[Register] Referência registrada com sucesso!', referralData);
+            // Remover o código do localStorage após registrar
+            localStorage.removeItem('affiliate_ref');
+          }
+        } catch (refErr) {
+          console.error('[Register] Erro ao processar referência:', refErr);
+          // Não bloquear o registro se houver erro na referência
+        }
+      } else {
+        console.log('[Register] Não há código de referência ou usuário não foi criado');
+        console.log('[Register] referralCode:', referralCode);
+        console.log('[Register] localStorage:', localStorage.getItem('affiliate_ref'));
+        console.log('[Register] result.user:', result.user);
+      }
       
       // Definir sucesso imediatamente
       setSuccess(true);

@@ -50,20 +50,57 @@ export function ZelleCheckout() {
     
     const fetchDocumentData = async () => {
       try {
-        const { data: document, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('id', documentId)
-          .single();
+        // Verificar se documentId contém múltiplos IDs (separados por vírgula)
+        const documentIds = documentId ? documentId.split(',').map(id => id.trim()) : [];
+        
+        if (documentIds.length === 0) {
+          setError('No document ID provided');
+          setLoading(false);
+          return;
+        }
 
-        if (error) throw error;
-        setDocumentData(document);
+        // Se houver múltiplos documentos, buscar todos
+        if (documentIds.length > 1) {
+          const { data: documents, error } = await supabase
+            .from('documents')
+            .select('*')
+            .in('id', documentIds);
 
-        // Arquivo já deve estar no Storage se chegou até aqui
-        if (document.file_url) {
-          console.log('✅ Document already has file_url:', document.file_url);
+          if (error) throw error;
+          
+          // Para múltiplos documentos, usar o primeiro para exibição
+          // (o ZelleCheckout pode precisar ser atualizado para mostrar múltiplos documentos)
+          if (documents && documents.length > 0) {
+            setDocumentData(documents[0]);
+            console.log(`✅ Found ${documents.length} documents for Zelle payment`);
+            console.log(`📄 Using first document for display: ${documents[0].id}`);
+            
+            // Arquivo já deve estar no Storage se chegou até aqui
+            if (documents[0].file_url) {
+              console.log('✅ Document already has file_url:', documents[0].file_url);
+            } else {
+              console.warn('⚠️ Document has no file_url - this should not happen in the new flow');
+            }
+          } else {
+            throw new Error('No documents found');
+          }
         } else {
-          console.warn('⚠️ Document has no file_url - this should not happen in the new flow');
+          // Documento único
+          const { data: document, error } = await supabase
+            .from('documents')
+            .select('*')
+            .eq('id', documentIds[0])
+            .single();
+
+          if (error) throw error;
+          setDocumentData(document);
+
+          // Arquivo já deve estar no Storage se chegou até aqui
+          if (document.file_url) {
+            console.log('✅ Document already has file_url:', document.file_url);
+          } else {
+            console.warn('⚠️ Document has no file_url - this should not happen in the new flow');
+          }
         }
       } catch (err) {
         console.error('Error fetching document:', err);
@@ -149,18 +186,33 @@ export function ZelleCheckout() {
 
   const sendWebhook = async (receiptUrl: string, userId: string): Promise<string> => {
     try {
+      // Separar documentId em array se houver múltiplos
+      const documentIds = documentId ? documentId.split(',').map(id => id.trim()) : [];
+      
+      // Enviar como array se houver múltiplos, senão como string única
+      const webhookPayload: any = {
+        user_id: userId,
+        image_url: receiptUrl,
+        value: amount,
+        currency: "USD",
+        fee_type: "traducao_doc",
+        timestamp: new Date().toISOString()
+      };
+      
+      // Se houver múltiplos documentos, enviar como array, senão como string
+      if (documentIds.length > 1) {
+        webhookPayload.document_ids = documentIds;
+        webhookPayload.document_id = documentIds[0]; // Manter document_id para retrocompatibilidade
+      } else {
+        webhookPayload.document_id = documentId;
+      }
+      
+      console.log('DEBUG: Webhook payload:', JSON.stringify(webhookPayload, null, 2));
+      
       const response = await fetch('https://nwh.thefutureofenglish.com/webhook/zelle-global-tfoe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          document_id: documentId,
-          image_url: receiptUrl,
-          value: amount,
-          currency: "USD",
-          fee_type: "traducao_doc",
-          timestamp: new Date().toISOString()
-        }),
+        body: JSON.stringify(webhookPayload),
       });
 
       if (!response.ok) {
@@ -212,6 +264,56 @@ export function ZelleCheckout() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const { data: { session } } = await supabase.auth.getSession();
       
+      // Separar documentId em array se houver múltiplos
+      const documentIds = documentId ? documentId.split(',').map(id => id.trim()) : [];
+      
+      // Se houver múltiplos documentos, enviar cada um individualmente
+      if (documentIds.length > 1) {
+        console.log(`DEBUG: Enviando notificações para ${documentIds.length} documentos`);
+        
+        // Buscar todos os documentos para obter os filenames
+        const { data: allDocuments } = await supabase
+          .from('documents')
+          .select('id, filename')
+          .in('id', documentIds);
+        
+        // Enviar notificação para cada documento
+        for (const doc of allDocuments || []) {
+          const notificationPayload = {
+            payment_id: paymentId || 'pending', // Será criado pelo n8n
+            user_id: userId,
+            document_id: doc.id,
+            payment_method: 'zelle',
+            amount: parseFloat(amount || '0'),
+            filename: doc.filename || filename || 'Unknown Document',
+            notification_type: 'payment_received',
+            status: needsManualReview ? 'comprovante requer revisão manual' : 'aguardando aprovação de pagamento'
+          };
+          
+          console.log(`DEBUG: Payload para payment-notifications (doc ${doc.id}):`, JSON.stringify(notificationPayload, null, 2));
+          
+          const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/payment-notifications`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token || ''}`
+            },
+            body: JSON.stringify(notificationPayload)
+          });
+          
+          if (notificationResponse.ok) {
+            const result = await notificationResponse.json();
+            console.log(`SUCCESS: Notificação Zelle enviada para documento ${doc.id}:`, result.message);
+          } else {
+            const errorText = await notificationResponse.text();
+            console.error(`WARNING: Falha ao enviar notificação Zelle para documento ${doc.id}:`, notificationResponse.status, errorText);
+          }
+        }
+        
+        return; // Retornar após processar todos os documentos
+      }
+      
+      // Documento único - fluxo original
       const notificationPayload = {
         payment_id: paymentId || 'pending', // Será criado pelo n8n
         user_id: userId,
@@ -378,17 +480,44 @@ export function ZelleCheckout() {
       console.log('DEBUG: Registro de pagamento será criado pelo n8n após processamento do webhook');
 
       // Processar baseado na validação
+      // Separar documentId em array se houver múltiplos
+      const documentIds = documentId ? documentId.split(',').map(id => id.trim()) : [];
+      
       if (isValid) {
         // Comprovante válido - fluxo normal
-        await supabase.from('documents').update({ 
-          status: 'processing',  // Mudando para processing pois vai iniciar tradução
-          payment_method: 'zelle'
-        }).eq('id', documentId);
+        // Atualizar todos os documentos
+        if (documentIds.length > 1) {
+          await supabase.from('documents').update({ 
+            status: 'processing',  // Mudando para processing pois vai iniciar tradução
+            payment_method: 'zelle'
+          }).in('id', documentIds);
+        } else {
+          await supabase.from('documents').update({ 
+            status: 'processing',  // Mudando para processing pois vai iniciar tradução
+            payment_method: 'zelle'
+          }).eq('id', documentIds[0] || documentId);
+        }
 
-        // Enviar documento automaticamente para tradução
+        // Enviar documentos automaticamente para tradução
         try {
-          await sendDocumentForTranslation(documentData, userProfile);
-          console.log('✅ Documento enviado para tradução automaticamente');
+          // Se houver múltiplos documentos, enviar cada um
+          if (documentIds.length > 1) {
+            // Buscar todos os documentos
+            const { data: allDocuments } = await supabase
+              .from('documents')
+              .select('*')
+              .in('id', documentIds);
+            
+            if (allDocuments) {
+              for (const doc of allDocuments) {
+                await sendDocumentForTranslation(doc, userProfile);
+                console.log(`✅ Documento ${doc.id} enviado para tradução automaticamente`);
+              }
+            }
+          } else {
+            await sendDocumentForTranslation(documentData, userProfile);
+            console.log('✅ Documento enviado para tradução automaticamente');
+          }
         } catch (translationError) {
           console.error('❌ Erro ao enviar documento para tradução:', translationError);
           // Não falhar o pagamento se a tradução falhar - pode ser reenviad manualmente
@@ -400,10 +529,18 @@ export function ZelleCheckout() {
         console.log('✅ Comprovante validado automaticamente');
       } else {
         // Comprovante inválido - precisa revisão manual
-        await supabase.from('documents').update({ 
-          status: 'pending_manual_review',
-          payment_method: 'zelle'
-        }).eq('id', documentId);
+        // Atualizar todos os documentos
+        if (documentIds.length > 1) {
+          await supabase.from('documents').update({ 
+            status: 'pending_manual_review',
+            payment_method: 'zelle'
+          }).in('id', documentIds);
+        } else {
+          await supabase.from('documents').update({ 
+            status: 'pending_manual_review',
+            payment_method: 'zelle'
+          }).eq('id', documentIds[0] || documentId);
+        }
 
         // Enviar notificação para revisão manual
         console.log('DEBUG: Tentando enviar notificação para revisão manual');
