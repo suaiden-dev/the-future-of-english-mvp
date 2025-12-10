@@ -1,7 +1,6 @@
 ﻿import React from 'react';
 import { Menu, User } from 'lucide-react';
 import { Sidebar } from './Sidebar';
-import { NotificationBell } from './NotificationBell';
 import type { CustomUser } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -54,7 +53,6 @@ export function AdminLayout({
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <NotificationBell />
               <button
                 onClick={onMobileMenuOpen}
                 className="p-2 text-gray-400 hover:text-gray-600"
@@ -74,7 +72,6 @@ export function AdminLayout({
               {/* Header left side - empty for now */}
             </div>
             <div className="flex items-center space-x-4">
-              <NotificationBell />
               <button
                 onClick={() => navigate('/finance/profile')}
                 className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"

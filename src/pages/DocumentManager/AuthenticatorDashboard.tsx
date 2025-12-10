@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { FileText, Check, Clock, ShieldCheck, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone } from 'lucide-react';
 import { getValidFileUrl } from '../../utils/fileUtils';
 import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
+import { Logger } from '../../lib/loggingHelpers';
+import { ActionTypes } from '../../types/actionTypes';
 
 interface Document {
   id: string;
@@ -444,6 +446,35 @@ export default function AuthenticatorDashboard() {
     setDocuments(docs => docs.filter(d => d.id !== id));
     
     console.log('[AuthenticatorDashboard] Documento aprovado com sucesso');
+    
+    // Log document approval
+    try {
+      await Logger.log(
+        ActionTypes.DOCUMENT.APPROVED,
+        `Document approved by authenticator: ${doc.filename}`,
+        {
+          entityType: 'document',
+          entityId: verificationId,
+          metadata: {
+            document_id: verificationId,
+            original_document_id: document.id,
+            filename: doc.filename,
+            verification_code: doc.verification_code,
+            user_id: doc.user_id,
+            pages: doc.pages,
+            total_cost: doc.total_cost,
+            authenticated_by: authData.authenticated_by,
+            authenticated_by_name: authData.authenticated_by_name,
+            authentication_date: authData.authentication_date,
+            timestamp: new Date().toISOString()
+          },
+          affectedUserId: doc.user_id,
+          performerType: 'authenticator'
+        }
+      );
+    } catch (logError) {
+      // Non-blocking
+    }
   }
 
 

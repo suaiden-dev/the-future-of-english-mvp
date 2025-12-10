@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -54,15 +54,19 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  // ✅ OTIMIZADO: Usar ref para evitar loops de dependência
+  const lastUpdatedRef = useRef<Date | null>(null);
 
+  // ✅ OTIMIZADO: Remover lastUpdated da dependência para evitar loops
   const fetchOverviewStats = useCallback(async (forceRefresh = false) => {
     if (!currentUser) return;
 
+    // ✅ OTIMIZADO: Usar ref para verificar cache sem causar loops
     // Check if we have recent data (less than 30 seconds old)
     const now = new Date();
     const thirtySecondsAgo = new Date(now.getTime() - 30 * 1000);
     
-    if (!forceRefresh && lastUpdated && lastUpdated > thirtySecondsAgo) {
+    if (!forceRefresh && lastUpdatedRef.current && lastUpdatedRef.current > thirtySecondsAgo) {
       return;
     }
 
@@ -70,6 +74,7 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
+      // ✅ OTIMIZADO: Buscar tudo em paralelo para melhor performance
       // Fetch documents based on user role
       let allDocumentsQuery = supabase.from('documents_to_be_verified').select('*');
       let translatedDocsQuery = supabase.from('translated_documents').select('*');
@@ -82,14 +87,48 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
         myUploadedDocsQuery = myUploadedDocsQuery.eq('user_id', currentUser.id);
       }
 
-      const { data: allDocuments, error: allError } = await allDocumentsQuery;
+      // ✅ OTIMIZADO: Buscar tudo em paralelo
+      const [allDocumentsResult, translatedDocsResult, myUploadedDocsResult, paymentsResult, profilesResult] = await Promise.all([
+        allDocumentsQuery,
+        translatedDocsQuery,
+        myUploadedDocsQuery,
+        supabase
+          .from('payments')
+          .select('id, document_id, amount, status, user_id'),
+        supabase
+          .from('profiles')
+          .select('id, role')
+      ]);
+
+      const { data: allDocuments, error: allError } = allDocumentsResult;
       if (allError) throw allError;
 
-      const { data: translatedDocs, error: translatedError } = await translatedDocsQuery;
+      const { data: translatedDocs, error: translatedError } = translatedDocsResult;
       if (translatedError) throw translatedError;
 
-      const { data: myUploadedDocs, error: uploadError } = await myUploadedDocsQuery;
+      const { data: myUploadedDocs, error: uploadError } = myUploadedDocsResult;
       if (uploadError) throw uploadError;
+
+      // Buscar pagamentos para calcular totalValue corretamente
+      const { data: payments, error: paymentsError } = paymentsResult;
+
+      if (paymentsError) {
+        console.warn('Error fetching payments in OverviewContext:', paymentsError);
+      }
+
+      // Buscar profiles para verificar roles e excluir autenticadores
+      const { data: profiles, error: profilesError } = profilesResult;
+      if (profilesError) {
+        console.warn('Error fetching profiles in OverviewContext:', profilesError);
+      }
+
+      // Criar mapa de user_id -> role para verificar autenticadores
+      const userRoleMap = new Map<string, string>();
+      (profiles || []).forEach((profile: any) => {
+        if (profile.id && profile.role) {
+          userRoleMap.set(profile.id, profile.role);
+        }
+      });
 
       // Calculate statistics based on user role
       let totalDocs, pendingDocs, approvedDocs, rejectedDocs, totalValue, totalPages;
@@ -100,8 +139,27 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
         pendingDocs = allDocuments?.filter(doc => doc.status === 'pending').length || 0;
         approvedDocs = allDocuments?.filter(doc => doc.status === 'completed').length || 0;
         rejectedDocs = allDocuments?.filter(doc => doc.status === 'rejected').length || 0;
-        totalValue = (allDocuments?.reduce((sum, doc) => sum + (doc.total_cost || 0), 0) || 0) +
-                    (translatedDocs?.reduce((sum, doc) => sum + (doc.total_cost || 0), 0) || 0);
+        
+        // Receita de autenticador NÃO é incluída no Total Revenue
+        // pois não é lucro (valores ficam pending e não são pagos)
+        
+        // Receita de usuários regulares: considerar apenas pagamentos com status 'completed' EXCETO autenticadores
+        const regularPaymentsRevenue = (payments || []).reduce((sum, p) => {
+          if (!p) return sum;
+          // Considerar apenas pagamentos com status 'completed' (pagamentos realmente pagos)
+          if (p.status === 'completed') {
+            // Verificar se o usuário é autenticador e excluir do Total Revenue
+            const userRole = userRoleMap.get(p.user_id || '');
+            if (userRole === 'authenticator') {
+              return sum; // Excluir pagamentos de autenticadores
+            }
+            return sum + (p.amount || 0);
+          }
+          return sum;
+        }, 0);
+
+        totalValue = regularPaymentsRevenue;
+        
         totalPages = (allDocuments?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0) +
                     (translatedDocs?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0);
       } else {
@@ -110,7 +168,23 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
         pendingDocs = allDocuments?.filter(doc => doc.status === 'pending').length || 0; // All pending docs
         approvedDocs = translatedDocs?.length || 0; // All translated docs are approved
         rejectedDocs = 0; // Rejected docs are not in translated_documents
-        totalValue = translatedDocs?.reduce((sum, doc) => sum + (doc.total_cost || 0), 0) || 0;
+        
+        // Para autenticadores, usar apenas pagamentos completed (se houver)
+        // Excluir pagamentos de outros autenticadores para manter consistência
+        const regularPaymentsRevenue = (payments || []).reduce((sum, p) => {
+          if (!p) return sum;
+          if (p.status === 'completed') {
+            // Verificar se o usuário é autenticador e excluir do Total Revenue
+            const userRole = userRoleMap.get(p.user_id || '');
+            if (userRole === 'authenticator') {
+              return sum; // Excluir pagamentos de autenticadores
+            }
+            return sum + (p.amount || 0);
+          }
+          return sum;
+        }, 0);
+        
+        totalValue = regularPaymentsRevenue;
         totalPages = translatedDocs?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0;
       }
 
@@ -201,6 +275,8 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
 
       setStats(newStats);
       setLastUpdated(now);
+      // ✅ OTIMIZADO: Atualizar ref também
+      lastUpdatedRef.current = now;
 
     } catch (err: any) {
       console.error('[OverviewContext] Error fetching stats:', err);
@@ -208,7 +284,7 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [currentUser, lastUpdated]);
+  }, [currentUser]); // ✅ OTIMIZADO: Remover lastUpdated da dependência para evitar loops
 
   const refreshStats = useCallback(async () => {
     await fetchOverviewStats(true);

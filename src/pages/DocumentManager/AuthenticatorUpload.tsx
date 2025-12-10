@@ -20,6 +20,7 @@ export default function AuthenticatorUpload() {
   const [isExtrato, setIsExtrato] = useState(false);
   const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
   const [idiomaDestino, setIdiomaDestino] = useState('English');
+  const [uploadType, setUploadType] = useState<'client' | 'personal'>('client');
   const [clientName, setClientName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -190,21 +191,25 @@ export default function AuthenticatorUpload() {
         throw new Error('No file selected');
       }
 
-      if (!clientName.trim()) {
-        throw new Error('Client name is required');
+      // Validar client name apenas se for upload para cliente
+      if (uploadType === 'client' && !clientName.trim()) {
+        throw new Error('Client name is required when uploading for a client');
       }
 
       const metadata = {
         documentType: tipoTrad,
         certification: false,
-                    notarization: tipoTrad === 'Certified',
+        notarization: tipoTrad === 'Certified',
         pageCount: pages,
         isBankStatement: isExtrato,
         originalLanguage: idiomaRaiz,
         targetLanguage: idiomaDestino,
         userId: user?.id,
-        clientName: clientName.trim(),
-        paymentMethod: paymentMethod,
+        uploadType: uploadType,
+        ...(uploadType === 'client' && {
+          clientName: clientName.trim(),
+          paymentMethod: paymentMethod
+        }),
         ...(isExtrato && {
           sourceCurrency: sourceCurrency,
           targetCurrency: targetCurrency
@@ -277,8 +282,14 @@ export default function AuthenticatorUpload() {
         is_bank_statement: isExtrato,
         file_url: publicUrl,
         verification_code: `AUTH${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
-        client_name: clientName.trim()
+        is_internal_use: uploadType === 'personal'
       };
+
+      // Adicionar campos de cliente apenas se for upload para cliente
+      if (uploadType === 'client') {
+        documentData.client_name = clientName.trim();
+        documentData.payment_method = paymentMethod;
+      }
 
       // Adicionar campos condicionais apenas se necessário
       if (isExtrato) {
@@ -420,9 +431,10 @@ export default function AuthenticatorUpload() {
       return;
     }
     
-    if (!clientName.trim()) {
-      console.log('DEBUG: Upload bloqueado - Client Name é obrigatório');
-      setError('Client name is required. Please enter the client\'s full name.');
+    // Validar client name apenas se for upload para cliente
+    if (uploadType === 'client' && !clientName.trim()) {
+      console.log('DEBUG: Upload bloqueado - Client Name é obrigatório para uploads de cliente');
+      setError('Client name is required when uploading for a client. Please enter the client\'s full name.');
       return;
     }
     
@@ -477,7 +489,7 @@ export default function AuthenticatorUpload() {
       console.log('DEBUG: isExtrato:', isExtrato);
       
       // Payload para webhook
-      const payload = {
+      const payload: any = {
         pages,
         isCertified: false,
         isNotarized: tipoTrad === 'Certified',
@@ -486,18 +498,24 @@ export default function AuthenticatorUpload() {
         userId: user.id,
         userEmail: user.email,
         filename: selectedFile?.name,
-        clientName: clientName.trim(),
         originalLanguage: idiomaRaiz,
         targetLanguage: idiomaDestino,
         documentType: 'Certificado',
         isMobile: isMobile,
-        paymentMethod: paymentMethod,
-        receiptPath: receiptPath,
+        uploadType: uploadType,
+        isInternalUse: uploadType === 'personal',
         ...(isExtrato && {
           sourceCurrency: sourceCurrency,
           targetCurrency: targetCurrency
         })
       };
+
+      // Adicionar campos de cliente apenas se for upload para cliente
+      if (uploadType === 'client') {
+        payload.clientName = clientName.trim();
+        payload.paymentMethod = paymentMethod;
+        payload.receiptPath = receiptPath;
+      }
       console.log('DEBUG: Payload enviado:', payload);
       console.log('DEBUG: Payload.originalLanguage:', payload.originalLanguage);
       console.log('DEBUG: Payload.targetLanguage:', payload.targetLanguage);
@@ -642,31 +660,65 @@ export default function AuthenticatorUpload() {
                   />
                 </section>
 
-                {/* Client Name */}
+                {/* Upload Type */}
                 <section>
-                  <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="client-name">
-                    3. Client Name
+                  <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="upload-type">
+                    3. Upload Type
                   </label>
-                  <input
-                    id="client-name"
-                    type="text"
-                    value={clientName}
-                    onChange={e => setClientName(e.target.value)}
+                  <select
+                    id="upload-type"
+                    value={uploadType}
+                    onChange={e => {
+                      const newType = e.target.value as 'client' | 'personal';
+                      setUploadType(newType);
+                      // Limpar campos quando mudar para personal use
+                      if (newType === 'personal') {
+                        setClientName('');
+                        setPaymentMethod('card');
+                        setReceiptFile(null);
+                        setReceiptFileUrl(null);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                    placeholder="Enter client's full name"
-                    aria-label="Client name"
-                    required
-                  />
+                    aria-label="Upload type"
+                  >
+                    <option value="client">For Client</option>
+                    <option value="personal">Personal Use</option>
+                  </select>
                   <p className="text-xs text-gray-500 mt-1">
-                    Enter the full name of the client for whom this document is being translated.
+                    {uploadType === 'client' 
+                      ? 'This document is for a client who paid for translation services.'
+                      : 'This document is for your personal use and will not be counted in statistics.'}
                   </p>
                 </section>
+
+                {/* Client Name - Only show for client uploads */}
+                {uploadType === 'client' && (
+                  <section>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="client-name">
+                      4. Client Name
+                    </label>
+                    <input
+                      id="client-name"
+                      type="text"
+                      value={clientName}
+                      onChange={e => setClientName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                      placeholder="Enter client's full name"
+                      aria-label="Client name"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter the full name of the client for whom this document is being translated.
+                    </p>
+                  </section>
+                )}
 
                 {/* Translation Details */}
                 <section className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="translation-type">
-                      4. Translation Type
+                      {uploadType === 'client' ? '5' : '4'}. Translation Type
                     </label>
                     <select
                       id="translation-type"
@@ -683,7 +735,7 @@ export default function AuthenticatorUpload() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="is-bank-statement">
-                      5. Is it a bank statement?
+                      {uploadType === 'client' ? '6' : '5'}. Is it a bank statement?
                     </label>
                     <select
                       id="is-bank-statement"
@@ -771,11 +823,12 @@ export default function AuthenticatorUpload() {
                   </div>
                 </section>
 
-                {/* Payment Method */}
-                <section>
-                  <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="payment-method">
-                    8. Payment Method
-                  </label>
+                {/* Payment Method - Only show for client uploads */}
+                {uploadType === 'client' && (
+                  <section>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="payment-method">
+                      7. Payment Method
+                    </label>
                   <select
                     id="payment-method"
                     value={paymentMethod}
@@ -791,11 +844,13 @@ export default function AuthenticatorUpload() {
                     Select the payment method used by the client for this translation service.
                   </p>
                 </section>
+                )}
 
-                {/* Receipt Upload */}
-                <section>
+                {/* Receipt Upload - Only show for client uploads */}
+                {uploadType === 'client' && (
+                  <section>
                   <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="receipt-upload">
-                    9. Payment Receipt (Optional)
+                    8. Payment Receipt (Optional)
                   </label>
                   <div
                     className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer flex flex-col items-center justify-center ${receiptFile ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-green-400'}`}
@@ -849,6 +904,7 @@ export default function AuthenticatorUpload() {
                     Upload a copy of the payment receipt for record keeping purposes. This is optional.
                   </p>
                 </section>
+                )}
 
                 {/* Error/Success Messages */}
                 {error && (
@@ -874,7 +930,7 @@ export default function AuthenticatorUpload() {
                         handleUpload();
                       }
                     }}
-                    disabled={!selectedFile || !clientName.trim() || isUploading}
+                    disabled={!selectedFile || (uploadType === 'client' && !clientName.trim()) || isUploading}
                     className="w-full bg-gradient-to-r from-tfe-blue-950 to-tfe-red-950 text-white py-4 rounded-xl font-bold shadow-lg hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-all"
                   >
                     {isUploading ? 'Uploading...' : 'Upload Document (Free for Authenticators)'}

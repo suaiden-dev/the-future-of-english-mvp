@@ -14,6 +14,7 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { UserManagement } from './pages/AdminDashboard/UserManagement';
 import { AuthenticatorControl } from './pages/AdminDashboard/AuthenticatorControl';
 import { AffiliateWithdrawals } from './pages/AdminDashboard/AffiliateWithdrawals';
+import { ActionLogs } from './pages/AdminDashboard/ActionLogs';
 import { CustomerDashboard } from './pages/CustomerDashboard';
 import { FinanceDashboard } from './pages/FinanceDashboard';
 import { DocumentVerification } from './pages/DocumentVerification';
@@ -28,7 +29,7 @@ import { ZelleCheckout } from './pages/ZelleCheckout';
 import { AffiliatesRegister } from './pages/AffiliatesRegister';
 import { AffiliatesLogin } from './pages/AffiliatesLogin';
 import { AffiliateDashboard } from './pages/AffiliateDashboard';
-import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, DollarSign } from 'lucide-react';
+import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, DollarSign, Activity } from 'lucide-react';
 
 import { Page } from './types/Page';
 import { Database } from './lib/database.types';
@@ -176,7 +177,8 @@ function App() {
                            location.pathname.startsWith('/finance') ||
                            location.pathname === '/user-management' ||
                            location.pathname === '/authenticator-control' ||
-                           location.pathname === '/admin/affiliate-withdrawals';
+                           location.pathname === '/admin/affiliate-withdrawals' ||
+                           location.pathname === '/admin/action-logs';
     
     // Se estÃ¡ na Ã¡rea de Dashboard, mostrar apenas itens do Dashboard (botÃ£o Home Ã© separado)
     if (isDashboardArea) {
@@ -191,6 +193,7 @@ function App() {
       if (user.role === 'admin') {
         const items = [
           { id: 'admin', label: 'Admin Dashboard', icon: Shield, page: 'admin' as Page },
+          { id: 'action-logs', label: 'Action Logs', icon: Activity, page: '/admin/action-logs' },
           { id: 'user-management', label: 'User Management', icon: Users, page: 'user-management' as Page },
           { id: 'authenticator-control', label: 'Authenticator Control', icon: UserCheck, page: 'authenticator-control' as Page },
         ];
@@ -200,6 +203,7 @@ function App() {
       if (user.role === 'finance') {
         const items = [
           { id: 'finance-dashboard', label: 'Finance Dashboard', icon: Shield, page: '/finance' },
+          { id: 'action-logs', label: 'Action Logs', icon: Activity, page: '/admin/action-logs' },
           { id: 'profile', label: 'Profile', icon: UserIcon, page: '/finance/profile' },
         ];
         return items;
@@ -477,6 +481,18 @@ function App() {
               subtitle="Professional Translation"
             >
               <AuthenticatorControl />
+            </AdminLayout>
+          ) : <Navigate to="/login" />} />
+          
+          <Route path="/admin/action-logs" element={user && (user.role === 'admin' || user.role === 'finance') ? (
+            <AdminLayout 
+              user={user} 
+              onLogout={handleLogout} 
+              onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
+              navItems={getNavItems()}
+              title="Action Logs"
+            >
+              <ActionLogs />
             </AdminLayout>
           ) : <Navigate to="/login" />} />
           

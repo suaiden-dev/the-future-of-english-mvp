@@ -241,6 +241,25 @@ export function ZelleReceiptsAdmin() {
       await loadPayments();
       setSelectedReceipt(null);
       
+      // Log Zelle payment approval
+      try {
+        await Logger.logPayment(
+          ActionTypes.PAYMENT.ZELLE_APPROVED,
+          confirmationModal.payment.id,
+          'Zelle payment approved',
+          {
+            payment_id: confirmationModal.payment.id,
+            zelle_confirmation_code: confirmationCode.trim(),
+            amount: confirmationModal.payment.amount,
+            document_id: confirmationModal.payment.document_id,
+            user_id: confirmationModal.payment.user_id,
+            timestamp: new Date().toISOString()
+          }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
+      
     } catch (err: any) {
       console.error('Error saving confirmation code:', err);
       setError(err.message || 'Failed to save confirmation code');
@@ -364,6 +383,25 @@ export function ZelleReceiptsAdmin() {
       await loadPayments();
       closeRejectionModal();
       setSelectedReceipt(null);
+      
+      // Log Zelle payment rejection
+      try {
+        await Logger.logPayment(
+          ActionTypes.PAYMENT.ZELLE_REJECTED,
+          rejectionModal.payment.id,
+          'Zelle payment rejected',
+          {
+            payment_id: rejectionModal.payment.id,
+            rejection_reason: finalReason,
+            amount: rejectionModal.payment.amount,
+            document_id: rejectionModal.payment.document_id,
+            user_id: rejectionModal.payment.user_id,
+            timestamp: new Date().toISOString()
+          }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
       
     } catch (err: any) {
       console.error('Error rejecting payment:', err);

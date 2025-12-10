@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { supabase } from '../lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { getResetPasswordUrl } from '../utils/urlUtils';
+import { Logger } from '../lib/loggingHelpers';
+import { ActionTypes } from '../types/actionTypes';
 
 export interface CustomUser extends SupabaseUser {
   role: 'user' | 'authenticator' | 'admin' | 'finance';
@@ -130,7 +132,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      // Log failed login attempt
+      try {
+        await Logger.logAuth(
+          ActionTypes.AUTH.LOGIN_FAILED,
+          `Failed login attempt for ${email}`,
+          { email, error: error.message }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
       throw error;
+    }
+    // Log successful login
+    try {
+      await Logger.logAuth(
+        ActionTypes.AUTH.USER_LOGIN,
+        `User logged in successfully`,
+        { email }
+      );
+    } catch (logError) {
+      // Non-blocking
     }
     // O listener de onAuthStateChange vai processar o usuário
     return data;
@@ -138,7 +160,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     setLoading(true);
+    const userEmail = user?.email || 'unknown';
     await supabase.auth.signOut();
+    // Log logout
+    try {
+      await Logger.logAuth(
+        ActionTypes.AUTH.USER_LOGOUT,
+        `User logged out`,
+        { email: userEmail }
+      );
+    } catch (logError) {
+      // Non-blocking
+    }
     setSession(null);
     setUser(null);
     setLoading(false);
@@ -156,6 +189,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Cria perfil imediatamente após registro
     if (data.user) {
       await fetchOrCreateProfile(data.user.id, email, name, role, phone);
+      // Log user registration
+      try {
+        await Logger.logAuth(
+          ActionTypes.AUTH.USER_REGISTER,
+          `User registered successfully`,
+          { email, name, role, phone }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
     }
     return data;
   };
@@ -169,6 +212,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     if (error) {
       throw error;
+    }
+    // Log password reset request
+    try {
+      await Logger.logAuth(
+        ActionTypes.AUTH.PASSWORD_RESET_REQUEST,
+        `Password reset requested for ${email}`,
+        { email }
+      );
+    } catch (logError) {
+      // Non-blocking
     }
     return data;
   };

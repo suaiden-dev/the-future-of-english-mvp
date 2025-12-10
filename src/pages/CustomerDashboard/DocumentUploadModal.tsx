@@ -301,6 +301,28 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
       console.log('DEBUG: - original_filename:', selectedFile.name);
       console.log('DEBUG: - document_id:', newDocument.id);
       
+      // Log document creation
+      try {
+        const { Logger } = await import('../../lib/loggingHelpers');
+        const { ActionTypes } = await import('../../types/actionTypes');
+        await Logger.logDocument(
+          ActionTypes.DOCUMENT.UPLOADED,
+          newDocument.id,
+          'Document uploaded successfully',
+          {
+            filename: uniqueFilename,
+            original_filename: selectedFile.name,
+            pages: pages,
+            is_bank_statement: isExtrato,
+            target_language: idiomaDestino,
+            original_language: idiomaRaiz,
+            timestamp: new Date().toISOString()
+          }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
+      
       // Armazenar o ID do documento para usar nos modais de pagamento
       setCurrentDocumentId(newDocument.id);
       

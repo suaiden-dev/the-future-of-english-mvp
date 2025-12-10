@@ -336,6 +336,27 @@ export function PaymentSuccess() {
 
       setSuccess(true);
       setUploadProgress(100);
+      
+      // Log payment completion for each document
+      try {
+        const { Logger } = await import('../lib/loggingHelpers');
+        const { ActionTypes } = await import('../types/actionTypes');
+        for (const docId of documentIds) {
+          await Logger.logPayment(
+            ActionTypes.PAYMENT.STRIPE_COMPLETED,
+            docId,
+            'Stripe payment completed successfully',
+            {
+              session_id: sessionId,
+              document_id: docId,
+              user_id: userId,
+              timestamp: new Date().toISOString()
+            }
+          );
+        }
+      } catch (logError) {
+        // Non-blocking
+      }
 
     } catch (err: any) {
       console.error('Erro no processamento:', err);

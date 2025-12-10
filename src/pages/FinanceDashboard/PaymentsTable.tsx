@@ -98,6 +98,10 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  // ✅ Estados para calcular Total Value corretamente (alinhado com Total Revenue - Admin Dashboard)
+  const [allPaymentsData, setAllPaymentsData] = useState<any[]>([]);
+  const [allProfilesData, setAllProfilesData] = useState<any[]>([]);
 
   // Date filter is now managed by parent component (FinanceDashboard)
 
@@ -131,9 +135,11 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       console.log('🔍 Date filter params:', { startDateParam, endDateParam });
 
       // Buscar todos os documentos da tabela principal (como no Admin Dashboard)
+      // Excluir documentos de uso pessoal (is_internal_use = true) das estatísticas
       let mainDocumentsQuery = supabase
         .from('documents')
         .select('*, profiles:profiles!documents_user_id_fkey(name, email, phone, role)')
+        .or('is_internal_use.is.null,is_internal_use.eq.false')
         .order('created_at', { ascending: false });
 
       // Aplicar filtros de data
@@ -154,7 +160,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       // Buscar documentos da tabela documents_to_be_verified
       let verifiedDocumentsQuery = supabase
         .from('documents_to_be_verified')
-        .select('*, profiles:profiles!documents_to_be_verified_user_id_fkey(name, email, phone, role)')
+        .select('*, profiles:profiles!documentos_a_serem_verificados_user_id_fkey(name, email, phone, role)')
         .order('created_at', { ascending: false });
 
       // Aplicar filtros de data
@@ -170,6 +176,22 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       if (verifiedDocError) {
         console.error('Error loading verified documents:', verifiedDocError);
       }
+      
+      // Criar Maps para matching eficiente (mesma lógica do Admin Dashboard)
+      const verifiedDocsMap = new Map();
+      const verifiedDocsByOriginalId = new Map();
+      
+      (verifiedDocuments || []).forEach((verifiedDoc: any) => {
+        // Map por original_document_id
+        if (verifiedDoc.original_document_id) {
+          verifiedDocsByOriginalId.set(verifiedDoc.original_document_id, verifiedDoc);
+        }
+        // Map por id
+        verifiedDocsMap.set(verifiedDoc.id, verifiedDoc);
+        // Map por user_id + filename
+        const key = `${verifiedDoc.user_id}_${verifiedDoc.filename}`;
+        verifiedDocsMap.set(key, verifiedDoc);
+      });
 
       // Buscar dados de pagamentos
       let paymentsQuery = supabase
@@ -190,8 +212,24 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       if (paymentsError) {
         console.error('Error loading payments data:', paymentsError);
       }
+      
+      // ✅ Armazenar payments para cálculo do Total Value
+      setAllPaymentsData(paymentsData || []);
+      
+      // Buscar perfis de usuários para verificar roles (necessário para Total Value)
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, role, name, email, phone');
+
+      if (profilesError) {
+        console.error('Error loading profiles data:', profilesError);
+      }
+      
+      // ✅ Armazenar profiles para cálculo do Total Value
+      setAllProfilesData(profilesData || []);
 
       console.log('🔍 Debug - Payments data loaded:', paymentsData?.length || 0);
+      console.log('🔍 Debug - Profiles data loaded:', profilesData?.length || 0);
       console.log('🔍 Debug - Sample payments:', paymentsData?.slice(0, 3));
       console.log('🔍 Debug - Main documents sample:', mainDocuments?.slice(0, 3).map(doc => ({
         id: doc.id,
@@ -208,9 +246,12 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
         status: doc.status
       })));
 
-      // Processar documentos de autenticadores (documents_to_be_verified)
-      // Para autenticadores, o payment_method está na tabela documents
-      const authenticatorPayments: MappedPayment[] = verifiedDocuments?.map(verifiedDoc => {
+      // FINANCE DASHBOARD: NÃO processar documentos de autenticadores
+      // Apenas mostrar pagamentos de usuários regulares (igual ao Admin Dashboard)
+      const authenticatorPayments: MappedPayment[] = [];
+      
+      // Código comentado - não mostrar authenticators no Finance Dashboard
+      /* verifiedDocuments?.map(verifiedDoc => {
         const mainDoc = mainDocuments?.find(doc => doc.filename === verifiedDoc.filename && doc.user_id === verifiedDoc.user_id);
         
         return {
@@ -255,7 +296,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
             verification_code: verifiedDoc.verification_code
           }
         };
-      }) || [];
+      }) || []; */
 
       // Processar documentos de usuários regulares (role: user)
       // Para usuários regulares, o payment_method está na tabela payments
@@ -263,31 +304,65 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       
       if (mainDocuments) {
         for (const doc of mainDocuments) {
+          // FINANCE DASHBOARD: Filtrar apenas usuários regulares (não authenticators)
+          if (doc.profiles?.role === 'authenticator') {
+            continue;
+          }
+          
           // Verificar se já foi processado como autenticador
           const alreadyProcessed = authenticatorPayments.some(auth => auth.document_filename === doc.filename);
           if (alreadyProcessed) {
             continue;
           }
 
-          // Buscar pagamento na tabela payments para usuários regulares
-          const paymentInfo = paymentsData?.find(payment => payment.user_id === doc.user_id);
+          // Buscar pagamento na tabela payments para usuários regulares (por document_id, não user_id)
+          const paymentInfo = paymentsData?.find(payment => payment.document_id === doc.id);
           
-          // Só incluir se tem informação financeira
-          if (!paymentInfo && !doc.total_cost) {
+          // FINANCE DASHBOARD: Mostrar APENAS pagamentos completed (igual ao Total Revenue)
+          // Não mostrar documentos sem pagamento ou com pagamento pending
+          if (!paymentInfo || paymentInfo.status !== 'completed') {
             continue;
           }
 
+          // Buscar status correto de documents_to_be_verified (3 métodos de matching - Admin Dashboard)
+          let verifiedDoc = null;
+          
+          // Método 1: Buscar por ID direto
+          if (verifiedDocsMap.has(doc.id)) {
+            verifiedDoc = verifiedDocsMap.get(doc.id);
+          } 
+          // Método 2: Buscar por original_document_id
+          else if (verifiedDocsByOriginalId.has(doc.id)) {
+            verifiedDoc = verifiedDocsByOriginalId.get(doc.id);
+          } 
+          // Método 3: Buscar por user_id + filename
+          else {
+            const key = `${doc.user_id}_${doc.filename}`;
+            if (verifiedDocsMap.has(key)) {
+              verifiedDoc = verifiedDocsMap.get(key);
+            }
+          }
+          
+          // Usar status de documents_to_be_verified se disponível, senão usar de documents
+          // Se não tem verifiedDoc, o documento ainda não foi para tradução, então usar 'processing'
+          const finalStatus = verifiedDoc ? verifiedDoc.status : 'processing';
+          
+          // Debug log para verificar status
+          if (finalStatus === 'pending_manual_review') {
+            console.log('🔍 [STATUS DEBUG] Document:', doc.filename, 'Status:', finalStatus, 'Has verifiedDoc:', !!verifiedDoc);
+          }
+
           regularPayments.push({
-            id: paymentInfo?.id || `doc-${doc.id}`,
+            id: paymentInfo.id, // Sempre tem paymentInfo aqui (verificado acima)
             user_id: doc.user_id,
             document_id: doc.id,
-            stripe_session_id: paymentInfo?.stripe_session_id || null,
-            amount: paymentInfo?.amount || doc.total_cost || 0,
-            currency: paymentInfo?.currency || 'usd',
-            status: paymentInfo?.status || 'pending', // Para usuários regulares, buscar na tabela payments
-            payment_method: paymentInfo?.payment_method || null, // Para usuários regulares, buscar na tabela payments
-            payment_date: paymentInfo?.payment_date || doc.created_at,
-            created_at: paymentInfo?.created_at || doc.created_at,
+            stripe_session_id: paymentInfo.stripe_session_id || null,
+            amount: paymentInfo.amount, // Usar sempre o amount da tabela payments
+            currency: paymentInfo.currency || 'usd',
+            status: paymentInfo.status, // Sempre 'completed' aqui (verificado acima)
+            payment_method: paymentInfo.payment_method || 'card', // Usar da tabela payments
+            payment_date: paymentInfo.payment_date || doc.created_at,
+            created_at: paymentInfo.created_at || doc.created_at,
             
             // Dados do usuário
             user_email: doc.profiles?.email || null,
@@ -296,17 +371,17 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
             
             // Dados do documento
             document_filename: doc.filename,
-            document_status: doc.status,
+            document_status: finalStatus, // Usar status correto de documents_to_be_verified
             client_name: doc.client_name,
-            idioma_raiz: doc.idioma_raiz,
-            tipo_trad: doc.tipo_trad,
+            idioma_raiz: verifiedDoc?.source_language || doc.idioma_raiz,
+            tipo_trad: verifiedDoc?.target_language || doc.tipo_trad,
             
-            // Dados de autenticação (não aplicável para documentos regulares)
-            authenticated_by_name: null,
-            authenticated_by_email: null,
-            authentication_date: null,
-            source_language: doc.idioma_raiz,
-            target_language: doc.tipo_trad,
+            // Dados de autenticação (buscar de documents_to_be_verified se disponível)
+            authenticated_by_name: verifiedDoc?.authenticated_by_name || null,
+            authenticated_by_email: verifiedDoc?.authenticated_by_email || null,
+            authentication_date: verifiedDoc?.authentication_date || null,
+            source_language: verifiedDoc?.source_language || doc.idioma_raiz,
+            target_language: verifiedDoc?.target_language || doc.tipo_trad,
             
             // Campos obrigatórios da interface
             profiles: doc.profiles,
@@ -322,8 +397,13 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
         }
       }
 
-      // Combinar ambos os tipos de pagamentos
+      // Combinar ambos os tipos de pagamentos (Finance Dashboard: apenas regular users)
       const documentsWithFinancialData: MappedPayment[] = [...authenticatorPayments, ...regularPayments];
+      
+      console.log('🔍 [FINANCE TABLE] Regular payments (users only, completed):', regularPayments.length);
+      console.log('🔍 [FINANCE TABLE] Authenticator payments (excluded):', 0);
+      console.log('🔍 [FINANCE TABLE] Pending payments (excluded):', mainDocuments?.filter(d => d.profiles?.role !== 'authenticator' && paymentsData?.find(p => p.document_id === d.id && p.status !== 'completed')).length || 0);
+      console.log('🔍 [FINANCE TABLE] Total displayed:', documentsWithFinancialData.length);
 
       console.log('✅ Documents with financial data:', documentsWithFinancialData.length);
       console.log('🔍 Debug - Sample payment data:', documentsWithFinancialData.slice(0, 3).map(p => ({
@@ -379,6 +459,42 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
     });
   }, [payments, searchTerm, filterStatus, filterRole]);
 
+  // ✅ Cálculo do Total Value alinhado com Total Revenue (StatsCards - Admin Dashboard)
+  // Soma TODOS os pagamentos completed de usuários regulares (não apenas os filtrados)
+  // Excluir autenticadores e usar apenas pagamentos com status 'completed'
+  const totalValue = useMemo(() => {
+    if (!allPaymentsData.length) return 0;
+    
+    // Criar mapa de user_id -> role para verificar autenticadores
+    const userRoleMap = new Map<string, string>();
+    (allProfilesData || []).forEach((profile: any) => {
+      if (profile.id && profile.role) {
+        userRoleMap.set(profile.id, profile.role);
+      }
+    });
+    
+    // Buscar TODOS os pagamentos completed de usuários regulares (mesma lógica do StatsCards)
+    let totalRevenue = 0;
+    
+    allPaymentsData.forEach((payment: any) => {
+      // Apenas pagamentos completed
+      if (payment.status !== 'completed') {
+        return;
+      }
+      
+      // Verificar se não é autenticador (excluir uploads de autenticadores)
+      const userRole = userRoleMap.get(payment.user_id || '');
+      if (userRole === 'authenticator') {
+        return;
+      }
+      
+      // Se chegou aqui, é um pagamento completed de usuário regular
+      totalRevenue += Number(payment.amount || 0);
+    });
+    
+    return totalRevenue;
+  }, [allPaymentsData, allProfilesData]);
+  
   // Pagination logic
   const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -617,7 +733,14 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div>
             <h3 className="text-base sm:text-lg font-medium text-gray-900">Payments</h3>
-            <p className="text-sm text-gray-500">Track all payment transactions</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 gap-1">
+              <p className="text-sm text-gray-500">
+                Showing {filteredPayments.length} of {payments.length} payments
+              </p>
+              <p className="text-sm font-medium text-green-600">
+                Total Value: ${totalValue.toFixed(2)}
+              </p>
+            </div>
           </div>
           <div className="flex items-center">
             <button
@@ -981,7 +1104,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                   Showing {startIndex + 1} to {Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length} payments
                   {filteredPayments.length !== payments.length && ` (filtered from ${payments.length} total)`}
                 </span>
-                <span className="font-medium text-green-600">Total: ${filteredPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+                <span className="font-medium text-green-600">Total Value: ${totalValue.toFixed(2)}</span>
               </div>
               
               {/* Pagination Controls */}
