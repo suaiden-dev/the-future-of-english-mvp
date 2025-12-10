@@ -1,4 +1,5 @@
 import { X, CreditCard, DollarSign } from 'lucide-react';
+import { calculateCardAmountWithFees, formatAmount } from '../utils/stripeFeeCalculator';
 
 interface PaymentMethodModalProps {
   isOpen: boolean;
@@ -23,6 +24,9 @@ export function PaymentMethodModal({
 }: PaymentMethodModalProps) {
   if (!isOpen) return null;
 
+  // Calcular valor com taxa do Stripe
+  const stripeAmount = calculateCardAmountWithFees(amount);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
@@ -46,8 +50,8 @@ export function PaymentMethodModal({
 
         {/* Amount Display */}
         <div className="bg-blue-50 rounded-lg p-4 mb-6 text-center">
-          <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-          <p className="text-3xl font-bold text-blue-900">${amount}.00</p>
+          <p className="text-sm text-gray-600 mb-1">Base Amount</p>
+          <p className="text-3xl font-bold text-blue-900">${formatAmount(amount)}</p>
         </div>
 
         {/* Payment Options */}
@@ -62,9 +66,19 @@ export function PaymentMethodModal({
                 <CreditCard className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1 text-left">
-                <h3 className="font-semibold text-gray-900 group-hover:text-blue-900">Stripe</h3>
-                <p className="text-sm text-gray-600">Credit/Debit Card, Apple Pay, Google Pay</p>
-                <p className="text-xs text-green-600 font-medium">✓ Instant processing</p>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-semibold text-gray-900 group-hover:text-blue-900">Stripe</h3>
+                  <span className="text-sm font-semibold text-blue-600">
+                    ${formatAmount(stripeAmount)}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mb-1">
+                  Includes processing fees
+                </p>
+                <p className="text-sm text-gray-600 mb-1">Credit/Debit Card, Apple Pay, Google Pay</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-green-600 font-medium">✓ Instant processing</p>
+                </div>
               </div>
               <div className="text-blue-600 group-hover:text-blue-700">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,7 +98,12 @@ export function PaymentMethodModal({
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1 text-left">
-                <h3 className="font-semibold text-gray-900 group-hover:text-green-900">Zelle</h3>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-semibold text-gray-900 group-hover:text-green-900">Zelle</h3>
+                  <span className="text-sm font-semibold text-green-600">
+                    ${formatAmount(amount)}
+                  </span>
+                </div>
                 <p className="text-sm text-gray-600">Direct bank transfer via email/phone</p>
                 <p className="text-xs text-orange-600 font-medium">⚡ Manual verification required</p>
               </div>

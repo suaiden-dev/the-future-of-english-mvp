@@ -22,6 +22,8 @@ interface ExtendedDocument extends Omit<Document, 'client_name' | 'payment_metho
   client_name?: string | null;
   display_name?: string | null; // Nome formatado para exibição na coluna USER/CLIENT
   user_role?: string | null; // Role do usuário para filtros
+  payment_gross_amount?: number | null; // Valor bruto cobrado (com taxas)
+  payment_fee_amount?: number | null; // Taxa de processamento
 }
 
 // Propriedades do componente
@@ -216,7 +218,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       // Buscar dados de pagamentos para obter payment_method e status
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .select('id, document_id, payment_method, status, amount, currency, user_id, created_at');
+        .select('id, document_id, payment_method, status, amount, base_amount, gross_amount, fee_amount, currency, user_id, created_at');
 
       if (paymentsError) {
         console.error('Error loading payments data:', paymentsError);
@@ -282,6 +284,9 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         const userRole = userProfile?.role || 'user';
         const isAuthenticator = userRole === 'authenticator';
         
+        // Calcular valor para visualização: usar gross_amount se disponível, senão usar total_cost
+        const displayAmount = paymentInfo?.gross_amount || doc.total_cost || 0;
+        
         return {
           ...doc,
           user_name: userProfile?.name || null,
@@ -298,6 +303,12 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
             ? `${doc.client_name} (${doc.authenticated_by_name})`
             : userProfile?.name || null,
           user_role: userRole,
+          // Para visualização: usar valor bruto se disponível, senão usar total_cost original
+          // Manter total_cost original para cálculos de soma (receita líquida)
+          total_cost: displayAmount, // Valor bruto para visualização (o que o cliente pagou)
+          payment_gross_amount: paymentInfo?.gross_amount || null,
+          payment_fee_amount: paymentInfo?.fee_amount || null,
+          payment_base_amount: paymentInfo?.base_amount || paymentInfo?.amount || null, // Valor líquido para cálculos
           // Adicionar informações de debug
           _debug_match_type: doc.matchType,
           _debug_has_verification_record: doc.hasVerificationRecord,
@@ -847,7 +858,12 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                 <div className="grid grid-cols-2 gap-2 text-xs mb-2">
                   <div>
                     <span className="text-gray-500">Amount:</span>
-                    <p className="font-medium text-gray-900">${doc.total_cost?.toFixed(2) || '0.00'}</p>
+                    <p className="font-medium text-gray-900">
+                      ${doc.total_cost?.toFixed(2) || '0.00'}
+                      {doc.payment_fee_amount && doc.payment_fee_amount > 0 && (
+                        <span className="text-xs text-gray-500 ml-1">(fee: ${doc.payment_fee_amount.toFixed(2)})</span>
+                      )}
+                    </p>
                   </div>
                   <div>
                     <span className="text-gray-500">Payment Method:</span>
@@ -951,7 +967,12 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                     
                     {/* Amount */}
                     <td className="px-3 py-3 text-xs font-medium text-gray-900">
-                      ${doc.total_cost?.toFixed(2) || '0.00'}
+                      <div>
+                        ${doc.total_cost?.toFixed(2) || '0.00'}
+                        {doc.payment_fee_amount && doc.payment_fee_amount > 0 && (
+                          <span className="block text-xs text-gray-500">Fee: ${doc.payment_fee_amount.toFixed(2)}</span>
+                        )}
+                      </div>
                     </td>
                     
                     {/* Payment Method */}

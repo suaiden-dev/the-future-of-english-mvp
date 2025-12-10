@@ -63,7 +63,7 @@ export function DraftCleanupApproval() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        throw new Error('Usuário não autenticado');
+        throw new Error('User not authenticated');
       }
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -76,7 +76,7 @@ export function DraftCleanupApproval() {
       });
 
       if (!response.ok) {
-        let errorMessage = 'Erro ao verificar documentos';
+        let errorMessage = 'Error checking documents';
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
@@ -96,21 +96,21 @@ export function DraftCleanupApproval() {
         
         if (data.syncResult) {
           showToast(
-            `Verificação concluída: ${data.syncResult.checked} sessões verificadas, ${data.syncResult.updated} atualizadas`,
+            `Verification completed: ${data.syncResult.checked} sessions checked, ${data.syncResult.updated} updated`,
             'success'
           );
         } else {
           showToast(
-            `Verificação concluída: ${data.documentsToCleanup?.length || 0} seguros para remover, ${data.documentsToKeep?.length || 0} protegidos`,
+            `Verification completed: ${data.documentsToCleanup?.length || 0} safe to remove, ${data.documentsToKeep?.length || 0} protected`,
             'success'
           );
         }
       } else {
-        throw new Error('Resposta inválida do servidor');
+        throw new Error('Invalid server response');
       }
     } catch (error: any) {
       console.error('❌ [DraftCleanup] Erro ao verificar documentos:', error);
-      const errorMessage = error.message || error.toString() || 'Erro ao verificar documentos. Verifique o console para mais detalhes.';
+      const errorMessage = error.message || error.toString() || 'Error checking documents. Check the console for more details.';
       showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
@@ -137,11 +137,11 @@ export function DraftCleanupApproval() {
 
   const handleRemoveSelected = async () => {
     if (selectedDocuments.size === 0) {
-      showToast('Selecione pelo menos um documento para remover', 'warning');
+      showToast('Select at least one document to remove', 'warning');
       return;
     }
 
-    const confirmMessage = `Tem certeza que deseja remover ${selectedDocuments.size} documento(s)? Esta ação é irreversível.`;
+    const confirmMessage = `Are you sure you want to remove ${selectedDocuments.size} document(s)? This action is irreversible.`;
     if (!window.confirm(confirmMessage)) {
       return;
     }
@@ -151,7 +151,7 @@ export function DraftCleanupApproval() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        throw new Error('Usuário não autenticado');
+        throw new Error('User not authenticated');
       }
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -167,7 +167,7 @@ export function DraftCleanupApproval() {
       });
 
       if (!response.ok) {
-        let errorMessage = 'Erro ao remover documentos';
+        let errorMessage = 'Error removing documents';
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
@@ -182,7 +182,7 @@ export function DraftCleanupApproval() {
 
       if (data.success) {
         showToast(
-          `Remoção concluída: ${data.deletedCount} documento(s) removido(s). Arquivos: ${data.storageDeletedCount}, Sessões: ${data.sessionsDeletedCount}`,
+          `Removal completed: ${data.deletedCount} document(s) removed. Files: ${data.storageDeletedCount}, Sessions: ${data.sessionsDeletedCount}`,
           'success'
         );
 
@@ -194,16 +194,16 @@ export function DraftCleanupApproval() {
         if (data.errors.length > 0) {
           console.warn('Erros durante remoção:', data.errors);
           showToast(
-            `${data.errors.length} documento(s) não puderam ser removidos. Verifique o console.`,
+            `${data.errors.length} document(s) could not be removed. Check the console.`,
             'warning'
           );
         }
       } else {
-        throw new Error('Resposta inválida do servidor');
+        throw new Error('Invalid server response');
       }
     } catch (error: any) {
       console.error('Erro ao remover documentos:', error);
-      showToast(error.message || 'Erro ao remover documentos', 'error');
+      showToast(error.message || 'Error removing documents', 'error');
     } finally {
       setRemoving(false);
     }
@@ -220,7 +220,7 @@ export function DraftCleanupApproval() {
               Draft Cleanup
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Verifique e remova documentos draft que não tiveram pagamento concluído
+              Check and remove draft documents that did not have completed payments
             </p>
           </div>
           <button
@@ -231,7 +231,7 @@ export function DraftCleanupApproval() {
             {loading ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Verificando...
+                Checking...
               </>
             ) : (
               <>
@@ -276,7 +276,7 @@ export function DraftCleanupApproval() {
                       {removing ? (
                         <>
                           <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Removendo...
+                          Removing...
                         </>
                       ) : (
                         <>
@@ -293,8 +293,8 @@ export function DraftCleanupApproval() {
             {safeDocuments.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <CheckCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p>Nenhum documento seguro para remoção encontrado.</p>
-                <p className="text-sm mt-1">Clique em "Check Documents" para verificar.</p>
+                <p>No documents safe for removal found.</p>
+                <p className="text-sm mt-1">Click "Check Documents" to verify.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -361,14 +361,14 @@ export function DraftCleanupApproval() {
                 </span>
               </div>
               <p className="text-sm text-gray-600 mt-1">
-                Estes documentos não podem ser removidos pois têm pagamentos confirmados ou sessões ativas
+                These documents cannot be removed as they have confirmed payments or active sessions
               </p>
             </div>
 
             {protectedDocuments.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <Shield className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p>Nenhum documento protegido encontrado.</p>
+                <p>No protected documents found.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">

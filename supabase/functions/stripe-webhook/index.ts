@@ -216,6 +216,17 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
         console.log('DEBUG: Criando registro único de pagamento para múltiplos documentos');
         console.log('DEBUG: Valor total pago:', totalAmountPaid);
         
+        // Extrair valores dos metadados (com markup de taxas)
+        const baseAmount = metadata.base_amount ? parseFloat(metadata.base_amount) : totalAmountPaid;
+        const grossAmount = metadata.gross_amount ? parseFloat(metadata.gross_amount) : totalAmountPaid;
+        const feeAmount = metadata.fee_amount ? parseFloat(metadata.fee_amount) : 0;
+        
+        console.log('DEBUG: Valores extraídos dos metadados:', {
+          baseAmount,
+          grossAmount,
+          feeAmount
+        });
+        
         // Usar o primeiro documento como referência (document_id é obrigatório)
         const firstDocumentId = documentIds[0].trim();
         
@@ -223,7 +234,10 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
           document_id: firstDocumentId,
           user_id: userId,
           stripe_session_id: session.id,
-          amount: totalAmountPaid,
+          amount: baseAmount,        // Valor líquido (receita real)
+          base_amount: baseAmount,   // Valor base (líquido desejado)
+          gross_amount: grossAmount, // Valor bruto cobrado
+          fee_amount: feeAmount,    // Taxa do Stripe paga pelo usuário
           currency: 'USD',
           status: 'completed',
           payment_method: 'card',
@@ -377,7 +391,10 @@ async function handleCheckoutSessionCompleted(session: any, supabase: any) {
         isNotarized,
         isBankStatement,
         totalPrice,
-        documentId
+        documentId,
+        base_amount,
+        gross_amount,
+        fee_amount
       } = metadata;
 
       if (!documentId) {
@@ -504,16 +521,30 @@ async function processDocument(documentId: string, userId: string, session: any,
         const totalAmountPaid = session.amount_total ? session.amount_total / 100 : 0;
         console.log('DEBUG: Valor total pago (do Stripe):', totalAmountPaid);
         
-        // Para documento único, usar o valor total pago
-        const paymentAmount = totalAmountPaid > 0 ? totalAmountPaid : parseFloat(metadata.totalPrice || '0');
+        // Extrair valores dos metadados (com markup de taxas)
+        const baseAmount = base_amount ? parseFloat(base_amount) : (totalAmountPaid > 0 ? totalAmountPaid : parseFloat(metadata.totalPrice || '0'));
+        const grossAmount = gross_amount ? parseFloat(gross_amount) : totalAmountPaid;
+        const feeAmount = fee_amount ? parseFloat(fee_amount) : 0;
         
-        console.log('DEBUG: Valor final a ser registrado no pagamento:', paymentAmount);
+        console.log('DEBUG: Valores extraídos dos metadados:', {
+          baseAmount,
+          grossAmount,
+          feeAmount
+        });
+        
+        // Para documento único, usar baseAmount como amount (receita líquida)
+        const paymentAmount = baseAmount;
+        
+        console.log('DEBUG: Valor final a ser registrado no pagamento (líquido):', paymentAmount);
 
         const paymentData = {
           document_id: documentId,
           user_id: userId,
           stripe_session_id: session.id,
-          amount: paymentAmount,
+          amount: paymentAmount,        // Valor líquido (receita real)
+          base_amount: baseAmount,      // Valor base (líquido desejado)
+          gross_amount: grossAmount,    // Valor bruto cobrado
+          fee_amount: feeAmount,       // Taxa do Stripe paga pelo usuário
           currency: 'USD',
           status: 'completed',
           payment_method: 'card',

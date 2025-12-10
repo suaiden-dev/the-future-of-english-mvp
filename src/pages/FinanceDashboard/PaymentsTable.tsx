@@ -41,6 +41,9 @@ interface PaymentWithRelations {
   user_id: string;
   stripe_session_id: string | null;
   amount: number;
+  base_amount: number | null; // Valor líquido desejado
+  gross_amount: number | null; // Valor bruto cobrado (com taxas)
+  fee_amount: number | null; // Taxa de processamento
   currency: string;
   status: string; // payment status
   payment_method: string | null;
@@ -700,7 +703,8 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
         payment.user_email || '',
         payment.document_id,
         payment.document_filename || '',
-        payment.amount.toFixed(2), // Format amount directly
+        // Mostrar valor bruto (o que o cliente pagou) se disponível, senão mostrar amount
+        (payment.gross_amount || payment.amount).toFixed(2), // Format amount directly
         payment.currency,
         payment.payment_method || '',
         payment.id,
@@ -862,7 +866,12 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
                         <span className="text-gray-500">Amount:</span>
-                        <div className="font-medium text-gray-900">${payment.amount.toFixed(2)} {payment.currency}</div>
+                        <div className="font-medium text-gray-900">
+                          ${(payment.gross_amount || payment.amount).toFixed(2)} {payment.currency}
+                          {payment.fee_amount && payment.fee_amount > 0 && (
+                            <span className="text-xs text-gray-500 ml-1">(includes ${payment.fee_amount.toFixed(2)} fee)</span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <span className="text-gray-500">Document:</span>
@@ -1015,10 +1024,13 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
                       </td>
                       <td className="px-2 py-4">
                         <div className="text-sm font-medium text-gray-900">
-                          ${payment.amount.toFixed(2)}
+                          ${(payment.gross_amount || payment.amount).toFixed(2)}
                         </div>
                         <div className="text-xs text-gray-500">
                           {payment.currency}
+                          {payment.fee_amount && payment.fee_amount > 0 && (
+                            <span className="block text-gray-400">Fee: ${payment.fee_amount.toFixed(2)}</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-2 py-4">

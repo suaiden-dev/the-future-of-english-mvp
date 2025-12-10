@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.21.0';
+import { calculateCardAmountWithFees, calculateCardFee } from '../shared/stripe-fee-calculator.ts';
 
 // Definição dos cabeçalhos CORS para reutilização
 const corsHeaders = {
@@ -211,7 +212,9 @@ Deno.serve(async (req: Request) => {
     }
 
     // Calcular preço total e criar line items para cada documento
-    let totalPrice = 0;
+    let totalBasePrice = 0;
+    let totalGrossAmount = 0;
+    let totalFeeAmount = 0;
     const lineItems: any[] = [];
     const documentIds: string[] = [];
     const allMetadata: any = {
@@ -224,13 +227,21 @@ Deno.serve(async (req: Request) => {
 
     for (let i = 0; i < documents.length; i++) {
       const doc = documents[i];
-      const docPrice = calculatePrice(doc.pages, doc.isNotarized, doc.isBankStatement);
-      totalPrice += docPrice;
+      // Calcular preço base (valor líquido desejado)
+      const docBasePrice = calculatePrice(doc.pages, doc.isNotarized, doc.isBankStatement);
+      totalBasePrice += docBasePrice;
+      
+      // Calcular valor bruto com markup de taxas do Stripe
+      const docGrossAmountInCents = calculateCardAmountWithFees(docBasePrice);
+      const docGrossAmount = docGrossAmountInCents / 100; // Converter centavos para dólares
+      const docFeeAmount = calculateCardFee(docGrossAmount);
+      totalGrossAmount += docGrossAmount;
+      totalFeeAmount += docFeeAmount;
       
       const fileIdentifier = isMobile ? (doc.filePath || doc.fileId) : doc.fileId;
       const serviceDescription = generateServiceDescription(doc.pages, doc.isNotarized, doc.isBankStatement);
       
-      // Adicionar line item para este documento
+      // Adicionar line item para este documento (com markup aplicado)
       lineItems.push({
         price_data: {
           currency: 'usd',
@@ -238,7 +249,7 @@ Deno.serve(async (req: Request) => {
             name: `Document Translation ${i + 1}`,
             description: `${doc.originalFilename || doc.filename} - ${serviceDescription}`,
           },
-          unit_amount: Math.round(docPrice * 100), // Stripe usa centavos
+          unit_amount: docGrossAmountInCents, // Stripe usa centavos (já calculado com markup)
         },
         quantity: 1,
       });
@@ -259,12 +270,23 @@ Deno.serve(async (req: Request) => {
       allMetadata[`doc${i}_documentType`] = doc.documentType || '';
       allMetadata[`doc${i}_sourceCurrency`] = doc.sourceCurrency || '';
       allMetadata[`doc${i}_targetCurrency`] = doc.targetCurrency || '';
+      // Valores com markup de taxas para cada documento
+      allMetadata[`doc${i}_base_amount`] = docBasePrice.toString();
+      allMetadata[`doc${i}_gross_amount`] = docGrossAmount.toFixed(2);
+      allMetadata[`doc${i}_fee_amount`] = docFeeAmount.toFixed(2);
     }
 
-    allMetadata.totalPrice = totalPrice.toString();
+    // Totais com markup
+    allMetadata.totalPrice = totalGrossAmount.toString();
+    allMetadata.base_amount = totalBasePrice.toString();
+    allMetadata.gross_amount = totalGrossAmount.toFixed(2);
+    allMetadata.fee_amount = totalFeeAmount.toFixed(2);
+    allMetadata.markup_enabled = 'true';
     allMetadata.documentIds = documentIds.join(',');
 
-    console.log('DEBUG: Preço total calculado:', totalPrice);
+    console.log('DEBUG: Preço base total (líquido):', totalBasePrice);
+    console.log('DEBUG: Valor bruto total (com taxas):', totalGrossAmount);
+    console.log('DEBUG: Taxa total do Stripe:', totalFeeAmount);
     console.log('DEBUG: Número de line items:', lineItems.length);
     console.log(`✅ Stripe config loaded for ${envInfo.environment} environment`);
 
@@ -336,7 +358,10 @@ Deno.serve(async (req: Request) => {
           })),
           userId,
           userEmail,
-          totalPrice,
+          totalPrice: totalGrossAmount,
+          basePrice: totalBasePrice,
+          grossAmount: totalGrossAmount,
+          feeAmount: totalFeeAmount,
           isMobile,
           clientName,
         };
@@ -348,7 +373,10 @@ Deno.serve(async (req: Request) => {
           user_id: userId,
           metadata: metadataToSave,
           payment_status: 'pending',
-          amount: totalPrice,
+          amount: totalGrossAmount,
+          base_amount: totalBasePrice,
+          gross_amount: totalGrossAmount,
+          fee_amount: totalFeeAmount,
           currency: 'usd'
         });
 
@@ -361,7 +389,10 @@ Deno.serve(async (req: Request) => {
             user_id: userId,
             metadata: metadataToSave,
             payment_status: 'pending',
-            amount: totalPrice,
+            amount: totalGrossAmount,
+            base_amount: totalBasePrice,      // Valor líquido desejado
+            gross_amount: totalGrossAmount,   // Valor bruto cobrado
+            fee_amount: totalFeeAmount,      // Taxa do Stripe
             currency: 'usd'
           })
           .select();
@@ -381,7 +412,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({ 
         sessionId: session.id, 
         url: session.url,
-        totalPrice 
+        totalPrice: totalGrossAmount 
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
