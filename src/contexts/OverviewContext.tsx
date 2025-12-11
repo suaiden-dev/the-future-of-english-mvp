@@ -164,27 +164,27 @@ export function OverviewProvider({ children }: { children: React.ReactNode }) {
                     (translatedDocs?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0);
       } else {
         // Authenticator sees their authenticated documents + pending documents they can review
-        totalDocs = translatedDocs?.length || 0;
-        pendingDocs = allDocuments?.filter(doc => doc.status === 'pending').length || 0; // All pending docs
-        approvedDocs = translatedDocs?.length || 0; // All translated docs are approved
+        // Pending: todos os documentos pendentes (não apenas do authenticator)
+        pendingDocs = allDocuments?.filter(doc => doc.status === 'pending').length || 0;
+        
+        // Completed/Approved: documentos traduzidos onde is_authenticated = true ou status = 'completed'
+        const approvedTranslated = (translatedDocs || []).filter(
+          (doc: any) => (doc.is_authenticated === true) || 
+          ((doc.status || '').toLowerCase() === 'completed')
+        );
+        approvedDocs = approvedTranslated.length;
+        
         rejectedDocs = 0; // Rejected docs are not in translated_documents
         
-        // Para autenticadores, usar apenas pagamentos completed (se houver)
-        // Excluir pagamentos de outros autenticadores para manter consistência
-        const regularPaymentsRevenue = (payments || []).reduce((sum, p) => {
-          if (!p) return sum;
-          if (p.status === 'completed') {
-            // Verificar se o usuário é autenticador e excluir do Total Revenue
-            const userRole = userRoleMap.get(p.user_id || '');
-            if (userRole === 'authenticator') {
-              return sum; // Excluir pagamentos de autenticadores
-            }
-            return sum + (p.amount || 0);
-          }
-          return sum;
-        }, 0);
+        // My Value: soma de total_cost de documentos autenticados pelo authenticator (status !== 'draft')
+        const validTranslatedDocsForAuth = (translatedDocs || []).filter(
+          (doc: any) => doc.authenticated_by === currentUser.id && doc.status !== 'draft'
+        );
+        totalValue = validTranslatedDocsForAuth.reduce(
+          (sum, doc) => sum + (doc.total_cost || 0), 
+          0
+        );
         
-        totalValue = regularPaymentsRevenue;
         totalPages = translatedDocs?.reduce((sum, doc) => sum + (doc.pages || 0), 0) || 0;
       }
 

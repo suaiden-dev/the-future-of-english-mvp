@@ -19,3 +19,6 @@ ON documents(is_internal_use);
 COMMENT ON COLUMN documents.is_internal_use IS 
 'Indicates if document is for authenticator personal use (true) or for a client (false). Personal use documents should not be counted in financial/admin statistics.';
 
+
+
+

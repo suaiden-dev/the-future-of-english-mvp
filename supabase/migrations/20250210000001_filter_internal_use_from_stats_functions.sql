@@ -329,3 +329,6 @@ COMMENT ON FUNCTION get_user_type_breakdown(text, text) IS 'Get detailed breakdo
 COMMENT ON FUNCTION get_enhanced_translation_stats_filtered(TIMESTAMP, TIMESTAMP) IS 'Get enhanced translation statistics with date filter, excluding internal use documents';
 COMMENT ON FUNCTION get_user_type_breakdown_filtered(TIMESTAMP, TIMESTAMP) IS 'Get user type breakdown with date filter, excluding internal use documents';
 
+
+
+

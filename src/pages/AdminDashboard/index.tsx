@@ -6,7 +6,8 @@ import { ZelleReceiptsAdmin } from '../../components/ZelleReceiptsAdmin';
 import { AffiliateWithdrawals } from './AffiliateWithdrawals';
 import { DraftCleanupApproval } from './DraftCleanupApproval';
 import { Document } from '../../App';
-import { Home, Receipt, DollarSign, FileX } from 'lucide-react';
+import { Home, Receipt, DollarSign, FileX, TestTube } from 'lucide-react';
+import { UploadSimulationPanel } from './UploadSimulationPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { DateRange } from '../../components/DateRangeFilter';
 
@@ -16,7 +17,7 @@ interface AdminDashboardProps {
 
 export function AdminDashboard({ documents }: AdminDashboardProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup' | 'test-tools'>('overview');
   const [dateRange, setDateRange] = useState<DateRange>({
     startDate: null,
     endDate: null,
@@ -33,6 +34,8 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
       setActiveTab('affiliate-withdrawals');
     } else if (location.hash === '#draft-cleanup') {
       setActiveTab('draft-cleanup');
+    } else if (location.hash === '#test-tools') {
+      setActiveTab('test-tools');
     } else {
       setActiveTab('overview');
     }
@@ -46,7 +49,7 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
     setSelectedDocument(null);
   };
 
-  const handleTabChange = (tab: 'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup') => {
+  const handleTabChange = (tab: 'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup' | 'test-tools') => {
     setActiveTab(tab);
     // Atualizar a URL para refletir a aba ativa
     if (tab === 'overview') {
@@ -61,6 +64,7 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
     { id: 'zelle-receipts', label: 'Zelle Receipts', icon: Receipt },
     { id: 'affiliate-withdrawals', label: 'Affiliate Withdrawals', icon: DollarSign },
     { id: 'draft-cleanup', label: 'Draft Cleanup', icon: FileX },
+    { id: 'test-tools', label: 'Test Tools', icon: TestTube },
   ];
 
   return (
@@ -77,11 +81,11 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
           <div className="sm:hidden">
             <select
               value={activeTab}
-              onChange={(e) => handleTabChange(e.target.value as 'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup')}
+              onChange={(e) => handleTabChange(e.target.value as 'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup' | 'test-tools')}
               className="block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-tfe-blue-500 focus:outline-none focus:ring-tfe-blue-500"
             >
               {tabs.map((tab) => (
-                <option key={tab.id} value={tab.id}>
+                <option key={tab.id} value={tab.id as string}>
                   {tab.label}
                 </option>
               ))}
@@ -95,7 +99,7 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabChange(tab.id as 'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup')}
+                  onClick={() => handleTabChange(tab.id as 'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup' | 'test-tools')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-tfe-blue-500 text-tfe-blue-600'
@@ -140,6 +144,12 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
           {activeTab === 'draft-cleanup' && (
             <div className="space-y-4 sm:space-y-6 w-full">
               <DraftCleanupApproval />
+            </div>
+          )}
+
+          {activeTab === 'test-tools' && (
+            <div className="space-y-4 sm:space-y-6 w-full">
+              <UploadSimulationPanel />
             </div>
           )}
         </div>

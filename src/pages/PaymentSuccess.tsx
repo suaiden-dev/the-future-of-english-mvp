@@ -4,6 +4,44 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { fileStorage } from '../utils/fileStorage';
 import { generateUniqueFileName } from '../utils/fileUtils';
+import { isUploadErrorSimulationActive } from '../utils/uploadSimulation';
+
+/**
+ * Marca documento como tendo upload falhado
+ */
+async function markDocumentUploadFailed(documentId: string, userId: string): Promise<void> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      console.error('Sessão não encontrada para marcar upload como falhado');
+      return;
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/update-document`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        documentId,
+        userId,
+        markUploadFailed: true
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Erro ao marcar upload como falhado:', errorText);
+    } else {
+      console.log(`✅ Documento ${documentId} marcado como upload falhado`);
+    }
+  } catch (error) {
+    console.error('Erro ao marcar upload como falhado:', error);
+  }
+}
 
 export function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -109,6 +147,17 @@ export function PaymentSuccess() {
           return;
         }
 
+      // Verificar se simulação de erro está ativa (apenas desenvolvimento)
+      const shouldSimulate = isUploadErrorSimulationActive();
+      if (shouldSimulate && documentIds.length > 0) {
+        console.log('🔧 DEBUG: Simulação de erro de upload ativada');
+        const firstDocId = documentIds[0].trim();
+        await markDocumentUploadFailed(firstDocId, userId);
+        setError('Upload failed: Simulated error for testing');
+        navigate(`/dashboard/retry-upload?documentId=${firstDocId}&from=payment`);
+        return;
+      }
+
       // Processar cada documento EXATAMENTE UMA VEZ
         for (let i = 0; i < documentIds.length; i++) {
         const docId = documentIds[i].trim();
@@ -203,8 +252,11 @@ export function PaymentSuccess() {
                       .update({ file_id: filePath })
                       .eq('id', docId);
                   } else {
-                    // Erro real no upload
+                    // Erro real no upload - marcar como falhado
                     console.error(`❌ Erro no upload do arquivo para ${docId}:`, uploadError);
+                    await markDocumentUploadFailed(docId, userId);
+                    // Redirecionar para página de reupload
+                    navigate(`/dashboard/retry-upload?documentId=${docId}&from=payment`);
                     continue; // Pular este documento
                   }
                 } else {
@@ -241,6 +293,10 @@ export function PaymentSuccess() {
           
           if (!publicUrl) {
           console.error(`❌ Não foi possível obter URL do arquivo para ${docId}`);
+            // Marcar como upload falhado
+            await markDocumentUploadFailed(docId, userId);
+            // Redirecionar para página de reupload
+            navigate(`/dashboard/retry-upload?documentId=${docId}&from=payment`);
             continue;
           }
           

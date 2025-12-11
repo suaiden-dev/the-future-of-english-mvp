@@ -38,6 +38,8 @@ import DocumentProgress from './pages/CustomerDashboard/DocumentProgress';
 import ProfilePage from './pages/CustomerDashboard/ProfilePage';
 import UploadDocument from './pages/CustomerDashboard/UploadDocument';
 import MyDocumentsPage from './pages/CustomerDashboard/MyDocumentsPage';
+import { DocumentsRetryList } from './pages/CustomerDashboard/DocumentsRetryList';
+import { DocumentRetryUpload } from './pages/CustomerDashboard/DocumentRetryUpload';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import AuthRedirect from './components/AuthRedirect';
 import DocumentManagerPage from './pages/DocumentManager/index';
@@ -408,6 +410,8 @@ function App() {
                   <Route path="/documents" element={<MyDocumentsPage />} />
                   <Route path="/progress" element={<DocumentProgress />} />
                   <Route path="/upload" element={<UploadDocument />} />
+                  <Route path="/retry-upload" element={<DocumentsRetryList />} />
+                  <Route path="/retry-upload/single/:documentId" element={<DocumentRetryUpload />} />
                 </Routes>
               </main>
             </div>

@@ -18,6 +18,7 @@ export const ActionTypes = {
     UPLOAD: 'document_upload',
     UPLOADED: 'DOCUMENT_UPLOADED',
     UPLOAD_FAILED: 'DOCUMENT_UPLOAD_FAILED',
+    RETRY_UPLOAD: 'document_retry_upload',
     APPROVE: 'document_approve',
     APPROVED: 'DOCUMENT_APPROVED',
     REJECT: 'document_reject',
@@ -28,6 +29,7 @@ export const ActionTypes = {
     VIEW: 'document_view',
     CORRECTION_UPLOADED: 'document_correction_uploaded',
     STATUS_CHANGED: 'document_status_changed',
+    MANUAL_UPLOAD_BY_AUTHENTICATOR: 'document_manual_upload_by_authenticator',
   },
   PAYMENT: {
     CREATED: 'payment_created',
@@ -82,6 +84,7 @@ export const ActionTypeLabels: Record<string, string> = {
   [ActionTypes.DOCUMENT.UPLOAD]: 'Document Upload',
   [ActionTypes.DOCUMENT.UPLOADED]: 'Document Uploaded',
   [ActionTypes.DOCUMENT.UPLOAD_FAILED]: 'Document Upload Failed',
+  [ActionTypes.DOCUMENT.RETRY_UPLOAD]: 'Document Retry Upload',
   [ActionTypes.DOCUMENT.APPROVE]: 'Document Approval',
   [ActionTypes.DOCUMENT.APPROVED]: 'Document Approved',
   [ActionTypes.DOCUMENT.REJECT]: 'Document Rejection',
@@ -92,6 +95,7 @@ export const ActionTypeLabels: Record<string, string> = {
   [ActionTypes.DOCUMENT.VIEW]: 'Document Viewed',
   [ActionTypes.DOCUMENT.CORRECTION_UPLOADED]: 'Document Correction Uploaded',
   [ActionTypes.DOCUMENT.STATUS_CHANGED]: 'Document Status Changed',
+  [ActionTypes.DOCUMENT.MANUAL_UPLOAD_BY_AUTHENTICATOR]: 'Manual Upload by Authenticator',
   
   // Payment
   [ActionTypes.PAYMENT.CREATED]: 'Payment Created',
