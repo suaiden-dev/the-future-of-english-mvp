@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { FileText, CheckCircle, Clock, DollarSign, Users, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { FileText, CheckCircle, Clock, DollarSign, Users, AlertCircle, UserCheck } from 'lucide-react';
 import { Document } from '../../App';
 import { supabase } from '../../lib/supabase';
+import { CardSkeleton, StatusCardSkeleton } from '../../components/Skeleton';
 
 interface StatsCardsProps {
   documents: Document[];
@@ -9,47 +10,291 @@ interface StatsCardsProps {
 
 export function StatsCards({ documents }: StatsCardsProps) {
   const [extendedStats, setExtendedStats] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [revenueLoading, setRevenueLoading] = useState(true);
+  const [overrideRevenue, setOverrideRevenue] = useState<number | null>(null);
+  const [authenticatorRevenue, setAuthenticatorRevenue] = useState<number>(0);
   
-  const totalRevenue = documents.reduce((sum, doc) => sum + (doc.total_cost || 0), 0);
   const completedDocuments = documents.filter(doc => doc.status === 'completed').length;
   const pendingDocuments = documents.filter(doc => doc.status === 'pending').length;
   const processingDocuments = documents.filter(doc => doc.status === 'processing').length;
   
   // Calcular métricas adicionais
   const uniqueUsers = new Set(documents.map(doc => doc.user_id)).size;
+  
+  // ✅ OTIMIZADO: Buscar dados exatos para receita (apenas pagamentos com status 'completed')
+  // Não incluir receita de autenticador pois não é lucro (valores ficam pending e não são pagos)
+  // ✅ OTIMIZADO: Adicionar cache e evitar múltiplas requisições
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRevenueData = async () => {
+      setRevenueLoading(true);
+      try {
+        // ✅ OTIMIZADO: Combinar queries em paralelo para melhor performance
+        // Fazer queries separadas para evitar problemas com relacionamentos
+        const [paysRes, docsRes, profilesRes] = await Promise.all([
+          supabase
+            .from('payments')
+            .select('id, document_id, amount, status, user_id')
+            .eq('status', 'completed'), // Filtrar no banco, não no cliente
+          supabase
+            .from('documents')
+            .select('id, total_cost, user_id')
+            .or('is_internal_use.is.null,is_internal_use.eq.false'),
+          supabase
+            .from('profiles')
+            .select('id, role')
+        ]);
+        
+        // ✅ OTIMIZADO: Verificar se componente ainda está montado
+        if (!isMounted) return;
+        
+        // Log de erro se houver
+        if (docsRes.error) {
+          console.error('❌ [AUTH REV DEBUG] Erro ao buscar documentos:', docsRes.error);
+        }
+        if (profilesRes.error) {
+          console.error('❌ [AUTH REV DEBUG] Erro ao buscar profiles:', profilesRes.error);
+        }
+        
+        // Criar mapa de user_id -> role para lookup rápido
+        const userRoleMap = new Map<string, string>();
+        (profilesRes.data || []).forEach((profile: any) => {
+          if (profile.id && profile.role) {
+            userRoleMap.set(profile.id, profile.role);
+          }
+        });
+        
+        // ✅ OTIMIZADO: Reduzir logs em produção
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 [AUTH REV DEBUG] Profiles carregados:', profilesRes.data?.length || 0);
+          console.log('🔍 [AUTH REV DEBUG] User role map size:', userRoleMap.size);
+          
+          // Log de exemplo de documento retornado
+          if (docsRes.data && docsRes.data.length > 0) {
+            const firstDoc = docsRes.data[0];
+            const userRole = userRoleMap.get(firstDoc.user_id);
+            console.log('🔍 [AUTH REV DEBUG] Exemplo de documento retornado:', {
+              id: firstDoc.id,
+              total_cost: firstDoc.total_cost,
+              user_id: firstDoc.user_id,
+              user_role: userRole || 'NOT FOUND'
+            });
+          }
+        }
+        
+        // Total Revenue = Soma de todos os pagamentos com status = 'completed' EXCETO os de autenticadores
+        // Autenticadores têm um card separado (Authenticator Revenue)
+        let userRev = 0;
+        let authPaymentsRev = 0; // Pagamentos completed de autenticadores (se houver)
+        const completedPayments: any[] = [];
+        let paymentsExcluded = 0;
+        let authenticatorPaymentsExcluded = 0;
+        
+        (paysRes.data || []).forEach((p: any) => {
+          // Considerar apenas pagamentos com status 'completed' (pagamentos realmente pagos)
+          if (p?.status === 'completed') {
+            // Verificar se o usuário é autenticador
+            const userRole = userRoleMap.get(p.user_id || '');
+            if (userRole === 'authenticator') {
+              // Separar pagamentos de autenticadores (serão incluídos no Authenticator Revenue)
+              authPaymentsRev += Number(p?.amount || 0);
+              authenticatorPaymentsExcluded++;
+              return;
+            }
+            
+            // Somar apenas pagamentos de usuários regulares
+            userRev += Number(p?.amount || 0);
+            completedPayments.push({
+              id: p.id,
+              document_id: p.document_id,
+              user_id: p.user_id,
+              amount: p.amount,
+              status: p.status
+            });
+          } else {
+            paymentsExcluded++;
+          }
+        });
+        
+        // Calcular também o total usando total_cost dos documentos (como era antes)
+        let totalFromDocuments = 0;
+        let userDocsFromDocuments = 0;
+        let authDocsFromDocuments = 0;
+        
+        (docsRes.data || []).forEach((doc: any) => {
+          const userRole = userRoleMap.get(doc.user_id);
+          const cost = Number(doc.total_cost || 0);
+          
+          if (userRole === 'authenticator') {
+            authDocsFromDocuments += cost;
+          } else {
+            userDocsFromDocuments += cost;
+            totalFromDocuments += cost;
+          }
+        });
+        
+        // ✅ OTIMIZADO: Reduzir logs em produção
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 [REVENUE DEBUG] ========== ANÁLISE DE PAGAMENTOS ==========');
+          console.log('🔍 [REVENUE DEBUG] Total pagamentos na tabela:', paysRes.data?.length || 0);
+          console.log('🔍 [REVENUE DEBUG] Pagamentos completed (usuários regulares):', completedPayments.length);
+          console.log('🔍 [REVENUE DEBUG] Pagamentos excluídos (não completed):', paymentsExcluded);
+          console.log('🔍 [REVENUE DEBUG] Pagamentos de autenticadores excluídos:', authenticatorPaymentsExcluded);
+          console.log('🔍 [REVENUE DEBUG] Total Revenue (completed, excluindo autenticadores):', userRev.toFixed(2));
+          console.log('🔍 [REVENUE DEBUG] ===========================================');
+          console.log('🔍 [COMPARISON DEBUG] ========== COMPARAÇÃO DE MÉTODOS ==========');
+          console.log('🔍 [COMPARISON DEBUG] Método 1 - Tabela payments (completed, excluindo auth):', userRev.toFixed(2));
+          console.log('🔍 [COMPARISON DEBUG] Método 2 - Tabela documents (total_cost, excluindo auth):', totalFromDocuments.toFixed(2));
+          console.log('🔍 [COMPARISON DEBUG] Authenticator revenue (total_cost):', authDocsFromDocuments.toFixed(2));
+          console.log('🔍 [COMPARISON DEBUG] Total geral (todos documentos):', (totalFromDocuments + authDocsFromDocuments).toFixed(2));
+          console.log('🔍 [COMPARISON DEBUG] Diferença entre métodos:', (totalFromDocuments - userRev).toFixed(2));
+          console.log('🔍 [COMPARISON DEBUG] ===========================================');
+        }
+        
+        // Calcular receita de autenticadores (apenas para controle, não incluída no Total Revenue)
+        // Incluir APENAS os documentos de autenticadores (total_cost)
+        // NÃO incluir pagamentos completed de autenticadores, pois esses já foram pagos
+        // Authenticator Revenue é para controle de documentos internos (uploads de autenticadores)
+        // ✅ OTIMIZADO: Analisar documentos de autenticadores (reduzir logs)
+        const authenticatorDocs: any[] = [];
+        const authenticatorDocsWithCost: any[] = [];
+        let authRev = 0;
+        
+        (docsRes.data || []).forEach((doc: any) => {
+          // Buscar role do usuário no mapa
+          const userRole = userRoleMap.get(doc.user_id);
+          
+          // Verificar se é autenticador
+          if (userRole === 'authenticator') {
+            authenticatorDocs.push(doc);
+            
+            // Nota: is_internal_use não existe na tabela documents
+            // Por enquanto, incluímos todos os documentos de autenticadores
+            
+            // Verificar se tem total_cost
+            const cost = Number(doc.total_cost || 0);
+            if (cost > 0) {
+              authenticatorDocsWithCost.push({
+                id: doc.id,
+                total_cost: cost,
+                user_id: doc.user_id,
+                role: userRole
+              });
+              authRev += cost;
+            }
+          }
+        });
+        
+        // NÃO adicionar pagamentos completed de autenticadores ao Authenticator Revenue
+        // Authenticator Revenue é apenas para documentos (uploads internos)
+        // Pagamentos completed de autenticadores não devem ser incluídos aqui
+        
+        // ✅ OTIMIZADO: Reduzir logs em produção
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 ADMIN DASHBOARD - Total completed payments (usuários regulares):', completedPayments.length);
+          console.log('🔍 ADMIN DASHBOARD - Total revenue (completed, excluindo autenticadores):', userRev.toFixed(2));
+          console.log('🔍 ADMIN DASHBOARD - Authenticator payments completed (excluídos do Total Revenue):', authPaymentsRev.toFixed(2));
+          console.log('🔍 ADMIN DASHBOARD - Authenticator revenue (apenas documentos, não pagamentos):', authRev.toFixed(2));
+          console.log('🔍 ADMIN DASHBOARD - [DEBUG] userRev antes de setOverrideRevenue:', userRev.toFixed(2));
+          console.log('🔍 ADMIN DASHBOARD - [DEBUG] authRev antes de setAuthenticatorRevenue:', authRev.toFixed(2));
+        }
+        
+        if (isMounted) {
+          // ✅ CORREÇÃO: Verificar se os valores estão sendo atribuídos corretamente
+          // userRev deve ir para Total Revenue (usuários regulares)
+          // authRev deve ir para Authenticator Revenue (autenticadores)
+          setOverrideRevenue(userRev);
+          setAuthenticatorRevenue(authRev);
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔍 ADMIN DASHBOARD - [DEBUG] Valores atribuídos:');
+            console.log('  - overrideRevenue (Total Revenue):', userRev.toFixed(2));
+            console.log('  - authenticatorRevenue (Authenticator Revenue):', authRev.toFixed(2));
+          }
+        }
+      } catch (e) {
+        if (isMounted) {
+          console.warn('Revenue fetch failed, fallback to doc-based', e);
+          setOverrideRevenue(null);
+          setAuthenticatorRevenue(0);
+        }
+      } finally {
+        if (isMounted) {
+          setRevenueLoading(false);
+        }
+      }
+    };
+    fetchRevenueData();
+    
+    // ✅ OTIMIZADO: Cleanup para evitar atualizações após desmontagem
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+  
+  // Usar overrideRevenue se disponível (calculado corretamente excluindo autenticadores)
+  // Se não estiver disponível, retornar 0 ao invés de usar fallback que incluiria autenticadores
+  // O fetch deve sempre funcionar, então este é apenas um fallback de segurança
+  const totalRevenue = overrideRevenue !== null ? overrideRevenue : 0;
   const avgRevenuePerDoc = documents.length > 0 ? totalRevenue / documents.length : 0;
 
-  // Buscar estatísticas estendidas do banco de dados
-  useEffect(() => {
-    fetchExtendedStats();
-  }, []);
-
-  const fetchExtendedStats = async () => {
+  // ✅ OTIMIZADO: Buscar estatísticas estendidas do banco de dados com cache
+  const fetchExtendedStats = useCallback(async () => {
     setLoading(true);
     try {
-      // Buscar estatísticas de todas as tabelas relevantes
+      // ✅ OTIMIZADO: Buscar estatísticas de todas as tabelas relevantes em paralelo
+      // Otimizar: buscar apenas campos necessários e usar contagem quando possível
       const [documentsResult, verifiedResult, translatedResult, profilesResult] = await Promise.all([
-        supabase.from('documents').select('id, status, total_cost, user_id, filename, original_filename, created_at, profiles!inner(role)'),
-        supabase.from('documents_to_be_verified').select('id, status, user_id, filename, original_filename, original_document_id, created_at'),
-        supabase.from('translated_documents').select('status, user_id'),
-        supabase.from('profiles').select('id, role, created_at')
+        supabase
+          .from('documents')
+          .select('id, status, user_id, filename, created_at')
+          .or('is_internal_use.is.null,is_internal_use.eq.false')
+          .limit(5000), // ✅ OTIMIZADO: Reduzir limite
+        supabase
+          .from('documents_to_be_verified')
+          .select('id, status, user_id, filename, original_document_id, created_at')
+          .limit(5000), // ✅ OTIMIZADO: Reduzir limite
+        supabase
+          .from('translated_documents')
+          .select('status, user_id')
+          .limit(5000), // ✅ OTIMIZADO: Reduzir limite
+        supabase
+          .from('profiles')
+          .select('id, role, created_at')
+          .limit(5000) // ✅ OTIMIZADO: Reduzir limite
       ]);
+
+      // Verificar erros
+      if (documentsResult.error) {
+        console.error('❌ [STATS] Error fetching documents:', documentsResult.error);
+      }
+      if (verifiedResult.error) {
+        console.error('❌ [STATS] Error fetching verified documents:', verifiedResult.error);
+      }
+      if (translatedResult.error) {
+        console.error('❌ [STATS] Error fetching translated documents:', translatedResult.error);
+      }
+      if (profilesResult.error) {
+        console.error('❌ [STATS] Error fetching profiles:', profilesResult.error);
+      }
 
       if (documentsResult.data && verifiedResult.data && translatedResult.data && profilesResult.data) {
         const mainDocuments = documentsResult.data;
         const verifiedDocuments = verifiedResult.data;
         const allProfiles = profilesResult.data;
 
-        // Debug: mostrar os dados reais
-        console.log('📊 [STATS] Total documents in documents table:', mainDocuments.length);
-        console.log('📊 [STATS] Total documents in verified table:', verifiedDocuments.length);
-        console.log('📊 [STATS] Total users in profiles table:', allProfiles.length);
+        // ✅ OTIMIZADO: Reduzir logs em produção
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📊 [STATS] Total documents in documents table:', mainDocuments.length);
+          console.log('📊 [STATS] Total documents in verified table:', verifiedDocuments.length);
+          console.log('📊 [STATS] Total users in profiles table:', allProfiles.length);
+        }
 
-        // USAR A MESMA LÓGICA DO DocumentsTable.tsx
+        // USAR A MESMA LÓGICA DO DocumentsTable.tsx (EXATAMENTE IGUAL)
         // Criar mapa dos documentos verificados para lookup rápido
         const verifiedDocsMap = new Map();
-        verifiedDocuments.forEach((verifiedDoc: any) => {
+        (verifiedDocuments || []).forEach((verifiedDoc: any) => {
           // Primeira prioridade: relacionar por original_document_id
           if (verifiedDoc.original_document_id) {
             verifiedDocsMap.set(verifiedDoc.original_document_id, verifiedDoc);
@@ -76,7 +321,7 @@ export function StatsCards({ documents }: StatsCardsProps) {
             }
           }
 
-          // Determinar status final
+          // Determinar status final - EXATAMENTE COMO NO DocumentsTable
           let finalStatus = 'processing'; // Default: se não está em documents_to_be_verified
 
           if (verifiedDoc) {
@@ -97,6 +342,16 @@ export function StatsCards({ documents }: StatsCardsProps) {
           return acc;
         }, {});
 
+        // Debug: verificar quantos documentos completed existem
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 [STATS DEBUG] Status counts (from documents table):', statusCounts);
+          console.log('🔍 [STATS DEBUG] Completed documents:', statusCounts.completed || 0);
+          console.log('🔍 [STATS DEBUG] Processing documents:', statusCounts.processing || 0);
+          console.log('🔍 [STATS DEBUG] Pending documents:', statusCounts.pending || 0);
+          console.log('🔍 [STATS DEBUG] Documents with verification record:', documentsWithCorrectStatus.filter(d => d.hasVerificationRecord).length);
+          console.log('🔍 [STATS DEBUG] Documents without verification record:', documentsWithCorrectStatus.filter(d => !d.hasVerificationRecord).length);
+        }
+
         // Log de debug detalhado
         const matchStats = {
           with_verification: documentsWithCorrectStatus.filter(d => d.hasVerificationRecord).length,
@@ -113,17 +368,31 @@ export function StatsCards({ documents }: StatsCardsProps) {
           active_users: allProfiles.length
         };
 
-        console.log('📈 [STATS NOVA LÓGICA] Using same logic as DocumentsTable:', stats);
-        console.log('📊 [STATS STATUS BREAKDOWN]:', statusCounts);
-        console.log('🔗 [STATS MATCH BREAKDOWN]:', matchStats);
+        // ✅ OTIMIZADO: Reduzir logs em produção
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📈 [STATS NOVA LÓGICA] Using same logic as DocumentsTable:', stats);
+          console.log('📊 [STATS STATUS BREAKDOWN]:', statusCounts);
+          console.log('🔗 [STATS MATCH BREAKDOWN]:', matchStats);
+        }
         setExtendedStats(stats);
+      } else {
+        console.warn('⚠️ [STATS] Missing data from one or more queries');
+        console.warn('⚠️ [STATS] documentsResult:', documentsResult.error ? 'ERROR' : 'OK', documentsResult.data?.length || 0);
+        console.warn('⚠️ [STATS] verifiedResult:', verifiedResult.error ? 'ERROR' : 'OK', verifiedResult.data?.length || 0);
+        console.warn('⚠️ [STATS] translatedResult:', translatedResult.error ? 'ERROR' : 'OK', translatedResult.data?.length || 0);
+        console.warn('⚠️ [STATS] profilesResult:', profilesResult.error ? 'ERROR' : 'OK', profilesResult.data?.length || 0);
       }
     } catch (error) {
       console.error('❌ [STATS ERROR] Error fetching extended stats:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // ✅ OTIMIZADO: Executar apenas uma vez no mount
+  useEffect(() => {
+    fetchExtendedStats();
+  }, [fetchExtendedStats]);
 
   const stats = [
     {
@@ -143,6 +412,15 @@ export function StatsCards({ documents }: StatsCardsProps) {
       bgColor: 'bg-green-100',
       iconColor: 'text-green-900',
       trend: 'up'
+    },
+    {
+      title: 'Authenticator Revenue',
+      value: `$${authenticatorRevenue.toLocaleString()}`,
+      subtitle: 'Internal use (not included in Total)',
+      icon: UserCheck,
+      bgColor: 'bg-orange-100',
+      iconColor: 'text-orange-900',
+      trend: null
     },
     {
       title: 'Active Users',
@@ -184,6 +462,32 @@ export function StatsCards({ documents }: StatsCardsProps) {
       description: 'Translated, awaiting Authenticator approval'
     }
   ];
+
+  // Mostrar skeleton enquanto carrega
+  if (loading || revenueLoading) {
+    return (
+      <div className="space-y-3 sm:space-y-4 lg:space-y-6 mb-4 sm:mb-6 lg:mb-8 w-full">
+        {/* Main Stats Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 w-full">
+          {[...Array(4)].map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+        {/* Status Breakdown Skeleton */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 lg:p-6 w-full">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4 lg:mb-6">
+            <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 w-full">
+            {[...Array(3)].map((_, i) => (
+              <StatusCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 sm:space-y-4 lg:space-y-6 mb-4 sm:mb-6 lg:mb-8 w-full">

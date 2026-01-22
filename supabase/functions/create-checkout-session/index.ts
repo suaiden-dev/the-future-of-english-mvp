@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.21.0';
+import { calculateCardAmountWithFees, calculateCardFee } from '../shared/stripe-fee-calculator.ts';
 
 // Definição dos cabeçalhos CORS para reutilização
 const corsHeaders = {
@@ -127,12 +128,20 @@ Deno.serve(async (req: Request) => {
       console.warn('Variáveis de ambiente do Supabase não configuradas. A sessão não será salva no banco de dados.');
     }
 
-    // Calcular preço e descrição
-    const totalPrice = calculatePrice(pages, isNotarized, isBankStatement);
+    // Calcular preço base (valor líquido desejado)
+    const basePrice = calculatePrice(pages, isNotarized, isBankStatement);
     const serviceDescription = generateServiceDescription(pages, isNotarized, isBankStatement);
 
-    console.log('DEBUG: Preço calculado:', totalPrice);
-    console.log('DEBUG: Descrição do serviço:', serviceDescription);
+    // Calcular valor bruto com markup de taxas do Stripe
+    const grossAmountInCents = calculateCardAmountWithFees(basePrice);
+    const grossAmount = grossAmountInCents / 100; // Converter centavos para dólares
+    const feeAmount = calculateCardFee(grossAmount);
+    const totalPrice = grossAmount; // Valor bruto a ser cobrado
+
+    console.log('DEBUG: Preço base (líquido):', basePrice);
+    console.log('DEBUG: Valor bruto (com taxas):', totalPrice);
+    console.log('DEBUG: Taxa do Stripe:', feeAmount);
+    console.log('DEBUG: Valor líquido esperado:', basePrice);
 
     // Inicializar o cliente Stripe
     const stripe = new Stripe(stripeSecretKey, {
@@ -152,7 +161,7 @@ Deno.serve(async (req: Request) => {
               name: 'Document Translation',
               description: serviceDescription,
             },
-            unit_amount: Math.round(totalPrice * 100), // Stripe usa centavos
+            unit_amount: grossAmountInCents, // Stripe usa centavos (já calculado com markup)
           },
           quantity: 1,
         },
@@ -183,6 +192,11 @@ Deno.serve(async (req: Request) => {
         sourceCurrency: sourceCurrency || '',
         targetCurrency: targetCurrency || '',
         totalPrice: totalPrice.toString(),
+        // Valores com markup de taxas
+        base_amount: basePrice.toString(),           // Valor líquido desejado
+        gross_amount: grossAmount.toFixed(2),        // Valor bruto cobrado
+        fee_amount: feeAmount.toFixed(2),            // Taxa do Stripe
+        markup_enabled: 'true',                      // Indica que markup foi aplicado
       },
     });
 
@@ -208,6 +222,9 @@ Deno.serve(async (req: Request) => {
           isNotarized,
           isBankStatement,
           totalPrice,
+          basePrice,      // Valor líquido desejado
+          grossAmount,   // Valor bruto cobrado
+          feeAmount,     // Taxa do Stripe
           isMobile,
           fileSize,
           fileType,
@@ -219,6 +236,23 @@ Deno.serve(async (req: Request) => {
           sourceCurrency,
           targetCurrency,
         };
+
+        // Marcar documento como aguardando pagamento Stripe
+        if (documentId) {
+          const { error: docError } = await supabaseClient
+            .from('documents')
+            .update({ 
+              status: 'stripe_pending',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', documentId);
+
+          if (docError) {
+            console.error('❌ Erro ao marcar documento como Stripe pending:', docError);
+          } else {
+            console.log('✅ Documento marcado como Stripe pending:', documentId);
+          }
+        }
 
         console.log('DEBUG: Tentando inserir na tabela stripe_sessions...');
         console.log('DEBUG: Dados a serem inseridos:', {
@@ -240,6 +274,9 @@ Deno.serve(async (req: Request) => {
             metadata: metadataToSave,
             payment_status: 'pending',
             amount: totalPrice,
+            base_amount: basePrice,      // Valor líquido desejado
+            gross_amount: grossAmount,   // Valor bruto cobrado
+            fee_amount: feeAmount,       // Taxa do Stripe
             currency: 'usd'
           })
           .select();

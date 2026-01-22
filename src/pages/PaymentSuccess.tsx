@@ -1,9 +1,47 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { fileStorage } from '../utils/fileStorage';
 import { generateUniqueFileName } from '../utils/fileUtils';
+import { isUploadErrorSimulationActive } from '../utils/uploadSimulation';
+
+/**
+ * Marca documento como tendo upload falhado
+ */
+async function markDocumentUploadFailed(documentId: string, userId: string): Promise<void> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      console.error('Sessão não encontrada para marcar upload como falhado');
+      return;
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/update-document`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        documentId,
+        userId,
+        markUploadFailed: true
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Erro ao marcar upload como falhado:', errorText);
+    } else {
+      console.log(`✅ Documento ${documentId} marcado como upload falhado`);
+    }
+  } catch (error) {
+    console.error('Erro ao marcar upload como falhado:', error);
+  }
+}
 
 export function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -12,7 +50,7 @@ export function PaymentSuccess() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const hasProcessedRef = useRef(false);
+  const processedSessionRef = useRef<string | null>(null);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -21,22 +59,24 @@ export function PaymentSuccess() {
       return;
     }
 
-    // Evitar processamento múltiplo (usando ref síncrono)
-    if (hasProcessedRef.current) {
-      console.log('DEBUG: Processamento já realizado, ignorando chamada duplicada');
+    // Se já processamos esta sessão, ignorar
+    if (processedSessionRef.current === sessionId) {
+      console.log('⏭️ Sessão já foi processada, ignorando');
       return;
     }
 
-    console.log('DEBUG: Iniciando processamento do pagamento');
-    hasProcessedRef.current = true;
+    // Marcar como processando
+    processedSessionRef.current = sessionId;
+    console.log('✅ Processando sessão:', sessionId);
+
     handlePaymentSuccess(sessionId);
   }, [searchParams]);
 
   const handlePaymentSuccess = async (sessionId: string) => {
     try {
-      console.log('DEBUG: Processando sucesso do pagamento para session:', sessionId);
+      setIsUploading(true);
       
-      // Buscar informações da sessão do Stripe usando Edge Function
+      // Buscar informações da sessão do Stripe
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(`${supabaseUrl}/functions/v1/get-session-info`, {
@@ -50,449 +90,332 @@ export function PaymentSuccess() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('ERROR: Falha ao buscar informações da sessão:', response.status, errorText);
+        console.error('Erro ao buscar informações da sessão:', response.status, errorText);
         setError('Failed to retrieve session information. Please contact support.');
         return;
       }
 
       const sessionData = await response.json();
-      console.log('DEBUG: Dados da sessão:', sessionData);
+      const metadata = sessionData.metadata || {};
+      const userId = metadata.userId;
+      
+      if (!userId) {
+        setError('User ID not found in session metadata. Please contact support.');
+        return;
+      }
 
-      const { fileId, userId, filename: sessionFilename, originalFilename, documentId, isMobile: sessionIsMobile } = sessionData.metadata;
+      // Detectar quantidade de documentos
+      const documentCount = parseInt(metadata.documentCount || '1', 10);
+      
+      console.log('📄 ========================================');
+      console.log('📄 QUANTIDADE DE DOCUMENTOS:', documentCount);
+      console.log('📄 METADADOS COMPLETOS:', JSON.stringify(metadata, null, 2));
+      console.log('📄 ========================================');
 
-      // Buscar o filename correto da tabela documents
-      let correctFilename = sessionFilename;
-      if (documentId) {
-        try {
-          const { data: documentData, error: docError } = await supabase
+      // Coletar IDs dos documentos
+      let documentIds: string[] = [];
+      
+      // Primeiro, tentar documentIds (string separada por vírgula)
+        const documentIdsStr = metadata.documentIds || '';
+      if (documentIdsStr) {
+        documentIds = documentIdsStr.split(',').filter((id: string) => id.trim());
+        console.log('📄 IDs encontrados em documentIds:', documentIds);
+      }
+        
+      // Se não encontrou, tentar doc0_documentId, doc1_documentId, etc.
+        if (documentIds.length === 0) {
+          for (let i = 0; i < documentCount; i++) {
+            const docId = metadata[`doc${i}_documentId`];
+            if (docId) {
+              documentIds.push(docId);
+            }
+          }
+        console.log('📄 IDs encontrados em docX_documentId:', documentIds);
+      }
+      
+      // Se ainda não encontrou, tentar documentId (documento único)
+      if (documentIds.length === 0 && metadata.documentId) {
+        documentIds = [metadata.documentId];
+        console.log('📄 ID encontrado em documentId:', documentIds);
+      }
+
+      console.log('📄 IDs DOS DOCUMENTOS FINAIS:', documentIds);
+      console.log('📄 TOTAL A PROCESSAR:', documentIds.length);
+
+        if (documentIds.length === 0) {
+          setError('No document IDs found. Please contact support.');
+          return;
+        }
+
+      // Verificar se simulação de erro está ativa (apenas desenvolvimento)
+      const shouldSimulate = isUploadErrorSimulationActive();
+      if (shouldSimulate && documentIds.length > 0) {
+        console.log('🔧 DEBUG: Simulação de erro de upload ativada');
+        const firstDocId = documentIds[0].trim();
+        await markDocumentUploadFailed(firstDocId, userId);
+        setError('Upload failed: Simulated error for testing');
+        navigate(`/dashboard/retry-upload?documentId=${firstDocId}&from=payment`);
+        return;
+      }
+
+      // Processar cada documento EXATAMENTE UMA VEZ
+        for (let i = 0; i < documentIds.length; i++) {
+        const docId = documentIds[i].trim();
+        console.log(`🔄 Processando documento ${i + 1}/${documentIds.length}: ${docId}`);
+
+          // Buscar dados do documento
+          const { data: docData, error: docError } = await supabase
             .from('documents')
-            .select('filename')
-            .eq('id', documentId)
+            .select('*')
+          .eq('id', docId)
             .single();
-          
-          if (!docError && documentData) {
-            correctFilename = documentData.filename;
-            console.log('🔍 DEBUG: Filename da sessão:', sessionFilename);
-            console.log('🔍 DEBUG: Filename correto do banco:', correctFilename);
-            console.log('🔍 DEBUG: Filenames são diferentes?', sessionFilename !== correctFilename);
-          } else {
-            console.warn('⚠️ Não foi possível buscar filename do banco, usando da sessão');
-          }
-        } catch (error) {
-          console.error('❌ Erro ao buscar filename do banco:', error);
+
+          if (docError || !docData) {
+          console.error(`Erro ao buscar documento ${docId}:`, docError);
+          continue;
         }
-      }
 
-      let storedFile = null;
-      let filePath = null;
-      let publicUrl = null;
-
-      // Função consolidada para fazer upload do arquivo
-      const uploadFileToStorage = async (file: File, userId: string) => {
-            setIsUploading(true);
-            setUploadProgress(0);
-
-        // Usar o filename correto da tabela documents
-        const uploadPath = correctFilename;
-
-        console.log('DEBUG: Fazendo upload para:', uploadPath);
-        console.log('DEBUG: Nome do arquivo:', file.name);
-        console.log('DEBUG: Tamanho do arquivo:', file.size);
-        console.log('DEBUG: Tipo do arquivo:', file.type);
-
-            // Simular progresso do upload
-            const progressInterval = setInterval(() => {
-              setUploadProgress(prev => {
-                if (prev >= 90) {
-                  clearInterval(progressInterval);
-                  return 90;
-                }
-                return prev + 10;
-              });
-            }, 200);
-
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('documents')
-          .upload(uploadPath, file, {
-                cacheControl: '31536000', // 1 ano de cache
-                upsert: false
-              });
-
-            clearInterval(progressInterval);
-            setUploadProgress(100);
-
-            if (uploadError) {
-              console.error('ERROR: Erro no upload:', uploadError);
-              console.error('ERROR: Detalhes do erro:', JSON.stringify(uploadError, null, 2));
-              setError(`Upload failed: ${uploadError.message}`);
-              return;
-            }
-
-            console.log('DEBUG: Upload completed:', uploadData);
-
-            // Obter URL pública do arquivo
-        const { data: { publicUrl: generatedPublicUrl } } = supabase.storage
-              .from('documents')
-          .getPublicUrl(uploadPath);
-
-        console.log('DEBUG: URL pública gerada:', generatedPublicUrl);
-        
-        return { uploadData, publicUrl: generatedPublicUrl, filePath: uploadPath };
-      };
-
-      // Lógica unificada para recuperar e fazer upload do arquivo
-      if (sessionIsMobile === 'true') {
-        // Mobile: Verificar se arquivo está no Storage ou fazer upload
-        console.log('DEBUG: Mobile detectado via metadados da sessão');
-        console.log('DEBUG: fileId recebido:', fileId);
-        console.log('DEBUG: userId recebido:', userId);
-        
-        // Verificar se fileId é um filePath válido no Storage (upload direto do DocumentUploadModal)
-        if (fileId && fileId.includes('/') && !fileId.startsWith('file_')) {
-          // É um filePath válido do Storage
-          console.log('DEBUG: ✅ fileId é um filePath válido do Storage:', fileId);
-          
-          // Obter URL pública do arquivo
-          const { data: { publicUrl: storagePublicUrl } } = supabase.storage
-            .from('documents')
-            .getPublicUrl(fileId);
-          
-          publicUrl = storagePublicUrl;
-          filePath = fileId;
-          
-          console.log('DEBUG: ✅ Arquivo encontrado no Storage (upload direto):', publicUrl);
-          
-          // Obter informações do arquivo do Storage
-          const { data: fileInfo } = await supabase.storage
-            .from('documents')
-            .list('', {
-              search: fileId.split('/').pop() // Buscar pelo nome do arquivo
-            });
-          
-          let fileSize = 0;
-          if (fileInfo && fileInfo.length > 0) {
-            fileSize = fileInfo[0].metadata?.size || 0;
-            console.log('DEBUG: Tamanho do arquivo no Storage:', fileSize);
+        // VERIFICAÇÃO: Se já tem file_url, pular (já foi processado)
+        if (docData.file_url) {
+          console.log(`⏭️ Documento ${docId} já tem file_url (${docData.file_url}), pulando`);
+            continue;
           }
-          
-          // Criar objeto simulado para compatibilidade
-          storedFile = {
-            file: { 
-              name: correctFilename, 
-              type: 'application/pdf', 
-              size: fileSize 
-            },
-            metadata: {
-              pageCount: parseInt(sessionData.metadata.pages),
-              documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified'
-            }
-          };
+
+        // Atualizar status para processing (apenas se file_url for null)
+        // Permite reprocessar documentos em processing que ainda não têm file_url
+        // Isso garante que apenas uma execução consiga atualizar (atualização atômica)
+        const { data: updateData, error: updateError } = await supabase
+            .from('documents')
+          .update({ status: 'processing', updated_at: new Date().toISOString() })
+          .eq('id', docId)
+          .is('file_url', null)
+          .select();
+
+        // Se não atualizou, outra execução já processou ou documento já tem file_url
+        if (!updateData || updateData.length === 0) {
+          console.log(`⏭️ Documento ${docId} não foi atualizado (já está sendo processado por outra execução ou já tem file_url), pulando`);
+            continue;
+        }
+
+        if (updateError) {
+          console.error(`❌ Erro ao atualizar documento ${docId}:`, updateError);
+          continue;
+        }
+
+        console.log(`✅ Documento ${docId} atualizado para processing - continuando processamento`);
+
+        // Obter URL do arquivo
+          let publicUrl = docData.file_url;
         
-          console.log('DEBUG: ✅ USANDO ARQUIVO DO STORAGE - SEM UPLOAD DUPLICADO');
-        } else {
-          // Não é um filePath válido, tentar IndexedDB como fallback
-          console.log('DEBUG: fileId não é um filePath válido do Storage, tentando IndexedDB');
-          
-          try {
-            console.log('DEBUG: Tentando recuperar do IndexedDB:', fileId);
-            storedFile = await fileStorage.getFile(fileId);
+          if (!publicUrl) {
+          // Tentar obter do file_id
+          if (docData.file_id) {
+            const { data: { publicUrl: generatedUrl } } = supabase.storage
+              .from('documents')
+              .getPublicUrl(docData.file_id);
+            publicUrl = generatedUrl;
+          } else {
+            // Buscar arquivo do IndexedDB ou Storage via metadados
+            const docIndex = i;
+            const metadataFileId = metadata[`doc${docIndex}_fileId`] || metadata[`doc${docIndex}_filePath`] || metadata.fileId;
             
-            if (storedFile) {
-              console.log('DEBUG: Arquivo encontrado no IndexedDB');
-              console.log('DEBUG: Nome do arquivo:', storedFile.file.name);
-              console.log('DEBUG: Tamanho do arquivo:', storedFile.file.size);
-              console.log('DEBUG: Tipo do arquivo:', storedFile.file.type);
-              
-              // Fazer upload do arquivo para o Supabase Storage
-              const uploadResult = await uploadFileToStorage(storedFile.file, userId);
-              if (!uploadResult) {
-                setError('Upload failed. Please try again.');
-                return;
-              }
-              publicUrl = uploadResult.publicUrl;
-              filePath = uploadResult.filePath;
-              
-              console.log('DEBUG: Upload bem-sucedido:', uploadResult.uploadData);
-            } else {
-              // Tentar localStorage como último recurso (fallback do mobile)
-              console.log('DEBUG: Arquivo não encontrado no IndexedDB, tentando localStorage');
-              
-              try {
-                const localStorageFileInfo = localStorage.getItem(fileId);
-                if (localStorageFileInfo && fileId.startsWith('mobile_fallback_')) {
-                  console.log('DEBUG: Arquivo encontrado no localStorage (fallback mobile)');
+            if (metadataFileId && metadataFileId.startsWith('file_')) {
+              // IndexedDB
+                const storedFileData = await fileStorage.getFile(metadataFileId);
+              if (storedFileData?.file) {
+                const filePath = generateUniqueFileName(
+                  docData.filename || metadata[`doc${docIndex}_filename`] || 'document.pdf',
+                  userId
+                );
+                
+                const { error: uploadError } = await supabase.storage
+                  .from('documents')
+                  .upload(filePath, storedFileData.file, { upsert: false });
+
+                if (uploadError) {
+                  // Verificar se é erro de arquivo já existente
+                  const errorMessage = uploadError.message || '';
+                  const errorString = JSON.stringify(uploadError);
+                  const errorObj = uploadError as any;
                   
-                  const fileInfo = JSON.parse(localStorageFileInfo);
-                  console.log('DEBUG: Informações do arquivo no localStorage:', fileInfo);
-                  
-                  // Criar um arquivo simulado para compatibilidade
-                  const fallbackFile = new File(
-                    [new ArrayBuffer(fileInfo.size)], // Arquivo vazio, mas com tamanho correto
-                    fileInfo.name,
-                    { type: fileInfo.type, lastModified: fileInfo.lastModified }
-                  );
-                  
-                  storedFile = {
-                    file: fallbackFile,
-                    metadata: {
-                      pageCount: fileInfo.pageCount,
-                      documentType: fileInfo.documentType
-                    }
-                  };
-                  
-                  // Fazer upload do arquivo para o Supabase Storage
-                  const uploadResult = await uploadFileToStorage(fallbackFile, userId);
-                  if (!uploadResult) {
-                    setError('Upload failed. Please try again.');
-                    return;
+                  if (errorObj.statusCode === '409' || errorString.includes('409') || 
+                      errorMessage.includes('already exists') || errorMessage.includes('Duplicate')) {
+                    // Arquivo já existe, usar existente
+                    const { data: { publicUrl: existingUrl } } = supabase.storage
+                      .from('documents')
+                      .getPublicUrl(filePath);
+                    publicUrl = existingUrl;
+                    
+                    // Atualizar apenas file_id (file_url será atualizado antes do webhook de forma atômica)
+                    await supabase
+                      .from('documents')
+                      .update({ file_id: filePath })
+                      .eq('id', docId);
+                  } else {
+                    // Erro real no upload - marcar como falhado
+                    console.error(`❌ Erro no upload do arquivo para ${docId}:`, uploadError);
+                    await markDocumentUploadFailed(docId, userId);
+                    // Redirecionar para página de reupload
+                    navigate(`/dashboard/retry-upload?documentId=${docId}&from=payment`);
+                    continue; // Pular este documento
                   }
-                  publicUrl = uploadResult.publicUrl;
-                  filePath = uploadResult.filePath;
-                  
-                  console.log('DEBUG: Upload bem-sucedido do fallback mobile:', uploadResult.uploadData);
-                  
-                  // Limpar do localStorage após upload bem-sucedido
-                  localStorage.removeItem(fileId);
                 } else {
-                  console.log('DEBUG: Arquivo NÃO encontrado nem no IndexedDB nem no localStorage');
-                  setError('File not found in local storage. Please try uploading again.');
-                  return;
+                  // Upload bem-sucedido
+                  const { data: { publicUrl: newUrl } } = supabase.storage
+                    .from('documents')
+                    .getPublicUrl(filePath);
+                  publicUrl = newUrl;
+                  
+                  // Atualizar apenas file_id (file_url será atualizado antes do webhook de forma atômica)
+                    await supabase
+                      .from('documents')
+                    .update({ file_id: filePath })
+                    .eq('id', docId);
                 }
-              } catch (localStorageError) {
-                console.error('ERROR: Erro ao acessar localStorage:', localStorageError);
-                setError('File not found in storage. Please try uploading again.');
-                return;
+              }
+            } else if (metadataFileId && metadataFileId.includes('/')) {
+              // Storage path
+              const { data: { publicUrl: storageUrl } } = supabase.storage
+                .from('documents')
+                .getPublicUrl(metadataFileId);
+              publicUrl = storageUrl;
+              
+              // Atualizar apenas file_id se necessário (file_url será atualizado antes do webhook de forma atômica)
+              if (!docData.file_id || docData.file_id !== metadataFileId) {
+                await supabase
+                  .from('documents')
+                  .update({ file_id: metadataFileId })
+                  .eq('id', docId);
               }
             }
-          } catch (indexedDBError) {
-            console.error('ERROR: Arquivo não encontrado nem no Storage nem no IndexedDB');
-            setError('File not found in storage. Please try uploading again.');
-            return;
           }
-        }
-      } else {
-        // Desktop: recuperar arquivo do IndexedDB
-        console.log('DEBUG: Desktop detectado, recuperando arquivo do IndexedDB:', fileId);
-        console.log('DEBUG: userId recebido:', userId);
-        
-        let documentData = null;
-        let checkError = null;
+          }
+          
+          if (!publicUrl) {
+          console.error(`❌ Não foi possível obter URL do arquivo para ${docId}`);
+            // Marcar como upload falhado
+            await markDocumentUploadFailed(docId, userId);
+            // Redirecionar para página de reupload
+            navigate(`/dashboard/retry-upload?documentId=${docId}&from=payment`);
+            continue;
+          }
+          
+          // Buscar dados do cliente
+          const { data: clientData } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('id', userId)
+            .single();
 
-        // Tentar recuperar do IndexedDB primeiro
+        // VERIFICAÇÃO CRÍTICA ANTES DO WEBHOOK: Atualização atômica que marca o documento
+        // Se esta atualização falhar, significa que outra execução já enviou para o webhook
+        const { data: webhookLockData, error: webhookLockError } = await supabase
+          .from('documents')
+          .update({ 
+            file_url: publicUrl, // Marcar file_url ANTES de enviar webhook
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', docId)
+          .eq('status', 'processing') // Só atualiza se ainda estiver em processing
+          .is('file_url', null) // E se file_url ainda for null
+          .select();
+
+        // Se não atualizou, outra execução já processou e enviou para o webhook
+        if (!webhookLockData || webhookLockData.length === 0) {
+          console.log(`⏭️ Documento ${docId} já foi marcado com file_url por outra execução, pulando webhook`);
+          continue;
+        }
+
+        if (webhookLockError) {
+          console.error(`❌ Erro ao marcar documento ${docId} antes do webhook:`, webhookLockError);
+          continue;
+        }
+
+        console.log(`🔒 Documento ${docId} bloqueado para envio ao webhook - continuando`);
+
+        // Preparar payload do webhook
+        const docIndex = i;
+          const docFilename = metadata[`doc${docIndex}_filename`] || docData.filename;
+          const docPages = parseInt(metadata[`doc${docIndex}_pages`] || docData.pages || '1', 10);
+          const docIsNotarized = metadata[`doc${docIndex}_isNotarized`] === 'true';
+          const docIsBankStatement = metadata[`doc${docIndex}_isBankStatement`] === 'true';
+          const docOriginalLanguage = metadata[`doc${docIndex}_originalLanguage`] || docData.original_language || 'Portuguese';
+          const docTargetLanguage = metadata[`doc${docIndex}_targetLanguage`] || docData.target_language || 'English';
+          const docDocumentType = metadata[`doc${docIndex}_documentType`] || docData.document_type || 'Certified';
+          const docPrice = docPages * (docIsNotarized ? 20 : 15) + (docIsBankStatement ? 10 : 0);
+
+          const webhookPayload = {
+            filename: docFilename,
+            original_filename: metadata[`doc${docIndex}_originalFilename`] || docFilename,
+          original_document_id: docId,
+            url: publicUrl,
+            mimetype: 'application/pdf',
+            size: docData.file_size || 0,
+            user_id: userId,
+            pages: docPages,
+            paginas: docPages,
+            document_type: docDocumentType,
+            tipo_trad: docIsNotarized ? 'Notarized' : 'Certified',
+            total_cost: docPrice.toString(),
+            valor: docPrice.toString(),
+            source_language: docOriginalLanguage,
+            target_language: docTargetLanguage,
+            idioma_raiz: docOriginalLanguage,
+            idioma_destino: docTargetLanguage,
+            is_bank_statement: docIsBankStatement,
+            client_name: clientData?.name || metadata.clientName || 'Unknown Client',
+          source_currency: metadata[`doc${docIndex}_sourceCurrency`] || null,
+          target_currency: metadata[`doc${docIndex}_targetCurrency`] || null
+        };
+
+        // Enviar para tradução
         try {
-          console.log('DEBUG: Tentando recuperar do IndexedDB:', fileId);
-          documentData = await fileStorage.getFile(fileId);
-          if (documentData) {
-            console.log('DEBUG: Arquivo encontrado no IndexedDB');
-            console.log('DEBUG: Nome do arquivo:', documentData.file.name);
-            console.log('DEBUG: Tamanho do arquivo:', documentData.file.size);
-            console.log('DEBUG: Tipo do arquivo:', documentData.file.type);
-            
-            // Fazer upload do arquivo para o Supabase Storage
-            const uploadResult = await uploadFileToStorage(documentData.file, userId);
-            if (!uploadResult) {
-              setError('Upload failed. Please try again.');
-              return;
-            }
-            publicUrl = uploadResult.publicUrl;
-            filePath = uploadResult.filePath;
-            
-            console.log('DEBUG: Upload bem-sucedido:', uploadResult.uploadData);
+          const translationResponse = await fetch(`${supabaseUrl}/functions/v1/send-translation-webhook`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token || ''}`
+              },
+              body: JSON.stringify(webhookPayload)
+            });
+
+          if (translationResponse.ok) {
+            console.log(`✅ Documento ${i + 1}/${documentIds.length} enviado para tradução`);
           } else {
-            console.log('DEBUG: Arquivo NÃO encontrado no IndexedDB, tentando buscar no banco');
-            // Se não encontrado no IndexedDB, tentar buscar no banco
-            const { data: existingDoc, error: checkError } = await supabase
-              .from('documents')
-              .select('id, status')
-              .eq('id', fileId)
-              .single();
-
-            if (checkError) {
-              console.error('ERROR: Documento não encontrado no banco:', checkError);
-              setError('Document not found in database. Please contact support.');
-              return;
-            }
-            documentData = { file: { name: correctFilename, type: 'application/pdf', size: 0 }, metadata: { pageCount: 0, documentType: 'Unknown' } }; // Placeholder for now
-            console.log('DEBUG: Documento encontrado no banco (mas sem arquivo):', existingDoc);
+            const errorText = await translationResponse.text();
+            console.error(`⚠️ Falha ao enviar documento ${i + 1}/${documentIds.length}:`, errorText);
           }
-        } catch (indexedDBError) {
-          console.error('ERROR: Arquivo não encontrado nem no Storage nem no IndexedDB');
-          setError('File not found in storage. Please try uploading again.');
-          return;
+        } catch (translationError) {
+          console.error(`⚠️ Erro ao enviar documento ${i + 1}/${documentIds.length}:`, translationError);
         }
-
-        if (!documentData) {
-          console.error('ERROR: Documento não encontrado após todas as tentativas');
-          setError('Document not found after multiple attempts. Please contact support.');
-          return;
-        }
-      }
-
-      // Verificar se documentId existe nos metadados da sessão
-      let finalDocumentId = documentId;
-      
-      if (!finalDocumentId) {
-        console.error('ERROR: documentId não encontrado nos metadados da sessão');
-        setError('Document ID not found in session metadata. Please contact support.');
-        return;
-      }
-
-      console.log('DEBUG: Usando documentId dos metadados:', finalDocumentId);
-
-      // Verificar se o documento realmente existe antes de tentar atualizar
-      const { data: existingDoc, error: checkError } = await supabase
-        .from('documents')
-        .select('id, status')
-        .eq('id', finalDocumentId)
-        .single();
-
-      if (checkError) {
-        console.error('ERROR: Documento não encontrado no banco:', checkError);
-        setError('Document not found in database. Please contact support.');
-        return;
-      }
-
-      console.log('DEBUG: Documento confirmado no banco:', existingDoc);
-
-      // Usar Edge Function para atualizar documento com service role
-      console.log('DEBUG: Chamando Edge Function para atualizar documento');
-      
-      const updateResponse = await fetch(`${supabaseUrl}/functions/v1/update-document`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || ''}`
-        },
-        body: JSON.stringify({
-          documentId: finalDocumentId,
-          fileUrl: publicUrl,
-          userId: userId,
-          filename: correctFilename,
-          pages: parseInt(sessionData.metadata.pages),
-          totalCost: parseFloat(sessionData.metadata.totalPrice),
-          documentType: sessionData.metadata.isCertified === 'true' ? 'Certificado' : 'Certified',
-          isBankStatement: sessionData.metadata.isBankStatement === 'true',
-          sourceLanguage: sessionData.metadata.originalLanguage || 'Portuguese',
-          targetLanguage: sessionData.metadata.targetLanguage || 'English',
-          clientName: sessionData.metadata.clientName || 'Cliente Padrão',
-          sourceCurrency: sessionData.metadata.sourceCurrency || null,
-          targetCurrency: sessionData.metadata.targetCurrency || null
-        })
-      });
-
-      if (!updateResponse.ok) {
-        const errorText = await updateResponse.text();
-        console.error('ERROR: Falha ao atualizar documento via Edge Function:', updateResponse.status, errorText);
-        setError('Failed to update document. Please contact support.');
-        return;
-      }
-
-      const updateResult = await updateResponse.json();
-      console.log('DEBUG: Documento atualizado via Edge Function:', updateResult);
-
-      // Chamada manual para send-translation-webhook (Storage Trigger não existe)
-      console.log('DEBUG: 🚀 INICIANDO ENVIO PARA N8N - CHAMADA MANUAL');
-      console.log('DEBUG: Chamando send-translation-webhook para enviar para n8n');
-      console.log('DEBUG: 📋 CONFIRMAÇÃO - APENAS UMA REQUISIÇÃO SERÁ ENVIADA PARA O N8N');
-      console.log('DEBUG: Metadados da sessão disponíveis:', sessionData.metadata);
-      console.log('DEBUG: Original Language:', sessionData.metadata.originalLanguage);
-      console.log('DEBUG: Target Language:', sessionData.metadata.targetLanguage);
-      console.log('DEBUG: Source Currency RAW:', sessionData.metadata.sourceCurrency);
-      console.log('DEBUG: Target Currency RAW:', sessionData.metadata.targetCurrency);
-      console.log('DEBUG: Document Type RAW:', sessionData.metadata.documentType);
-      console.log('DEBUG: Is Notarized RAW:', sessionData.metadata.isNotarized);
-      console.log('DEBUG: Is Bank Statement:', sessionData.metadata.isBankStatement);
-      console.log('DEBUG: VERIFICAÇÃO CRÍTICA - CAMPOS DE MOEDA:');
-      console.log('DEBUG: sessionData.metadata.sourceCurrency type:', typeof sessionData.metadata.sourceCurrency);
-      console.log('DEBUG: sessionData.metadata.targetCurrency type:', typeof sessionData.metadata.targetCurrency);
-      console.log('DEBUG: sessionData.metadata.documentType type:', typeof sessionData.metadata.documentType);
-      console.log('DEBUG: sessionData.metadata.targetLanguage type:', typeof sessionData.metadata.targetLanguage);
-      console.log('DEBUG: sourceCurrency value:', JSON.stringify(sessionData.metadata.sourceCurrency));
-      console.log('DEBUG: targetCurrency value:', JSON.stringify(sessionData.metadata.targetCurrency));
-      console.log('DEBUG: documentType value:', JSON.stringify(sessionData.metadata.documentType));
-      console.log('DEBUG: targetLanguage value:', JSON.stringify(sessionData.metadata.targetLanguage));
-      
-      // Garantir que a URL seja válida
-      let finalUrl = publicUrl;
-      if (publicUrl && !publicUrl.startsWith('http')) {
-        console.error('ERROR: URL inválida gerada:', publicUrl);
-        setError('Invalid file URL generated. Please contact support.');
-        return;
-      }
-      
-      console.log('DEBUG: URL final para n8n:', finalUrl);
-      
-      const webhookPayload = {
-        filename: correctFilename, // Nome único correto da tabela documents
-        original_filename: originalFilename || correctFilename, // Nome original do arquivo
-        original_document_id: finalDocumentId, // ID do documento original
-        url: finalUrl,
-        mimetype: 'application/pdf',
-        size: storedFile?.file?.size || 0,
-        user_id: userId,
-        pages: parseInt(sessionData.metadata.pages),
-        document_type: sessionData.metadata.documentType || (sessionData.metadata.isNotarized === 'true' ? 'Notorizado' : 'Certificado'),
-        total_cost: sessionData.metadata.totalPrice,
-        source_language: sessionData.metadata.originalLanguage || 'Portuguese',
-        target_language: sessionData.metadata.targetLanguage || 'English',
-        is_bank_statement: sessionData.metadata.isBankStatement === 'true',
-        source_currency: sessionData.metadata.sourceCurrency || null,
-        target_currency: sessionData.metadata.targetCurrency || null,
-        document_id: finalDocumentId,
-        // Campos padronizados para compatibilidade com n8n
-        isPdf: true,
-        fileExtension: 'pdf',
-        tableName: 'profiles',
-        schema: 'public'
-      };
-
-      console.log('DEBUG: Payload para send-translation-webhook:', webhookPayload);
-      console.log('DEBUG: VERIFICAÇÃO FINAL - MOEDAS NO PAYLOAD:');
-      console.log('DEBUG: source_currency no payload:', webhookPayload.source_currency);
-      console.log('DEBUG: target_currency no payload:', webhookPayload.target_currency);
-      console.log('DEBUG: Tipo source_currency:', typeof webhookPayload.source_currency);
-      console.log('DEBUG: Tipo target_currency:', typeof webhookPayload.target_currency);
-
-      const webhookResponse = await fetch(`${supabaseUrl}/functions/v1/send-translation-webhook`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || ''}`
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-
-      if (!webhookResponse.ok) {
-        const errorText = await webhookResponse.text();
-        console.error('ERROR: Falha ao chamar send-translation-webhook:', webhookResponse.status, errorText);
-        // Não falhar se isso der erro, apenas log
-        console.log('WARNING: Webhook failed but continuing with process');
-      } else {
-        const webhookResult = await webhookResponse.json();
-        console.log('DEBUG: Resposta do send-translation-webhook:', webhookResult);
-        console.log('✅ SUCCESS: Documento enviado para n8n via send-translation-webhook');
-        console.log('✅ CONFIRMAÇÃO: APENAS UMA REQUISIÇÃO FOI ENVIADA PARA O N8N');
-      }
-
-      // Remover arquivo do IndexedDB (apenas desktop usa IndexedDB)
-      if (sessionIsMobile !== 'true' && fileId) {
-        try {
-          await fileStorage.deleteFile(fileId);
-          console.log('DEBUG: Arquivo removido do IndexedDB');
-        } catch (error) {
-          console.log('WARNING: Could not remove file from IndexedDB:', error);
-        }
-      } else {
-        console.log('DEBUG: Mobile - arquivo não estava no IndexedDB');
       }
 
       setSuccess(true);
       setUploadProgress(100);
-
-      // Não redirecionar automaticamente - usuário clica quando quiser
+      
+      // Log payment completion for each document
+      try {
+        const { Logger } = await import('../lib/loggingHelpers');
+        const { ActionTypes } = await import('../types/actionTypes');
+        for (const docId of documentIds) {
+          await Logger.logPayment(
+            ActionTypes.PAYMENT.STRIPE_COMPLETED,
+            docId,
+            'Stripe payment completed successfully',
+            {
+              session_id: sessionId,
+              document_id: docId,
+              user_id: userId,
+              timestamp: new Date().toISOString()
+            }
+          );
+        }
+      } catch (logError) {
+        // Non-blocking
+      }
 
     } catch (err: any) {
-      console.error('ERROR: Erro no processamento:', err);
+      console.error('Erro no processamento:', err);
       setError(err.message || 'Erro ao processar pagamento');
     } finally {
       setIsUploading(false);
@@ -517,8 +440,6 @@ export function PaymentSuccess() {
     );
   }
 
-
-
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
@@ -528,15 +449,10 @@ export function PaymentSuccess() {
         <p className="text-gray-600 mb-6">
           Your document has been successfully sent and is being processed.
         </p>
-          
-
-
           <div className="bg-green-50 p-4 rounded-lg mb-6">
             <p className="text-sm text-green-700 mb-4">
               Your document has been successfully processed and sent for translation.
             </p>
-            
-            {/* Aviso sobre não recarregar a página */}
             <div className="bg-tfe-blue-50 border border-tfe-blue-200 rounded-lg p-3 mb-4">
               <div className="flex items-start space-x-2">
                 <CheckCircle className="w-4 h-4 text-tfe-blue-600 mt-0.5 flex-shrink-0" />
@@ -550,7 +466,6 @@ export function PaymentSuccess() {
                 </div>
               </div>
             </div>
-            
             <button
               onClick={() => navigate('/dashboard')}
               className="bg-tfe-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-tfe-blue-700 transition-colors w-full"
@@ -585,8 +500,6 @@ export function PaymentSuccess() {
               ></div>
             </div>
             <p className="text-xs text-gray-500">{uploadProgress}% completed</p>
-            
-            {/* Aviso importante para não fechar a página */}
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-4">
               <div className="flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
@@ -596,14 +509,12 @@ export function PaymentSuccess() {
                   </p>
                   <p className="text-xs text-amber-700">
                     Please do not close this page or refresh the browser while the upload is in progress. 
-                    This could interrupt the process and cause delays.
                   </p>
                 </div>
               </div>
             </div>
           </div>
         )}
-        
       </div>
     </div>
   );

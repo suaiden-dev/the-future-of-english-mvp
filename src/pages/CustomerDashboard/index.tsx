@@ -7,6 +7,7 @@ import { DocumentUploadModal } from './DocumentUploadModal';
 import { DocumentsList } from './DocumentsList';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
 import { Chatbot } from '../../components/Chatbot';
+import { DocumentUploadRetry } from '../../components/DocumentUploadRetry/DocumentUploadRetry';
 // import { DocumentManager } from './DocumentManager';
 import { Document, Folder } from '../../App';
 import { Database } from '../../lib/database.types';
@@ -132,6 +133,8 @@ export function CustomerDashboard({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
         {/* Dashboard principal - sempre renderiza o overview */}
         <WelcomeSection user={user} onUploadClick={handleUploadClick} />
+        {/* Alerta de documentos pendentes de reupload */}
+        {user?.id && <DocumentUploadRetry userId={user.id} />}
         <CustomerStatsCards documents={documents} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="lg:col-span-2">

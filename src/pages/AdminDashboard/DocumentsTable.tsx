@@ -22,6 +22,8 @@ interface ExtendedDocument extends Omit<Document, 'client_name' | 'payment_metho
   client_name?: string | null;
   display_name?: string | null; // Nome formatado para exibição na coluna USER/CLIENT
   user_role?: string | null; // Role do usuário para filtros
+  payment_gross_amount?: number | null; // Valor bruto cobrado (com taxas)
+  payment_fee_amount?: number | null; // Taxa de processamento
 }
 
 // Propriedades do componente
@@ -37,6 +39,10 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
+  // ✅ Estados para calcular Total Value corretamente (alinhado com Total Revenue)
+  const [paymentsData, setPaymentsData] = useState<any[]>([]);
+  const [profilesData, setProfilesData] = useState<any[]>([]);
   
   // Estados para paginação
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,9 +82,11 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       }
 
       // Buscar documentos da tabela principal com perfis de usuário
+      // Excluir documentos de uso pessoal (is_internal_use = true) das estatísticas
       let mainDocumentsQuery = supabase
         .from('documents')
-        .select('*, profiles:profiles!documents_user_id_fkey(name, email, phone)')
+        .select('*, profiles:profiles!documents_user_id_fkey(name, email, phone, role)')
+        .or('is_internal_use.is.null,is_internal_use.eq.false')
         .order('created_at', { ascending: false });
 
       // Aplicar filtros de data
@@ -210,11 +218,14 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       // Buscar dados de pagamentos para obter payment_method e status
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .select('document_id, payment_method, status, amount, currency, created_at');
+        .select('id, document_id, payment_method, status, amount, base_amount, gross_amount, fee_amount, currency, user_id, created_at');
 
       if (paymentsError) {
         console.error('Error loading payments data:', paymentsError);
       }
+      
+      // ✅ Armazenar payments para cálculo do Total Value
+      setPaymentsData(paymentsData || []);
 
       // Buscar dados de traduções para obter status correto de tradução e autenticador
       // OBS: Relacionamento via original_document_id (referencia documents_to_be_verified.id)
@@ -242,6 +253,9 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       if (profilesError) {
         console.error('Error loading profiles data:', profilesError);
       }
+      
+      // ✅ Armazenar profiles para cálculo do Total Value
+      setProfilesData(profilesData || []);
 
       console.log('🔍 Profiles data loaded:', profilesData?.length || 0);
       console.log('🔍 Sample profiles:', profilesData?.slice(0, 5));
@@ -270,6 +284,9 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         const userRole = userProfile?.role || 'user';
         const isAuthenticator = userRole === 'authenticator';
         
+        // Calcular valor para visualização: usar gross_amount se disponível, senão usar total_cost
+        const displayAmount = paymentInfo?.gross_amount || doc.total_cost || 0;
+        
         return {
           ...doc,
           user_name: userProfile?.name || null,
@@ -286,6 +303,12 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
             ? `${doc.client_name} (${doc.authenticated_by_name})`
             : userProfile?.name || null,
           user_role: userRole,
+          // Para visualização: usar valor bruto se disponível, senão usar total_cost original
+          // Manter total_cost original para cálculos de soma (receita líquida)
+          total_cost: displayAmount, // Valor bruto para visualização (o que o cliente pagou)
+          payment_gross_amount: paymentInfo?.gross_amount || null,
+          payment_fee_amount: paymentInfo?.fee_amount || null,
+          payment_base_amount: paymentInfo?.base_amount || paymentInfo?.amount || null, // Valor líquido para cálculos
           // Adicionar informações de debug
           _debug_match_type: doc.matchType,
           _debug_has_verification_record: doc.hasVerificationRecord,
@@ -385,7 +408,14 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         }
       }
 
-      return matchesSearch && matchesStatus && matchesRole;
+      // Filtro de Payment Status
+      let matchesPaymentStatus = true;
+      if (paymentStatusFilter !== 'all') {
+        const docPaymentStatus = (doc.payment_status || '').toLowerCase();
+        matchesPaymentStatus = docPaymentStatus === paymentStatusFilter.toLowerCase();
+      }
+
+      return matchesSearch && matchesStatus && matchesRole && matchesPaymentStatus;
     });
     
     // Debug log para mostrar quantos documentos foram filtrados
@@ -412,7 +442,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
     }
     
     return filtered;
-  }, [extendedDocuments, searchTerm, statusFilter, roleFilter]);
+  }, [extendedDocuments, searchTerm, statusFilter, roleFilter, paymentStatusFilter]);
 
   // Lógica de paginação
   const totalItems = filteredDocuments.length;
@@ -421,15 +451,46 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
   const endIndex = startIndex + itemsPerPage;
   const paginatedDocuments = filteredDocuments.slice(startIndex, endIndex);
 
-  // Cálculo do valor total dos documentos filtrados
-  const totalValue = filteredDocuments.reduce((sum, doc) => {
-    return sum + (doc.total_cost || 0);
-  }, 0);
+  // ✅ Cálculo do Total Value alinhado com Total Revenue (StatsCards)
+  // Soma TODOS os pagamentos completed de usuários regulares (não apenas os filtrados)
+  // Excluir autenticadores e usar apenas pagamentos com status 'completed'
+  const totalValue = useMemo(() => {
+    if (!paymentsData.length) return 0;
+    
+    // Criar mapa de user_id -> role para verificar autenticadores
+    const userRoleMap = new Map<string, string>();
+    (profilesData || []).forEach((profile: any) => {
+      if (profile.id && profile.role) {
+        userRoleMap.set(profile.id, profile.role);
+      }
+    });
+    
+    // Buscar TODOS os pagamentos completed de usuários regulares (mesma lógica do StatsCards)
+    let totalRevenue = 0;
+    
+    paymentsData.forEach((payment: any) => {
+      // Apenas pagamentos completed
+      if (payment.status !== 'completed') {
+        return;
+      }
+      
+      // Verificar se não é autenticador (excluir uploads de autenticadores)
+      const userRole = userRoleMap.get(payment.user_id || '');
+      if (userRole === 'authenticator') {
+        return;
+      }
+      
+      // Se chegou aqui, é um pagamento completed de usuário regular
+      totalRevenue += Number(payment.amount || 0);
+    });
+    
+    return totalRevenue;
+  }, [paymentsData, profilesData]);
 
   // Reset para primeira página quando filtros mudam
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, roleFilter]);
+  }, [searchTerm, statusFilter, roleFilter, paymentStatusFilter]);
 
   // Define a cor de fundo e texto com base no status de pagamento
   const getPaymentStatusColor = (paymentStatus: string | null | undefined) => {
@@ -504,6 +565,135 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
     window.URL.revokeObjectURL(url);
   }, [filteredDocuments, totalValue]);
 
+  // Gera e inicia o download de um relatório CSV apenas dos documentos de autenticadores
+  const downloadAuthenticatorsReport = useCallback(() => {
+    // Filtrar apenas documentos de autenticadores
+    const authenticatorDocs = extendedDocuments.filter(doc => doc.user_role === 'authenticator');
+    
+    // Calcular total de documentos de autenticadores
+    const authenticatorTotal = authenticatorDocs.reduce((sum, doc) => {
+      return sum + (doc.total_cost || 0);
+    }, 0);
+
+    const csvRows = [
+      ['Document Name', 'User Name', 'User Email', 'Document Type', 'Status', 'Pages', 'Cost', 'Source Language', 'Target Language', 'Client Name', 'Created At'],
+      ...authenticatorDocs.map(doc => [
+        doc.filename,
+        doc.user_name || '',
+        doc.user_email || '',
+        doc.document_type || 'regular',
+        doc.status || 'pending',
+        doc.pages?.toString() || 'N/A',
+        doc.total_cost?.toFixed(2) || '0.00',
+        doc.source_language || '',
+        doc.target_language || '',
+        doc.client_name || '',
+        new Date(doc.created_at || '').toLocaleDateString()
+      ]),
+      // Adicionar linha vazia e totais
+      [],
+      ['TOTALS', '', '', '', '', '', authenticatorTotal.toFixed(2), '', '', '', `${authenticatorDocs.length} documents`]
+    ];
+
+    const csvContent = csvRows.map(row => 
+      row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `authenticators-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, [extendedDocuments]);
+
+  // Gera e inicia o download de um relatório CSV apenas dos usuários regulares com status PAID (completed)
+  // Usa a MESMA lógica do Total Revenue: apenas pagamentos completed da tabela payments, excluindo autenticadores
+  const downloadPaidUsersReport = useCallback(() => {
+    // Criar mapa de user_id -> role para verificar autenticadores
+    const userRoleMap = new Map<string, string>();
+    (profilesData || []).forEach((profile: any) => {
+      if (profile.id && profile.role) {
+        userRoleMap.set(profile.id, profile.role);
+      }
+    });
+    
+    // Buscar APENAS pagamentos completed de usuários regulares (mesma lógica do Total Revenue)
+    const paidPayments: any[] = [];
+    let paidTotal = 0;
+    
+    paymentsData.forEach((payment: any) => {
+      // Apenas pagamentos completed
+      if (payment.status !== 'completed') {
+        return;
+      }
+      
+      // Verificar se não é autenticador
+      const userRole = userRoleMap.get(payment.user_id || '');
+      if (userRole === 'authenticator') {
+        return;
+      }
+      
+      // Se chegou aqui, é um pagamento completed de usuário regular
+      paidPayments.push(payment);
+      paidTotal += Number(payment.amount || 0);
+    });
+    
+    // Buscar documentos correspondentes aos pagamentos
+    const paidDocIds = new Set(paidPayments.map(p => p.document_id));
+    const paidUserDocs = extendedDocuments.filter(doc => paidDocIds.has(doc.id));
+    
+    // Criar mapa de document_id -> payment para lookup rápido
+    const paymentMap = new Map<string, any>();
+    paidPayments.forEach(payment => {
+      paymentMap.set(payment.document_id, payment);
+    });
+
+    const csvRows = [
+      ['Document Name', 'User Name', 'User Email', 'Document Type', 'Status', 'Pages', 'Amount Paid', 'Payment Method', 'Payment Status', 'Source Language', 'Target Language', 'Created At'],
+      ...paidUserDocs.map(doc => {
+        // Buscar o pagamento correspondente (sempre deve existir)
+        const payment = paymentMap.get(doc.id);
+        const amountPaid = payment?.amount || 0;
+        
+        return [
+          doc.filename,
+          doc.user_name || '',
+          doc.user_email || '',
+          doc.document_type || 'regular',
+          doc.status || 'pending',
+          doc.pages?.toString() || 'N/A',
+          amountPaid.toFixed(2),
+          payment?.payment_method || doc.payment_method || '',
+          payment?.status || 'completed',
+          doc.source_language || '',
+          doc.target_language || '',
+          new Date(doc.created_at || '').toLocaleDateString()
+        ];
+      }),
+      // Adicionar linha vazia e totais
+      [],
+      ['TOTALS', '', '', '', '', '', paidTotal.toFixed(2), '', '', '', '', `${paidUserDocs.length} documents`]
+    ];
+
+    const csvContent = csvRows.map(row => 
+      row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `paid-users-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, [extendedDocuments, paymentsData, profilesData]);
+
   // Renderiza um esqueleto de carregamento enquanto os dados são buscados
   if (loading) {
     return (
@@ -533,19 +723,35 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
               </p>
             </div>
           </div>
-          <button
-            onClick={downloadDocumentsReport}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tfe-blue-500"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            <span>Export CSV</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={downloadDocumentsReport}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tfe-blue-500"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              <span>Export CSV</span>
+            </button>
+            <button
+              onClick={downloadPaidUsersReport}
+              className="inline-flex items-center px-3 py-2 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              <span>Export Paid Users CSV</span>
+            </button>
+            <button
+              onClick={downloadAuthenticatorsReport}
+              className="inline-flex items-center px-3 py-2 border border-orange-300 shadow-sm text-sm font-medium rounded-md text-orange-700 bg-orange-50 hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              <span>Export Authenticators CSV</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Filtros */}
       <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
           {/* Search */}
           <div className="sm:col-span-2">
             <input
@@ -574,6 +780,24 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
               <option value="completed">Completed</option>
               <option value="processing">Processing</option>
               <option value="pending">Pending</option>
+            </select>
+          </div>
+
+          {/* Payment Status Filter */}
+          <div className="flex items-center space-x-2">
+            <Filter className="w-4 h-4 text-gray-400 hidden sm:block" aria-hidden="true" />
+            <select
+              value={paymentStatusFilter}
+              onChange={(e) => setPaymentStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              aria-label="Filter by payment status"
+            >
+              <option value="all">All Payment Status</option>
+              <option value="completed">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="pending_verification">Pending Verification</option>
+              <option value="failed">Failed</option>
+              <option value="refunded">Refunded</option>
             </select>
           </div>
 
@@ -634,7 +858,12 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                 <div className="grid grid-cols-2 gap-2 text-xs mb-2">
                   <div>
                     <span className="text-gray-500">Amount:</span>
-                    <p className="font-medium text-gray-900">${doc.total_cost?.toFixed(2) || '0.00'}</p>
+                    <p className="font-medium text-gray-900">
+                      ${doc.total_cost?.toFixed(2) || '0.00'}
+                      {doc.payment_fee_amount && doc.payment_fee_amount > 0 && (
+                        <span className="text-xs text-gray-500 ml-1">(fee: ${doc.payment_fee_amount.toFixed(2)})</span>
+                      )}
+                    </p>
                   </div>
                   <div>
                     <span className="text-gray-500">Payment Method:</span>
@@ -738,7 +967,12 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                     
                     {/* Amount */}
                     <td className="px-3 py-3 text-xs font-medium text-gray-900">
-                      ${doc.total_cost?.toFixed(2) || '0.00'}
+                      <div>
+                        ${doc.total_cost?.toFixed(2) || '0.00'}
+                        {doc.payment_fee_amount && doc.payment_fee_amount > 0 && (
+                          <span className="block text-xs text-gray-500">Fee: ${doc.payment_fee_amount.toFixed(2)}</span>
+                        )}
+                      </div>
                     </td>
                     
                     {/* Payment Method */}

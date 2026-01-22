@@ -1,5 +1,5 @@
 import { User, LogOut, Home, FileText, Search, Menu } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import LanguageSelector from './LanguageSelector';
 
@@ -14,6 +14,7 @@ interface HeaderProps {
 
 export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: HeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useI18n();
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">

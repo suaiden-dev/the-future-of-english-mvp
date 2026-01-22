@@ -101,7 +101,8 @@ export function FinanceCharts({ dateRange }: FinanceChartsProps) {
       // 3. Dados para receita por tipo de usuário
       let documentsQuery = supabase
         .from('documents')
-        .select('total_cost, uploaded_by, status');
+        .select('total_cost, status, profiles:user_id(role)')
+        .or('is_internal_use.is.null,is_internal_use.eq.false');
       
       if (dateRange?.startDate) {
         documentsQuery = documentsQuery.gte('created_at', dateRange.startDate.toISOString());
@@ -119,7 +120,7 @@ export function FinanceCharts({ dateRange }: FinanceChartsProps) {
 
       documentsData?.forEach(doc => {
         if (doc.status === 'completed') {
-          const userType = doc.uploaded_by === 'authenticator' ? 'Authenticators' : 'Regular Users';
+          const userType = doc.profiles?.role === 'authenticator' ? 'Authenticators' : 'Regular Users';
           userTypeRevenue[userType] += doc.total_cost || 0;
         }
       });

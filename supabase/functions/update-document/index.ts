@@ -41,11 +41,18 @@ Deno.serve(async (req) => {
       isBankStatement,
       sourceLanguage,
       targetLanguage,
-      clientName
+      clientName,
+      markUploadFailed,
+      clearUploadFailed
     } = await req.json();
 
-    if (!documentId || !fileUrl || !userId) {
-      throw new Error('Missing required parameters: documentId, fileUrl, userId');
+    if (!documentId || !userId) {
+      throw new Error('Missing required parameters: documentId, userId');
+    }
+
+    // Se markUploadFailed, fileUrl não é obrigatório
+    if (!markUploadFailed && !fileUrl) {
+      throw new Error('Missing required parameter: fileUrl (unless markUploadFailed is true)');
     }
 
     console.log('DEBUG: Atualizando documento:', { 
@@ -59,25 +66,54 @@ Deno.serve(async (req) => {
       isBankStatement,
       sourceLanguage,
       targetLanguage,
-      clientName
+      clientName,
+      markUploadFailed,
+      clearUploadFailed
     });
 
     // Preparar dados para atualização
     const updateData: any = {
-      file_url: fileUrl,
-      status: 'processing',
       updated_at: new Date().toISOString()
     };
 
-    // Adicionar campos opcionais se fornecidos
-    if (filename) updateData.filename = filename;
-    if (pages) updateData.pages = parseInt(pages);
-    if (totalCost) updateData.total_cost = parseFloat(totalCost);
-    if (documentType) updateData.tipo_trad = documentType;
-    if (isBankStatement !== undefined) updateData.is_bank_statement = isBankStatement;
-    if (sourceLanguage) updateData.idioma_raiz = sourceLanguage;
-    if (targetLanguage) updateData.idioma_destino = targetLanguage;
-    if (clientName) updateData.client_name = clientName;
+    // Se markUploadFailed, apenas marcar como falhado
+    if (markUploadFailed) {
+      updateData.upload_failed_at = new Date().toISOString();
+      // Não atualizar file_url nem status quando apenas marcando como falhado
+    } else {
+      // Atualização normal: incluir file_url e status
+      if (fileUrl) {
+        updateData.file_url = fileUrl;
+        updateData.status = 'pending'; // Reset para pending quando reenviando
+      }
+      
+      // Se clearUploadFailed, limpar flag de falha e incrementar contador
+      if (clearUploadFailed) {
+        updateData.upload_failed_at = null;
+        // Incrementar upload_retry_count
+        // Primeiro buscar o valor atual
+        const { data: currentDoc } = await supabase
+          .from('documents')
+          .select('upload_retry_count')
+          .eq('id', documentId)
+          .single();
+        
+        const currentRetryCount = currentDoc?.upload_retry_count || 0;
+        updateData.upload_retry_count = currentRetryCount + 1;
+      }
+    }
+
+    // Adicionar campos opcionais se fornecidos (apenas se não for apenas markUploadFailed)
+    if (!markUploadFailed) {
+      if (filename) updateData.filename = filename;
+      if (pages) updateData.pages = parseInt(pages);
+      if (totalCost) updateData.total_cost = parseFloat(totalCost);
+      if (documentType) updateData.tipo_trad = documentType;
+      if (isBankStatement !== undefined) updateData.is_bank_statement = isBankStatement;
+      if (sourceLanguage) updateData.idioma_raiz = sourceLanguage;
+      if (targetLanguage) updateData.idioma_destino = targetLanguage;
+      if (clientName) updateData.client_name = clientName;
+    }
 
     // Atualizar documento na tabela documents
     const { data: updateResult, error: updateError } = await supabase

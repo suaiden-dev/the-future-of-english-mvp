@@ -178,6 +178,36 @@ export default function DocumentsToAuthenticate({ user }: Props) {
       setDocuments(prev => prev.filter(doc => doc.id !== docId));
       console.log('[DocumentsToAuthenticate] Documento aprovado com sucesso');
       
+      // Log document approval
+      try {
+        const { Logger } = await import('../../lib/loggingHelpers');
+        const { ActionTypes } = await import('../../types/actionTypes');
+        await Logger.log(
+          ActionTypes.DOCUMENT.APPROVED,
+          `Document approved by authenticator: ${doc.filename}`,
+          {
+            entityType: 'document',
+            entityId: docId,
+            metadata: {
+              document_id: docId,
+              filename: doc.filename,
+              verification_code: doc.verification_code,
+              user_id: doc.user_id,
+              pages: doc.pages,
+              total_cost: doc.total_cost,
+              authenticated_by: authData.authenticated_by,
+              authenticated_by_name: authData.authenticated_by_name,
+              authentication_date: authData.authentication_date,
+              timestamp: new Date().toISOString()
+            },
+            affectedUserId: doc.user_id,
+            performerType: 'authenticator'
+          }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
+      
     } catch (err) {
       console.error('[DocumentsToAuthenticate] Erro inesperado ao aprovar:', err);
       alert('Erro inesperado ao aprovar documento.');
@@ -242,6 +272,33 @@ export default function DocumentsToAuthenticate({ user }: Props) {
       // Remover documento da lista
       setDocuments(prev => prev.filter(doc => doc.id !== selectedDocForRejection.id));
       console.log('[DocumentsToAuthenticate] Documento rejeitado com sucesso');
+      
+      // Log document rejection
+      try {
+        const { Logger } = await import('../../lib/loggingHelpers');
+        const { ActionTypes } = await import('../../types/actionTypes');
+        await Logger.log(
+          ActionTypes.DOCUMENT.REJECTED,
+          `Document rejected by authenticator: ${selectedDocForRejection.filename}`,
+          {
+            entityType: 'document',
+            entityId: selectedDocForRejection.id,
+            metadata: {
+              document_id: selectedDocForRejection.id,
+              filename: selectedDocForRejection.filename,
+              rejection_reason: finalReason,
+              rejection_comment: finalComment,
+              rejected_by: user.id,
+              rejected_at: new Date().toISOString(),
+              timestamp: new Date().toISOString()
+            },
+            affectedUserId: selectedDocForRejection.user_id,
+            performerType: 'authenticator'
+          }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
       
       // Fechar modal
       setShowRejectModal(false);

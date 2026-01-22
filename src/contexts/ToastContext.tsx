@@ -20,18 +20,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setCurrentNotification(null);
   }, []);
 
-  const handleMarkAsRead = useCallback((id: string) => {
-    // Mark as read logic can be implemented here if needed
-    console.log('Marking notification as read:', id);
-  }, []);
-
   return (
     <ToastContext.Provider value={{ showToast, hideToast }}>
       {children}
       <ToastNotification
         notification={currentNotification}
         onClose={hideToast}
-        onMarkAsRead={handleMarkAsRead}
       />
     </ToastContext.Provider>
   );

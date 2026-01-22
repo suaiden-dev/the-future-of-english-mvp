@@ -5,6 +5,7 @@ import { fileStorage } from '../../utils/fileStorage';
 import { PaymentMethodModal } from '../../components/PaymentMethodModal';
 import { ZellePaymentModal } from '../../components/ZellePaymentModal';
 import { useI18n } from '../../contexts/I18nContext';
+import { useDocumentCleanup } from '../../hooks/useDocumentCleanup';
 
 interface DocumentUploadModalProps {
   isOpen: boolean;
@@ -35,6 +36,18 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showZelleModal, setShowZelleModal] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+  const [isPaymentCompleted, setIsPaymentCompleted] = useState(false);
+
+  // Hook para limpeza de documentos
+  const { cleanupDocument, navigateWithCleanup } = useDocumentCleanup({
+    documentId: currentDocumentId || undefined,
+    isPaymentCompleted,
+    shouldCleanup: !isPaymentCompleted && !!currentDocumentId,
+    onCleanupComplete: () => {
+      console.log('✅ Limpeza de documento concluída');
+      setCurrentDocumentId(null);
+    }
+  });
   
   const translationTypes = [
     { value: 'Certified', label: 'Certified' },
@@ -288,6 +301,28 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
       console.log('DEBUG: - original_filename:', selectedFile.name);
       console.log('DEBUG: - document_id:', newDocument.id);
       
+      // Log document creation
+      try {
+        const { Logger } = await import('../../lib/loggingHelpers');
+        const { ActionTypes } = await import('../../types/actionTypes');
+        await Logger.logDocument(
+          ActionTypes.DOCUMENT.UPLOADED,
+          newDocument.id,
+          'Document uploaded successfully',
+          {
+            filename: uniqueFilename,
+            original_filename: selectedFile.name,
+            pages: pages,
+            is_bank_statement: isExtrato,
+            target_language: idiomaDestino,
+            original_language: idiomaRaiz,
+            timestamp: new Date().toISOString()
+          }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
+      
       // Armazenar o ID do documento para usar nos modais de pagamento
       setCurrentDocumentId(newDocument.id);
       
@@ -437,7 +472,12 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
               <p className="text-gray-600 mt-1">Get your documents professionally translated</p>
             </div>
             <button
-              onClick={onClose}
+              onClick={async () => {
+                if (currentDocumentId && !isPaymentCompleted) {
+                  await cleanupDocument(currentDocumentId);
+                }
+                onClose();
+              }}
               className="text-gray-400 hover:text-gray-600 transition-colors p-2"
               aria-label="Close upload modal"
             >
@@ -826,8 +866,26 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
           setShowPaymentModal(false);
           handleStripePayment();
         }}
-        onSelectZelle={() => {
+        onSelectZelle={async () => {
           setShowPaymentModal(false);
+          
+          // Atualizar payment_method e status para 'zelle_pending' quando usuário escolhe Zelle
+          if (currentDocumentId) {
+            const { error: updateError } = await supabase
+              .from('documents')
+              .update({ 
+                payment_method: 'zelle',
+                status: 'zelle_pending'
+              })
+              .eq('id', currentDocumentId);
+            
+            if (updateError) {
+              console.error('❌ Erro ao atualizar payment_method e status:', updateError);
+            } else {
+              console.log('✅ Payment method e status atualizados para Zelle');
+            }
+          }
+          
           setShowZelleModal(true);
         }}
         amount={calculateValue(pages, isExtrato, tipoTrad)}

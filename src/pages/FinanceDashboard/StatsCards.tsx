@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, Users, CreditCard, UserCheck } from 'lucide-react';
+import { DollarSign, Users, CreditCard, UserCheck, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { DateRange } from '../../components/DateRangeFilter';
 
@@ -20,7 +20,7 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
     try {
       setLoading(true);
       
-      // Buscar dados da tabela documents
+      // Buscar dados da tabela documents (excluir documentos de uso interno)
       let documentsQuery = supabase
         .from('documents')
         .select(`
@@ -29,7 +29,8 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
             id,
             role
           )
-        `);
+        `)
+        .or('is_internal_use.is.null,is_internal_use.eq.false');
       
       // Aplicar filtros de data se fornecidos
       if (dateRange?.startDate) {
@@ -42,9 +43,12 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
       const { data: documentsData, error: documentsError } = await documentsQuery;
       
       if (documentsError) {
-        console.error('❌ Erro ao buscar documentos:', documentsError);
+        console.error('❌ [FINANCE] Erro ao buscar documentos:', documentsError);
         return;
       }
+      
+      console.log('✅ [FINANCE] Documents loaded:', documentsData?.length || 0);
+      console.log('🔍 [FINANCE] Sample document:', documentsData?.[0]);
 
       // Buscar dados atualizados da tabela documents_to_be_verified
       let verifiedQuery = supabase
@@ -62,17 +66,56 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
       const { data: verifiedData, error: verifiedError } = await verifiedQuery;
       
       if (verifiedError) {
-        console.error('❌ Erro ao buscar documentos verificados:', verifiedError);
+        console.error('❌ [FINANCE] Erro ao buscar documentos verificados:', verifiedError);
       }
+      
+      console.log('✅ [FINANCE] Verified documents loaded:', verifiedData?.length || 0);
+      console.log('🔍 [FINANCE] Sample verified doc:', verifiedData?.[0]);
 
-      // Mesclar dados: priorizar status da documents_to_be_verified (usar filename como chave)
+      // Criar Maps para matching eficiente (mesma lógica do Admin Dashboard)
+      const verifiedDocsMap = new Map();
+      const verifiedDocsByOriginalId = new Map();
+      
+      (verifiedData || []).forEach((verifiedDoc: any) => {
+        // Map por original_document_id
+        if (verifiedDoc.original_document_id) {
+          verifiedDocsByOriginalId.set(verifiedDoc.original_document_id, verifiedDoc);
+        }
+        // Map por id
+        verifiedDocsMap.set(verifiedDoc.id, verifiedDoc);
+        // Map por user_id + filename
+        const key = `${verifiedDoc.user_id}_${verifiedDoc.filename}`;
+        verifiedDocsMap.set(key, verifiedDoc);
+      });
+
+      // Mesclar dados: priorizar status da documents_to_be_verified
       const allDocs = (documentsData || []).map(doc => {
-        const verifiedDoc = verifiedData?.find(v => v.filename === doc.filename && v.user_id === doc.user_id);
+        let verifiedDoc = null;
+        
+        // Tentar 3 métodos de matching (em ordem de prioridade)
+        if (verifiedDocsMap.has(doc.id)) {
+          verifiedDoc = verifiedDocsMap.get(doc.id);
+        } else if (verifiedDocsByOriginalId.has(doc.id)) {
+          verifiedDoc = verifiedDocsByOriginalId.get(doc.id);
+        } else {
+          const key = `${doc.user_id}_${doc.filename}`;
+          if (verifiedDocsMap.has(key)) {
+            verifiedDoc = verifiedDocsMap.get(key);
+          }
+        }
+        
+        // Usar status de documents_to_be_verified se disponível, senão usar de documents
+        const finalStatus = verifiedDoc ? verifiedDoc.status : doc.status;
+        
         return {
           ...doc,
-          status: verifiedDoc ? verifiedDoc.status : doc.status
+          status: finalStatus,
+          hasVerificationRecord: !!verifiedDoc
         };
       });
+      
+      console.log('📊 [FINANCE] Total docs after merging:', allDocs.length);
+      console.log('🔍 [FINANCE] Sample merged doc:', allDocs[0]);
       
       // Preparar query para payments
       let paymentsQuery = supabase
@@ -90,8 +133,11 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
       const { data: paymentsData, error: paymentsError } = await paymentsQuery;
       
       if (paymentsError) {
-        console.error('❌ Erro ao buscar pagamentos:', paymentsError);
+        console.error('❌ [FINANCE] Erro ao buscar pagamentos:', paymentsError);
       }
+      
+      console.log('✅ [FINANCE] Payments loaded:', paymentsData?.length || 0);
+      console.log('🔍 [FINANCE] Sample payment:', paymentsData?.[0]);
       
       
       // Calcular estatísticas manualmente
@@ -106,33 +152,53 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
         failed_payments: allPayments.filter(p => p.status === 'failed').length
       };
       
-      // Calcular revenue corretamente:
       // User Uploads: usar dados da tabela payments
-      // Authenticator Uploads: usar dados da tabela documents
+      // NÃO incluir receita de autenticador pois não é lucro (valores ficam pending e não são pagos)
       
       // Revenue de usuários regulares (User Uploads) - usar tabela payments
+      // MESMA LÓGICA DO ADMIN DASHBOARD: somar apenas pagamentos completed de usuários regulares
+      // Buscar role do usuário para filtrar authenticators
+      const userRoleMap = new Map();
+      const { data: profilesData } = await supabase.from('profiles').select('id, role');
+      profilesData?.forEach(profile => {
+        userRoleMap.set(profile.id, profile.role);
+      });
+      
       const regularRevenue = paymentsData?.reduce((sum, payment) => {
-        // Verificar se o pagamento é de um usuário regular (não autenticador)
-        const userDoc = documentsData?.find(doc => doc.id === payment.document_id);
-        if (userDoc && userDoc.profiles?.role === 'user') {
+        const userRole = userRoleMap.get(payment.user_id);
+        // Considerar apenas pagamentos completed de usuários NÃO authenticators
+        if (payment.status === 'completed' && userRole !== 'authenticator') {
           return sum + (payment.amount || 0);
         }
         return sum;
       }, 0) || 0;
       
-      // Revenue de autenticadores (Authenticator Uploads) - usar tabela documents
+      // 🔍 LOG COMPARATIVO
+      const allCompletedPayments = paymentsData?.filter(p => p.status === 'completed') || [];
+      const regularCompletedPayments = allCompletedPayments.filter(p => userRoleMap.get(p.user_id) !== 'authenticator');
+      const authCompletedPayments = allCompletedPayments.filter(p => userRoleMap.get(p.user_id) === 'authenticator');
+      
+      console.log('🔍 FINANCE DASHBOARD - Total completed payments:', allCompletedPayments.length);
+      console.log('🔍 FINANCE DASHBOARD - Regular users completed payments:', regularCompletedPayments.length);
+      console.log('🔍 FINANCE DASHBOARD - Authenticators completed payments (excluded):', authCompletedPayments.length);
+      console.log('🔍 FINANCE DASHBOARD - Regular revenue (users only):', regularRevenue.toFixed(2));
+      
+      // Revenue de autenticadores não é incluída no Total Revenue
+      // pois não é lucro (valores ficam pending e não são pagos)
+      // Excluir documentos de uso pessoal (is_internal_use = true)
       const authenticatorRevenue = documentsData?.reduce((sum, doc) => {
-        if (doc.profiles?.role === 'authenticator') {
+        if (doc.profiles?.role === 'authenticator' && !doc.is_internal_use) {
           return sum + (doc.total_cost || 0);
         }
         return sum;
       }, 0) || 0;
       
-      const totalRevenue = authenticatorRevenue + regularRevenue;
+      // Total Revenue: apenas pagamentos completed de usuários regulares
+      const totalRevenue = regularRevenue;
       
-      console.log('🔍 Debug - StatsCards total_revenue:', totalRevenue);
-      console.log('🔍 Debug - User Uploads revenue (from payments table):', regularRevenue);
-      console.log('🔍 Debug - Authenticator Uploads revenue (from documents table):', authenticatorRevenue);
+      console.log('🔍 Debug - StatsCards total_revenue (only completed payments):', totalRevenue);
+      console.log('🔍 Debug - User Uploads revenue (from payments table, status=completed):', regularRevenue);
+      console.log('🔍 Debug - Authenticator Uploads revenue (excluded from total):', authenticatorRevenue);
       
       // Estatísticas de tradução calculadas mas não utilizadas no momento
       // const calculatedTranslationStats = {
@@ -142,9 +208,21 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
       //   total_revenue: totalRevenue
       // };
       
-      // Separar por tipo de usuário
-      const userDocs = allDocs.filter(d => d.profiles?.role === 'user');
-      const authenticatorDocs = allDocs.filter(d => d.profiles?.role === 'authenticator');
+      // Log de debug do matching de status
+      const withVerification = allDocs.filter(d => d.hasVerificationRecord).length;
+      const withoutVerification = allDocs.filter(d => !d.hasVerificationRecord).length;
+      console.log('📊 [FINANCE] Documents with verification record:', withVerification);
+      console.log('📊 [FINANCE] Documents without verification record:', withoutVerification);
+      
+      const statusCounts = allDocs.reduce((acc: any, doc: any) => {
+        acc[doc.status] = (acc[doc.status] || 0) + 1;
+        return acc;
+      }, {});
+      console.log('📊 [FINANCE] Status distribution:', statusCounts);
+      
+      // Separar por tipo de usuário (excluindo documentos de uso interno)
+      const userDocs = allDocs.filter(d => d.profiles?.role === 'user' && !d.is_internal_use);
+      const authenticatorDocs = allDocs.filter(d => d.profiles?.role === 'authenticator' && !d.is_internal_use);
       
       // Estatísticas aprimoradas com separação por tipo de usuário
       const calculatedEnhancedStats = {
@@ -273,10 +351,19 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
     {
       title: 'Authenticator Uploads',
       value: realAuthUploads || 0,
-      subtitle: `$${realAuthRevenue?.toFixed(0) || '0'} revenue`,
+      subtitle: `${realAuthUploads || 0} documents`,
       icon: UserCheck,
       bgColor: 'bg-orange-100',
       iconColor: 'text-orange-900',
+      trend: null
+    },
+    {
+      title: 'Authenticator Revenue',
+      value: `$${realAuthRevenue?.toFixed(0) || '0'}`,
+      subtitle: 'Internal use (not included in Total)',
+      icon: Shield,
+      bgColor: 'bg-amber-100',
+      iconColor: 'text-amber-900',
       trend: null
     }
   ];
@@ -305,7 +392,7 @@ export function StatsCards({ dateRange }: StatsCardsProps) {
   return (
     <div className="space-y-3 sm:space-y-4 lg:space-y-6 mb-4 sm:mb-6 lg:mb-8 w-full">
       {/* Main Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 w-full">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (

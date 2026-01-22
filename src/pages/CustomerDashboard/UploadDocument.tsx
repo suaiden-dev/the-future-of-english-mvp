@@ -1,5 +1,5 @@
-                                              import React, { useState, useRef } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, DollarSign, Globe, Award } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, DollarSign, Globe, Award, X, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { fileStorage } from '../../utils/fileStorage';
@@ -8,30 +8,51 @@ import { useI18n } from '../../contexts/I18nContext';
 import { PaymentMethodModal } from '../../components/PaymentMethodModal';
 import { ZellePaymentModal } from '../../components/ZellePaymentModal';
 import { useNavigate } from 'react-router-dom';
+import { useDocumentCleanup } from '../../hooks/useDocumentCleanup';
+
+interface DocumentConfig {
+  id: string;
+  file: File;
+  fileUrl?: string;
+  pages: number;
+  tipoTrad: 'Certified' | 'Notarized';
+  isExtrato: boolean;
+  idiomaRaiz: string;
+  idiomaDestino: string;
+  sourceCurrency: string;
+  targetCurrency: string;
+  documentId?: string;
+  isUploading?: boolean;
+  error?: string;
+}
 
 export default function UploadDocument() {
   const { user } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [pages, setPages] = useState(1);
+  const [documents, setDocuments] = useState<DocumentConfig[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [tipoTrad, setTipoTrad] = useState<'Certified' | 'Notarized'>('Certified');
-  const [isExtrato, setIsExtrato] = useState(false);
-  const [idiomaRaiz, setIdiomaRaiz] = useState('Portuguese');
-  const [idiomaDestino, setIdiomaDestino] = useState('English');
-  const [sourceCurrency, setSourceCurrency] = useState('USD');
-  const [targetCurrency, setTargetCurrency] = useState('BRL');
   
   // Estados para os modais de pagamento
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showZelleModal, setShowZelleModal] = useState(false);
-  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+  const [currentDocumentIds, setCurrentDocumentIds] = useState<string[]>([]);
+  const [isPaymentCompleted, setIsPaymentCompleted] = useState(false);
+
+  // Hook para limpeza de documentos (usado para documentos individuais)
+  const { cleanupDocument, navigateWithCleanup } = useDocumentCleanup({
+    documentId: currentDocumentIds[0] || undefined,
+    isPaymentCompleted,
+    shouldCleanup: !isPaymentCompleted && currentDocumentIds.length > 0,
+    onCleanupComplete: () => {
+      console.log('✅ Limpeza de documento concluída');
+      setCurrentDocumentIds([]);
+    }
+  });
   
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -78,7 +99,10 @@ export default function UploadDocument() {
   function mapTipoTradToDatabase(tipoTrad: 'Certified' | 'Notarized'): string {
     return tipoTrad === 'Certified' ? 'Certificado' : 'Notorizado';
   }
-  const valor = calcularValor(pages, isExtrato, tipoTrad);
+  // Calcular valor total de todos os documentos
+  const totalValue = documents.reduce((sum, doc) => {
+    return sum + calcularValor(doc.pages, doc.isExtrato, doc.tipoTrad);
+  }, 0);
 
   // PDF page count
   let pdfjsLib: any = null;
@@ -95,113 +119,331 @@ export default function UploadDocument() {
     return pdfjsLib;
   }
 
-  const handleFileChange = async (file: File) => {
+  const handleFiles = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    
     setError(null);
     setSuccess(null);
-    setFileUrl(null);
-    setPages(1);
-    setSelectedFile(file);
     
-    console.log('DEBUG: File selected:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      lastModified: file.lastModified
-    });
+    const newDocuments: DocumentConfig[] = [];
     
-    if (file.type === 'application/pdf') {
-      try {
-        console.log('DEBUG: Attempting to read PDF file...');
-        const pdfjsLib = await loadPdfJs();
-        console.log('DEBUG: PDF.js library loaded successfully');
-        
-        const arrayBuffer = await file.arrayBuffer();
-        console.log('DEBUG: File converted to ArrayBuffer, size:', arrayBuffer.byteLength);
-        
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        console.log('DEBUG: PDF loaded successfully, pages:', pdf.numPages);
-        setPages(pdf.numPages);
-      } catch (err) {
-        console.error('DEBUG: Error reading PDF:', err);
-        setError(`Failed to read PDF pages: ${err instanceof Error ? err.message : 'Unknown error'}`);
-        setPages(1);
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      let pages = 1;
+      let fileUrl: string | undefined;
+      
+      console.log('DEBUG: File selected:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: file.lastModified
+      });
+      
+      if (file.type === 'application/pdf') {
+        try {
+          console.log('DEBUG: Attempting to read PDF file...');
+          const pdfjsLib = await loadPdfJs();
+          console.log('DEBUG: PDF.js library loaded successfully');
+          
+          const arrayBuffer = await file.arrayBuffer();
+          console.log('DEBUG: File converted to ArrayBuffer, size:', arrayBuffer.byteLength);
+          
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          console.log('DEBUG: PDF loaded successfully, pages:', pdf.numPages);
+          pages = pdf.numPages;
+        } catch (err) {
+          console.error('DEBUG: Error reading PDF:', err);
+          pages = 1;
+        }
       }
-    } else {
-      console.log('DEBUG: File is not a PDF, type:', file.type);
-      setPages(1);
+      
+      if (file.type.startsWith('image/')) {
+        fileUrl = URL.createObjectURL(file);
+      }
+      
+      const newDoc: DocumentConfig = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        file,
+        fileUrl,
+        pages,
+        tipoTrad: 'Certified',
+        isExtrato: false,
+        idiomaRaiz: 'Portuguese',
+        idiomaDestino: 'English',
+        sourceCurrency: 'USD',
+        targetCurrency: 'BRL',
+      };
+      
+      newDocuments.push(newDoc);
     }
     
-    if (file.type.startsWith('image/')) {
-      setFileUrl(URL.createObjectURL(file));
+    setDocuments(prev => [...prev, ...newDocuments]);
+  };
+
+  const removeDocument = (id: string) => {
+    setDocuments(prev => {
+      const doc = prev.find(d => d.id === id);
+      if (doc?.fileUrl) {
+        URL.revokeObjectURL(doc.fileUrl);
+      }
+      return prev.filter(d => d.id !== id);
+    });
+  };
+
+  const updateDocument = (id: string, updates: Partial<DocumentConfig>) => {
+    setDocuments(prev => prev.map(doc => 
+      doc.id === id ? { ...doc, ...updates } : doc
+    ));
+  };
+
+  // Função para gerar nome único do arquivo (igual ao autenticador)
+  function generateUniqueFilename(originalFilename: string): string {
+    const timestamp = Date.now();
+    const randomCode = Math.random().toString(36).substr(2, 8).toUpperCase();
+    const fileExtension = originalFilename.split('.').pop();
+    const baseName = originalFilename.replace(/\.[^/.]+$/, ""); // Remove extensão
+    
+    return `${baseName}_${timestamp}_${randomCode}.${fileExtension}`;
+  }
+
+  const handleUpload = async () => {
+    if (documents.length === 0 || !user) {
+      setError('Por favor, adicione pelo menos um documento');
+      return;
+    }
+    
+    setError(null);
+    setSuccess(null);
+    setIsUploading(true);
+    
+    try {
+      const documentIds: string[] = [];
+      
+      // Criar documentos no banco para cada arquivo
+      for (const doc of documents) {
+        // Gerar nome único para o arquivo
+        const uniqueFilename = generateUniqueFilename(doc.file.name);
+        console.log('DEBUG: Criando documento no banco:', doc.file.name);
+        
+        const { data: newDocument, error: createError } = await supabase
+          .from('documents')
+          .insert({
+            user_id: user.id,
+            filename: uniqueFilename,
+            original_filename: doc.file.name,
+            pages: doc.pages,
+            status: 'pending',
+            total_cost: calcularValor(doc.pages, doc.isExtrato, doc.tipoTrad),
+            verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+            is_authenticated: true,
+            upload_date: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            tipo_trad: mapTipoTradToDatabase(doc.tipoTrad),
+            idioma_raiz: doc.idiomaRaiz,
+            idioma_destino: doc.idiomaDestino,
+            is_bank_statement: doc.isExtrato,
+            source_currency: doc.isExtrato ? doc.sourceCurrency : null,
+            target_currency: doc.isExtrato ? doc.targetCurrency : null
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('ERROR: Erro ao criar documento no banco:', createError);
+          throw new Error(`Erro ao criar documento ${doc.file.name}: ${createError.message}`);
+        }
+
+        console.log('DEBUG: Documento criado:', newDocument.id);
+        documentIds.push(newDocument.id);
+        
+        // Atualizar o documento com o ID
+        updateDocument(doc.id, { documentId: newDocument.id });
+      }
+      
+      // Armazenar os IDs dos documentos para usar nos modais de pagamento
+      setCurrentDocumentIds(documentIds);
+      
+      // Mostrar modal de seleção de método de pagamento
+      setShowPaymentModal(true);
+
+    } catch (err: any) {
+      console.error('ERROR: Erro ao preparar documentos:', err);
+      setError(err.message || 'Erro ao preparar documentos');
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  // Função para processar pagamento direto com Stripe
-  const handleDirectPayment = async (fileId: string, customPayload?: any) => {
+  // Função para redirecionar para checkout Zelle COM UPLOAD
+  const handleZelleRedirect = async (amount: number) => {
+    if (documents.length === 0 || !user || currentDocumentIds.length === 0) return;
+    
     try {
-      console.log('DEBUG: Iniciando pagamento direto com Stripe');
+      setIsUploading(true);
+      setError(null);
       
-      // Verificar se o arquivo foi selecionado
-      if (!selectedFile) {
-        throw new Error('Nenhum arquivo selecionado');
+      console.log('🚀 Uploading documents for Zelle payment...');
+      
+      // Fazer upload de todos os arquivos para o Storage
+      for (const doc of documents) {
+        if (!doc.documentId) continue;
+        
+        const fileName = generateUniqueFileName(doc.file.name, user.id);
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(fileName, doc.file);
+
+        if (uploadError) {
+          console.error('❌ Storage upload error:', uploadError);
+          throw new Error(`Falha ao fazer upload do documento ${doc.file.name}`);
+        }
+
+        // Obter URL público
+        const { data: { publicUrl } } = supabase.storage
+          .from('documents')
+          .getPublicUrl(fileName);
+
+        console.log('✅ Document uploaded successfully:', publicUrl);
+
+        // Atualizar o documento no banco com file_url, payment_method e status zelle_pending
+        const { error: updateError } = await supabase
+          .from('documents')
+          .update({ 
+            file_url: publicUrl,
+            payment_method: 'zelle',
+            status: 'zelle_pending'
+          })
+          .eq('id', doc.documentId);
+
+        if (updateError) {
+          console.error('❌ Database update error:', updateError);
+          throw new Error(`Falha ao atualizar documento ${doc.file.name} no banco`);
+        }
       }
 
-      // Verificar se o documentId foi fornecido
-      if (!customPayload?.documentId) {
-        throw new Error('Document ID não fornecido');
-      }
+      console.log('✅ All documents updated in database with file_url');
 
-      console.log('DEBUG: Usando documentId fornecido:', customPayload.documentId);
+      // Redirecionar para Zelle checkout com o primeiro documento (pode precisar ajustar para múltiplos)
+      const firstDoc = documents[0];
+      const params = new URLSearchParams({
+        document_id: currentDocumentIds.join(','), // Passar todos os IDs separados por vírgula
+        amount: amount.toString(),
+        filename: firstDoc.file.name,
+        pages: firstDoc.pages?.toString() || '1'
+      });
       
-      // Gerar nome único para o arquivo (igual ao autenticador)
-      const uniqueFilename = generateUniqueFilename(selectedFile.name);
-      console.log('DEBUG: Nome original:', selectedFile.name);
-      console.log('DEBUG: Nome único gerado:', uniqueFilename);
+      navigate(`/zelle-checkout?${params.toString()}`);
+      
+    } catch (err: any) {
+      console.error('❌ Error preparing Zelle payment:', err);
+      setError(err.message || 'Erro ao preparar pagamento Zelle');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
-      // Criar payload completo igual ao DocumentUploadModal
+  const handleDirectStripePayment = async () => {
+    if (documents.length === 0 || !user || currentDocumentIds.length === 0) {
+      setError('Nenhum documento selecionado');
+      return;
+    }
+    
+    try {
+      setIsUploading(true);
+      setError(null);
+      
+      // Processar todos os documentos e criar uma sessão de checkout que inclua todos
+      const documentItems = [];
+      
+      for (const doc of documents) {
+        if (!doc.documentId) continue;
+        
+        let fileId = '';
+        
+        if (isMobile) {
+          // Mobile: Tentar usar IndexedDB primeiro, se falhar usar upload direto
+          try {
+            fileId = await fileStorage.storeFile(doc.file, {
+              documentType: mapTipoTradToDatabase(doc.tipoTrad),
+              certification: true,
+              notarization: doc.tipoTrad === 'Notarized',
+              pageCount: doc.pages,
+              isBankStatement: doc.isExtrato,
+              originalLanguage: doc.idiomaRaiz,
+              targetLanguage: doc.idiomaDestino,
+              userId: user.id,
+              sourceCurrency: doc.isExtrato ? doc.sourceCurrency : null,
+              targetCurrency: doc.isExtrato ? doc.targetCurrency : null
+            });
+          } catch (indexedDBError) {
+            // Fallback: Upload direto para Supabase Storage
+            const filePath = generateUniqueFileName(doc.file.name, user.id);
+            const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, doc.file);
+            if (uploadError) throw uploadError;
+            fileId = filePath;
+          }
+        } else {
+          // Desktop: Salvar arquivo no IndexedDB primeiro
+          fileId = await fileStorage.storeFile(doc.file, {
+            documentType: mapTipoTradToDatabase(doc.tipoTrad),
+            certification: true,
+            notarization: doc.tipoTrad === 'Notarized',
+            pageCount: doc.pages,
+            isBankStatement: doc.isExtrato,
+            originalLanguage: doc.idiomaRaiz,
+            targetLanguage: doc.idiomaDestino,
+            userId: user.id,
+            sourceCurrency: doc.isExtrato ? doc.sourceCurrency : null,
+            targetCurrency: doc.isExtrato ? doc.targetCurrency : null
+          });
+        }
+        
+        // Determinar fileId e filePath baseado na plataforma
+        // Se for mobile e fileId contém '/' (é um caminho), usar filePath, senão usar fileId
+        const isFilePath = isMobile && fileId.includes('/');
+        
+        const documentItem: any = {
+          documentId: doc.documentId,
+          pages: doc.pages,
+          isNotarized: doc.tipoTrad === 'Notarized',
+          isBankStatement: doc.isExtrato,
+          filename: generateUniqueFilename(doc.file.name),
+          originalFilename: doc.file.name,
+          originalLanguage: doc.idiomaRaiz,
+          targetLanguage: doc.idiomaDestino,
+          documentType: mapTipoTradToDatabase(doc.tipoTrad),
+          sourceCurrency: doc.isExtrato ? doc.sourceCurrency : null,
+          targetCurrency: doc.isExtrato ? doc.targetCurrency : null,
+          fileSize: doc.file.size,
+          fileType: doc.file.type
+        };
+        
+        if (isFilePath) {
+          documentItem.filePath = fileId;
+        } else {
+          documentItem.fileId = fileId;
+        }
+        
+        documentItems.push(documentItem);
+      }
+      
+      // Criar payload com múltiplos documentos
       const payload = {
-        pages,
-        isCertified: true, // Always certified now
-        isNotarized: tipoTrad === 'Notarized', // Corrigir lógica - Notarized deve ser true quando tipoTrad === 'Notarized'
-        isBankStatement: isExtrato,
-        fileId: fileId || '', // Usar o ID do arquivo no IndexedDB
-        userId: user?.id,
-        userEmail: user?.email, // Adicionar email do usuário
-        filename: uniqueFilename, // Usar nome único em vez do original
-        originalFilename: selectedFile?.name, // Nome original para referência
-        originalLanguage: idiomaRaiz,
-        targetLanguage: idiomaDestino,
-        documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente baseado na seleção
-        documentId: customPayload.documentId, // Adicionar o documentId
-        sourceCurrency: isExtrato ? sourceCurrency : null,
-        targetCurrency: isExtrato ? targetCurrency : null,
-        isMobile: isMobile, // Adicionar campo obrigatório
-        fileSize: selectedFile?.size, // Adicionar tamanho do arquivo
-        fileType: selectedFile?.type, // Adicionar tipo do arquivo
-        clientName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Cliente' // Adicionar nome do cliente
+        documents: documentItems, // Array de documentos
+        userId: user.id,
+        userEmail: user.email,
+        isMobile: isMobile,
+        clientName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente',
+        totalAmount: totalValue
       };
 
-      console.log('DEBUG: Payload completo criado:', payload);
-      console.log('DEBUG: pages:', pages);
-      console.log('DEBUG: tipoTrad:', tipoTrad);
-      console.log('DEBUG: isExtrato:', isExtrato);
-      console.log('DEBUG: fileId:', fileId);
-      console.log('DEBUG: userId:', user?.id);
-      console.log('DEBUG: userEmail:', user?.email);
-      console.log('DEBUG: filename:', selectedFile?.name);
-      console.log('DEBUG: documentId:', customPayload.documentId);
-      console.log('DEBUG: idiomaRaiz:', idiomaRaiz);
-      console.log('DEBUG: idiomaDestino:', idiomaDestino);
-      console.log('DEBUG: sourceCurrency:', sourceCurrency);
-      console.log('DEBUG: targetCurrency:', targetCurrency);
-      console.log('DEBUG: documentType calculado:', tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado');
-      console.log('DEBUG: isNotarized calculado:', tipoTrad === 'Notarized');
-
-      console.log('Payload enviado para checkout:', payload);
+      console.log('DEBUG: Payload com múltiplos documentos:', payload);
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
+      // Usar a nova função para múltiplos documentos
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session-multiple`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -228,210 +470,6 @@ export default function UploadDocument() {
 
       // Redirecionar para o Stripe Checkout
       window.location.href = url;
-
-    } catch (err: any) {
-      console.error('ERROR: Erro no pagamento:', err);
-      setError(err.message || 'Erro ao processar pagamento');
-    }
-  };
-
-  // Função para gerar nome único do arquivo (igual ao autenticador)
-  function generateUniqueFilename(originalFilename: string): string {
-    const timestamp = Date.now();
-    const randomCode = Math.random().toString(36).substr(2, 8).toUpperCase();
-    const fileExtension = originalFilename.split('.').pop();
-    const baseName = originalFilename.replace(/\.[^/.]+$/, ""); // Remove extensão
-    
-    return `${baseName}_${timestamp}_${randomCode}.${fileExtension}`;
-  }
-
-  const handleUpload = async () => {
-    if (!selectedFile || !user) return;
-    setError(null);
-    setSuccess(null);
-    setIsUploading(true);
-    
-    try {
-      // Gerar nome único para o arquivo (igual ao autenticador)
-      const uniqueFilename = generateUniqueFilename(selectedFile.name);
-      console.log('DEBUG: Nome original:', selectedFile.name);
-      console.log('DEBUG: Nome único gerado:', uniqueFilename);
-
-      // CRIAR DOCUMENTO NO BANCO ANTES DO PAGAMENTO
-      console.log('DEBUG: Criando documento no banco antes do pagamento');
-      const { data: newDocument, error: createError } = await supabase
-        .from('documents')
-        .insert({
-          user_id: user.id,
-          filename: uniqueFilename, // Nome único para evitar conflitos
-          original_filename: selectedFile.name, // Nome original para exibição
-          pages: pages,
-          status: 'pending', // Começa como pending até o pagamento ser confirmado
-          total_cost: calcularValor(pages, isExtrato, tipoTrad),
-          verification_code: 'TFE' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-          is_authenticated: true,
-          upload_date: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          tipo_trad: mapTipoTradToDatabase(tipoTrad),
-          idioma_raiz: idiomaRaiz,
-          idioma_destino: idiomaDestino,
-          is_bank_statement: isExtrato,
-          source_currency: isExtrato ? sourceCurrency : null,
-          target_currency: isExtrato ? targetCurrency : null
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('ERROR: Erro ao criar documento no banco:', createError);
-        throw new Error('Erro ao criar documento no banco de dados');
-      }
-
-      console.log('DEBUG: Documento criado no banco:', newDocument.id);
-      console.log('DEBUG: - filename (único):', uniqueFilename);
-      console.log('DEBUG: - original_filename:', selectedFile.name);
-      console.log('DEBUG: - document_id:', newDocument.id);
-      
-      // Armazenar o ID do documento para usar nos modais de pagamento
-      setCurrentDocumentId(newDocument.id);
-      
-      // Mostrar modal de seleção de método de pagamento
-      setShowPaymentModal(true);
-
-    } catch (err: any) {
-      console.error('ERROR: Erro ao preparar documento:', err);
-      setError(err.message || 'Erro ao preparar documento');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  // Função para redirecionar para checkout Zelle COM UPLOAD
-  const handleZelleRedirect = async (amount: number) => {
-    if (!selectedFile || !user || !currentDocumentId) return;
-    
-    try {
-      setIsUploading(true);
-      setError(null);
-      
-      console.log('🚀 Uploading document for Zelle payment...');
-      
-      // Fazer upload do arquivo para o Storage
-      const fileName = generateUniqueFileName(selectedFile.name, user.id);
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, selectedFile);
-
-      if (uploadError) {
-        console.error('❌ Storage upload error:', uploadError);
-        throw new Error('Falha ao fazer upload do documento');
-      }
-
-      // Obter URL público
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName);
-
-      console.log('✅ Document uploaded successfully:', publicUrl);
-
-      // Atualizar o documento no banco com file_url
-      const { error: updateError } = await supabase
-        .from('documents')
-        .update({ file_url: publicUrl })
-        .eq('id', currentDocumentId);
-
-      if (updateError) {
-        console.error('❌ Database update error:', updateError);
-        throw new Error('Falha ao atualizar documento no banco');
-      }
-
-      console.log('✅ Document updated in database with file_url');
-
-      // Agora redirecionar para Zelle checkout
-      const params = new URLSearchParams({
-        document_id: currentDocumentId,
-        amount: amount.toString(),
-        filename: selectedFile.name,
-        pages: pages?.toString() || '1'
-      });
-      
-      navigate(`/zelle-checkout?${params.toString()}`);
-      
-    } catch (err: any) {
-      console.error('❌ Error preparing Zelle payment:', err);
-      setError(err.message || 'Erro ao preparar pagamento Zelle');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleDirectStripePayment = async () => {
-    
-    try {
-      setIsUploading(true);
-      setError(null);
-      
-      if (isMobile) {
-        // Mobile: Tentar usar IndexedDB primeiro, se falhar usar upload direto
-        try {
-          const fileId = await fileStorage.storeFile(selectedFile!, {
-            documentType: 'Certificado',
-            certification: true,
-            notarization: tipoTrad === 'Certified',
-            pageCount: pages,
-            isBankStatement: isExtrato,
-            originalLanguage: idiomaRaiz,
-            targetLanguage: idiomaDestino,
-            userId: user!.id,
-            sourceCurrency: isExtrato ? sourceCurrency : null,
-            targetCurrency: isExtrato ? targetCurrency : null
-          });
-          
-          await handleDirectPayment(fileId, { documentId: currentDocumentId });
-        } catch (indexedDBError) {
-          // Fallback: Upload direto para Supabase Storage
-          const filePath = generateUniqueFileName(selectedFile!.name, user!.id);
-          const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile!);
-          if (uploadError) throw uploadError;
-          
-          const payload = {
-            pages,
-            isCertified: true,
-            isNotarized: tipoTrad === 'Notarized', // Corrigir lógica
-            isBankStatement: isExtrato,
-            filePath,
-            userId: user!.id,
-            userEmail: user!.email,
-            filename: selectedFile?.name,
-            originalLanguage: idiomaRaiz,
-            targetLanguage: idiomaDestino,
-            documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente
-            isMobile: true,
-            documentId: currentDocumentId,
-            sourceCurrency: isExtrato ? sourceCurrency : null,
-            targetCurrency: isExtrato ? targetCurrency : null
-          };
-          
-          await handleDirectPayment('', payload);
-        }
-      } else {
-        // Desktop: Salvar arquivo no IndexedDB primeiro
-        const fileId = await fileStorage.storeFile(selectedFile!, {
-          documentType: tipoTrad === 'Notarized' ? 'Notorizado' : 'Certificado', // Mapear corretamente
-          certification: true,
-          notarization: tipoTrad === 'Notarized', // Corrigir lógica
-          pageCount: pages,
-          isBankStatement: isExtrato,
-          originalLanguage: idiomaRaiz,
-          targetLanguage: idiomaDestino,
-            userId: user!.id,
-          sourceCurrency: isExtrato ? sourceCurrency : null,
-          targetCurrency: isExtrato ? targetCurrency : null
-        });
-        
-        await handleDirectPayment(fileId, { documentId: currentDocumentId });
-      }
       
     } catch (err: any) {
       console.error('ERROR: Erro ao processar pagamento Stripe:', err);
@@ -446,17 +484,32 @@ export default function UploadDocument() {
     e.stopPropagation();
     setDragActive(true);
   };
+  
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
   };
+  
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFileChange(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFiles(files);
+    }
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFiles(files);
+    }
+    // Reset input para permitir selecionar o mesmo arquivo novamente
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
   };
 
   return (
@@ -499,7 +552,18 @@ export default function UploadDocument() {
               <div className="space-y-6">
                 {/* Upload Area */}
                 <section>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-3">{t('upload.form.selectDocument')}</h2>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-2xl font-bold text-gray-800">{t('upload.form.selectDocument')}</h2>
+                    {documents.length > 0 && (
+                      <button
+                        onClick={() => inputRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Adicionar Mais Documentos
+                      </button>
+                    )}
+                  </div>
                   <div
                     className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer flex flex-col items-center justify-center ${dragActive ? 'border-tfe-blue-500 bg-tfe-blue-50' : 'border-gray-300 hover:border-tfe-blue-400'}`}
                     onDragOver={handleDragOver}
@@ -512,170 +576,186 @@ export default function UploadDocument() {
                     <input
                       type="file"
                       ref={inputRef}
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileChange(file);
-                      }}
+                      onChange={handleInputChange}
                       accept=".pdf,.jpg,.jpeg,.png"
+                      multiple
                       className="hidden"
                       id="file-upload"
                       aria-label="Upload document file input"
-                      title="Select a document to upload"
+                      title="Select documents to upload"
                     />
-                    {selectedFile ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <FileText className="w-10 h-10 text-tfe-blue-500 mb-1" />
-                        <span className="text-gray-800 font-medium text-base">{selectedFile.name}</span>
-                        <span className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
-                        <button
-                          className="mt-1 text-xs text-tfe-red-500 hover:underline"
-                          onClick={e => { e.stopPropagation(); setSelectedFile(null); }}
-                        >{t('upload.form.uploadArea.removeFile')}</button>
-                        {selectedFile && fileUrl && selectedFile.type.startsWith('image/') && (
-                          <img src={fileUrl} alt="Preview" className="max-h-32 rounded shadow mt-2" />
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-12 h-12 text-gray-400 mb-2" />
+                      <p className="text-base text-gray-600 font-medium">
+                        {documents.length === 0 
+                          ? t('upload.form.uploadArea.clickToUpload')
+                          : 'Arraste e solte mais arquivos ou clique para adicionar'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {t('upload.form.uploadArea.supportedFormats')} - Você pode adicionar múltiplos documentos
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Documents List */}
+                {documents.length > 0 && (
+                  <section className="space-y-4">
+                    <h2 className="text-xl font-bold text-gray-800">Documentos Adicionados ({documents.length})</h2>
+                    {documents.map((doc) => (
+                      <div key={doc.id} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3 flex-1">
+                            <FileText className="w-8 h-8 text-tfe-blue-500" />
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">{doc.file.name}</p>
+                              <p className="text-sm text-gray-500">{(doc.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeDocument(doc.id)}
+                            className="p-2 text-tfe-red-500 hover:bg-tfe-red-50 rounded-lg transition-colors"
+                            title="Remover documento"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                        
+                        {doc.fileUrl && doc.file.type.startsWith('image/') && (
+                          <div className="mb-4">
+                            <img src={doc.fileUrl} alt="Preview" className="max-h-32 rounded shadow" />
+                          </div>
                         )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2">
-                        <Upload className="w-12 h-12 text-gray-400 mb-2" />
-                        <p className="text-base text-gray-600 font-medium">
-                          {t('upload.form.uploadArea.clickToUpload')}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {t('upload.form.uploadArea.supportedFormats')}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </section>
 
-                {/* Pages */}
-                <section>
-                  <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="num-pages">
-                    {t('upload.form.numberOfPages')}
-                  </label>
-                  <input
-                    id="num-pages"
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={pages}
-                    onChange={e => setPages(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                    disabled
-                    placeholder={t('upload.form.numberOfPages')}
-                    aria-label={t('upload.form.numberOfPages')}
-                  />
-                </section>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Pages */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {t('upload.form.numberOfPages')}
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="50"
+                              value={doc.pages}
+                              onChange={e => updateDocument(doc.id, { pages: Math.max(1, parseInt(e.target.value) || 1) })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                              disabled
+                            />
+                          </div>
 
-                {/* Translation Details */}
-                <section className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="translation-type">
-                      {t('upload.form.translationType')}
-                    </label>
-                    <select
-                      id="translation-type"
-                      value={tipoTrad}
-                      onChange={e => setTipoTrad(e.target.value as 'Certified' | 'Notarized')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                      aria-label="Translation type"
-                    >
-                      {translationTypes.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="is-bank-statement">
-                      {t('upload.form.isBankStatement')}
-                    </label>
-                    <select
-                      id="is-bank-statement"
-                      value={isExtrato ? 'yes' : 'no'}
-                      onChange={e => setIsExtrato(e.target.value === 'yes')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                      aria-label="Is it a bank statement"
-                    >
-                      <option value="no">{t('upload.form.selectOptions.no')}</option>
-                      <option value="yes">{t('upload.form.selectOptions.yes')}</option>
-                    </select>
-                  </div>
+                          {/* Translation Type */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {t('upload.form.translationType')}
+                            </label>
+                            <select
+                              value={doc.tipoTrad}
+                              onChange={e => updateDocument(doc.id, { tipoTrad: e.target.value as 'Certified' | 'Notarized' })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                            >
+                              {translationTypes.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
 
-                  {/* Currency Fields - Only show when isExtrato is true */}
-                  {isExtrato && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="source-currency">
-                          4.1. Source Currency (Original Document)
-                        </label>
-                        <select
-                          id="source-currency"
-                          value={sourceCurrency}
-                          onChange={e => setSourceCurrency(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                          aria-label="Source currency"
-                        >
-                          {currencies.map(currency => (
-                            <option key={currency} value={currency}>{currency}</option>
-                          ))}
-                        </select>
+                          {/* Is Bank Statement */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {t('upload.form.isBankStatement')}
+                            </label>
+                            <select
+                              value={doc.isExtrato ? 'yes' : 'no'}
+                              onChange={e => updateDocument(doc.id, { isExtrato: e.target.value === 'yes' })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                            >
+                              <option value="no">{t('upload.form.selectOptions.no')}</option>
+                              <option value="yes">{t('upload.form.selectOptions.yes')}</option>
+                            </select>
+                          </div>
+
+                          {/* Original Language */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {t('upload.form.originalLanguage')}
+                            </label>
+                            <select
+                              value={doc.idiomaRaiz}
+                              onChange={e => updateDocument(doc.id, { idiomaRaiz: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                            >
+                              {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
+                                <option key={index} value={lang}>{lang}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Target Language */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {t('upload.form.targetLanguage')}
+                            </label>
+                            <select
+                              value={doc.idiomaDestino}
+                              onChange={e => updateDocument(doc.id, { idiomaDestino: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                            >
+                              {targetLanguages.map(lang => (
+                                <option key={lang} value={lang}>{lang}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Currency Fields - Only show when isExtrato is true */}
+                        {doc.isExtrato && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                4.1. Source Currency (Original Document)
+                              </label>
+                              <select
+                                value={doc.sourceCurrency}
+                                onChange={e => updateDocument(doc.id, { sourceCurrency: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                              >
+                                {currencies.map(currency => (
+                                  <option key={currency} value={currency}>{currency}</option>
+                                ))}
+                              </select>
+                            </div>
+                            
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                4.2. Target Currency (Translation To)
+                              </label>
+                              <select
+                                value={doc.targetCurrency}
+                                onChange={e => updateDocument(doc.id, { targetCurrency: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                              >
+                                {currencies.map(currency => (
+                                  <option key={currency} value={currency}>{currency}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Document Price */}
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Valor deste documento:</span>
+                            <span className="text-lg font-bold text-tfe-blue-950">
+                              ${calcularValor(doc.pages, doc.isExtrato, doc.tipoTrad)}.00
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-currency">
-                          4.2. Target Currency (Translation To)
-                        </label>
-                        <select
-                          id="target-currency"
-                          value={targetCurrency}
-                          onChange={e => setTargetCurrency(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                          aria-label="Target currency"
-                        >
-                          {currencies.map(currency => (
-                            <option key={currency} value={currency}>{currency}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </>
-                  )}
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="original-language">
-                      {t('upload.form.originalLanguage')}
-                    </label>
-                    <select
-                      id="original-language"
-                      value={idiomaRaiz}
-                      onChange={e => setIdiomaRaiz(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                      aria-label="Original document language"
-                    >
-                      {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
-                        <option key={index} value={lang}>{lang}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="target-language">
-                      {t('upload.form.targetLanguage')}
-                    </label>
-                    <select
-                      id="target-language"
-                      value={idiomaDestino}
-                      onChange={e => setIdiomaDestino(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                      aria-label="Target language for translation"
-                    >
-                      {targetLanguages.map(lang => (
-                        <option key={lang} value={lang}>{lang}</option>
-                      ))}
-                    </select>
-                  </div>
-                </section>
+                    ))}
+                  </section>
+                )}
 
                 {/* Error/Success Messages */}
                 {error && (
@@ -692,15 +772,17 @@ export default function UploadDocument() {
                 )}
 
                 {/* Upload Button */}
-                <div className="pt-4">
-                  <button
-                    onClick={handleUpload}
-                    disabled={!selectedFile || isUploading}
-                    className="w-full bg-gradient-to-r from-tfe-blue-950 to-tfe-red-950 text-white py-4 rounded-xl font-bold shadow-lg hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-all"
-                  >
-                    {isUploading ? t('common.loading') : `${t('upload.summary.processPayment')} $${valor}.00`}
-                  </button>
-                </div>
+                {documents.length > 0 && (
+                  <div className="pt-4">
+                    <button
+                      onClick={handleUpload}
+                      disabled={documents.length === 0 || isUploading}
+                      className="w-full bg-gradient-to-r from-tfe-blue-950 to-tfe-red-950 text-white py-4 rounded-xl font-bold shadow-lg hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-all"
+                    >
+                      {isUploading ? t('common.loading') : `${t('upload.summary.processPayment')} $${totalValue}.00`}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -714,19 +796,32 @@ export default function UploadDocument() {
                   <DollarSign className="w-5 h-5" />
                   {t('upload.summary.title')}
                 </h3>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-base text-gray-700">{t('upload.summary.pricing.title')}:</span>
-                  <span className="text-2xl font-bold text-tfe-blue-950">${valor}.00</span>
-                </div>
-                <p className="text-xs text-tfe-blue-950/80 mb-2">
-                  {translationTypes.find(t => t.value === tipoTrad)?.label} ${tipoTrad === 'Notarized' ? '20' : '15'}{isExtrato ? ' + $10' : ''} {t('upload.summary.pricing.perPage')} × {pages} {pages !== 1 ? t('upload.summary.pages') : t('upload.summary.page')}
-                </p>
-                <div className="mb-3 p-2 bg-tfe-blue-100 rounded-lg">
-                  <p className="text-xs text-tfe-blue-950/80 font-medium flex items-center gap-1">
-                    <Globe className="w-3 h-3" />
-                    {idiomaRaiz} → {idiomaDestino}
-                  </p>
-                </div>
+                {documents.length > 0 ? (
+                  <>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-base text-gray-700">Total ({documents.length} {documents.length === 1 ? 'documento' : 'documentos'}):</span>
+                      <span className="text-2xl font-bold text-tfe-blue-950">${totalValue}.00</span>
+                    </div>
+                    <div className="space-y-2 mb-3">
+                      {documents.map((doc, index) => (
+                        <div key={doc.id} className="text-xs text-tfe-blue-950/80 bg-tfe-blue-100 rounded p-2">
+                          <p className="font-medium">{doc.file.name}</p>
+                          <p>
+                            {translationTypes.find(t => t.value === doc.tipoTrad)?.label} ${doc.tipoTrad === 'Notarized' ? '20' : '15'}{doc.isExtrato ? ' + $10' : ''} {t('upload.summary.pricing.perPage')} × {doc.pages} {doc.pages !== 1 ? t('upload.summary.pages') : t('upload.summary.page')} = ${calcularValor(doc.pages, doc.isExtrato, doc.tipoTrad)}.00
+                          </p>
+                          <p className="text-tfe-blue-950/70 flex items-center gap-1 mt-1">
+                            <Globe className="w-3 h-3" />
+                            {doc.idiomaRaiz} → {doc.idiomaDestino}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-600">Adicione documentos para ver o resumo</p>
+                  </div>
+                )}
                 <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
                   <li>USCIS accepted translations</li>
                   <li>Official certification & authentication</li>
@@ -869,23 +964,23 @@ export default function UploadDocument() {
         }}
         onSelectZelle={() => {
           setShowPaymentModal(false);
-          handleZelleRedirect(calcularValor(pages, isExtrato, tipoTrad));
+          handleZelleRedirect(totalValue);
         }}
-        amount={calcularValor(pages, isExtrato, tipoTrad)}
+        amount={totalValue}
       />
 
       {/* Modal de Pagamento Zelle */}
-      {currentDocumentId && (
+      {currentDocumentIds.length > 0 && documents.length > 0 && (
         <ZellePaymentModal
           isOpen={showZelleModal}
           onClose={() => setShowZelleModal(false)}
-          amount={calcularValor(pages, isExtrato, tipoTrad)}
-          documentId={currentDocumentId}
+          amount={totalValue}
+          documentId={currentDocumentIds[0]}
           userId={user?.id || ''}
           documentDetails={{
-            filename: selectedFile?.name || '',
-            pages: pages,
-            translationType: tipoTrad
+            filename: documents[0]?.file.name || '',
+            pages: documents[0]?.pages || 1,
+            translationType: documents[0]?.tipoTrad || 'Certified'
           }}
         />
       )}

@@ -4,7 +4,8 @@ import AuthenticatorDashboard from './AuthenticatorDashboard';
 import TranslatedDocuments from './TranslatedDocuments';
 import AuthenticatorOverview from './AuthenticatorOverview';
 import AuthenticatorUpload from './AuthenticatorUpload';
-import { FileText, CheckCircle, LogOut, Menu, X, User, Upload, Home as HomeIcon } from 'lucide-react';
+import AuthenticatorFailedUploads from './AuthenticatorFailedUploads';
+import { FileText, CheckCircle, LogOut, Menu, X, User, Upload, Home as HomeIcon, AlertTriangle } from 'lucide-react';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OverviewProvider } from '../../contexts/OverviewContext';
@@ -22,6 +23,7 @@ export default function AuthenticatorLayout() {
     if (location.pathname.includes('/authenticate')) return 'authenticate';
     if (location.pathname.includes('/translated')) return 'translated';
     if (location.pathname.includes('/upload')) return 'upload';
+    if (location.pathname.includes('/failed-uploads')) return 'failed-uploads';
     return 'overview';
   };
 
@@ -35,7 +37,7 @@ export default function AuthenticatorLayout() {
     signOut();
   };
 
-  const handleNavigation = (page: 'overview' | 'authenticate' | 'translated' | 'upload') => {
+  const handleNavigation = (page: 'overview' | 'authenticate' | 'translated' | 'upload' | 'failed-uploads') => {
     if (page === 'overview') {
       navigate('/authenticator');
     } else if (page === 'authenticate') {
@@ -44,6 +46,8 @@ export default function AuthenticatorLayout() {
       navigate('/authenticator/translated');
     } else if (page === 'upload') {
       navigate('/authenticator/upload');
+    } else if (page === 'failed-uploads') {
+      navigate('/authenticator/failed-uploads');
     }
     setIsMobileMenuOpen(false);
   };
@@ -146,6 +150,18 @@ export default function AuthenticatorLayout() {
             >
               <Upload className="w-5 h-5" />
               <span className="font-medium">Upload Document</span>
+            </button>
+            
+            <button
+              onClick={() => navigate('/authenticator/failed-uploads')}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                currentPage === 'failed-uploads'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <AlertTriangle className="w-5 h-5" />
+              <span className="font-medium">Failed Uploads</span>
             </button>
           </nav>
 
@@ -254,6 +270,18 @@ export default function AuthenticatorLayout() {
                   <Upload className="w-5 h-5" />
                   <span className="font-medium">Upload Document</span>
                 </button>
+                
+                <button
+                  onClick={() => navigate('/authenticator/failed-uploads')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    currentPage === 'failed-uploads'
+                      ? 'bg-tfe-blue-50 text-tfe-blue-700 border border-tfe-blue-200'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <AlertTriangle className="w-5 h-5" />
+                  <span className="font-medium">Failed Uploads</span>
+                </button>
               </nav>
 
 
@@ -342,6 +370,7 @@ export default function AuthenticatorLayout() {
               <Route path="/authenticate" element={<AuthenticatorDashboard />} />
               <Route path="/translated" element={<TranslatedDocuments />} />
               <Route path="/upload" element={<AuthenticatorUpload />} />
+              <Route path="/failed-uploads" element={<AuthenticatorFailedUploads />} />
             </Routes>
           </OverviewProvider>
         </div>

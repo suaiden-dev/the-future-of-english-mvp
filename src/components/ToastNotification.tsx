@@ -5,10 +5,9 @@ import { Notification } from '../hooks/useNotifications';
 interface ToastNotificationProps {
   notification: Notification | null;
   onClose: () => void;
-  onMarkAsRead: (id: string) => void;
 }
 
-export function ToastNotification({ notification, onClose, onMarkAsRead }: ToastNotificationProps) {
+export function ToastNotification({ notification, onClose }: ToastNotificationProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
@@ -33,13 +32,6 @@ export function ToastNotification({ notification, onClose, onMarkAsRead }: Toast
       setIsVisible(false);
       setIsExiting(false);
     }, 300);
-  };
-
-  const handleMarkAsRead = () => {
-    if (notification) {
-      onMarkAsRead(notification.id);
-      handleClose();
-    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -107,19 +99,10 @@ export function ToastNotification({ notification, onClose, onMarkAsRead }: Toast
               {notification.message}
             </p>
             
-            <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center mt-3">
               <span className="text-xs text-gray-400">
                 {formatTimeAgo(notification.created_at)}
               </span>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleMarkAsRead}
-                  className="text-xs text-tfe-blue-600 hover:text-tfe-blue-800 font-medium transition-colors"
-                >
-                  Mark as read
-                </button>
-              </div>
             </div>
           </div>
         </div>

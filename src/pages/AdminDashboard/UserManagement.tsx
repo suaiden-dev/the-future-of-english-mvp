@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { Users, Shield, UserCheck, Search, Filter, ChevronDown, ChevronUp, Crown, User, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { Logger } from '../../lib/loggingHelpers';
+import { ActionTypes } from '../../types/actionTypes';
 
 interface User {
   id: string;
@@ -56,11 +58,29 @@ export function UserManagement() {
       if (error) throw error;
 
       // Atualizar estado local
+      const updatedUser = users.find(u => u.id === userId);
       setUsers(prev => prev.map(user =>
         user.id === userId ? { ...user, role: newRole, updated_at: new Date().toISOString() } : user
       ));
 
       console.log(`User ${userId} role updated to ${newRole}`);
+      
+      // Log role change
+      try {
+        await Logger.logAdminAction(
+          ActionTypes.ADMIN.USER_ROLE_CHANGED,
+          userId,
+          `User role changed from ${updatedUser?.role || 'unknown'} to ${newRole}`,
+          {
+            old_role: updatedUser?.role || 'unknown',
+            new_role: newRole,
+            user_email: updatedUser?.email,
+            timestamp: new Date().toISOString()
+          }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
     } catch (err) {
       console.error('Error updating user role:', err);
       alert('Error updating user role');
