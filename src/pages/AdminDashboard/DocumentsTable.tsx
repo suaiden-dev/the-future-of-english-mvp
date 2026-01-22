@@ -43,11 +43,11 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
   // ✅ Estados para calcular Total Value corretamente (alinhado com Total Revenue)
   const [paymentsData, setPaymentsData] = useState<any[]>([]);
   const [profilesData, setProfilesData] = useState<any[]>([]);
-  
+
   // Estados para paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
-  
+
   // Debug log para verificar mudanças no statusFilter
   useEffect(() => {
     console.log(`🔍 [Status Filter State] Current statusFilter: "${statusFilter}"`);
@@ -66,14 +66,14 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       // Aplicar filtros de data se fornecidos
       let startDateParam = null;
       let endDateParam = null;
-      
+
       if (internalDateRange?.startDate) {
         // Para data de início, usar início do dia (00:00:00)
         const startDate = new Date(internalDateRange.startDate);
         startDate.setHours(0, 0, 0, 0);
         startDateParam = startDate.toISOString();
       }
-      
+
       if (internalDateRange?.endDate) {
         // Para data de fim, usar fim do dia (23:59:59)
         const endDate = new Date(internalDateRange.endDate);
@@ -105,9 +105,9 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
 
       // Buscar documentos da tabela documents_to_be_verified
       let verifiedDocumentsQuery = supabase
-  .from('documents_to_be_verified')
-  .select('*')
-  .order('created_at', { ascending: false });
+        .from('documents_to_be_verified')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       // Aplicar filtros de data
       if (startDateParam) {
@@ -126,7 +126,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       // LOG DE DEPURAÇÃO DETALHADA
       console.log('[DEBUG] 📊 Quantidade de documentos em documents:', mainDocuments?.length || 0);
       console.log('[DEBUG] 📊 Quantidade de documentos em documents_to_be_verified:', verifiedDocuments?.length || 0);
-      
+
       if (verifiedDocuments && verifiedDocuments.length > 0) {
         console.log('[DEBUG] 📄 Exemplo de documento verificado:', verifiedDocuments[0]);
       } else {
@@ -137,7 +137,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       // 1. Todos os documentos começam com status da tabela documents
       // 2. Se existir em documents_to_be_verified, usar esse status (mais atual)
       // 3. Se não existir em documents_to_be_verified, manter como 'processing'
-      
+
       console.log('[DEBUG] 📊 Implementando nova lógica de status...');
       console.log('[DEBUG] 📊 Documents principais:', mainDocuments?.length || 0);
       console.log('[DEBUG] 📊 Documents to be verified:', verifiedDocuments?.length || 0);
@@ -210,7 +210,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
           ...verificationData
         };
       });
-      
+
       console.log('[DEBUG] � Documentos processados:', allDocuments.length);
       console.log('[DEBUG] 📊 Com registro de verificação:', allDocuments.filter(d => d.hasVerificationRecord).length);
       console.log('[DEBUG] 📊 Sem registro (processing):', allDocuments.filter(d => !d.hasVerificationRecord).length);
@@ -218,12 +218,12 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       // Buscar dados de pagamentos para obter payment_method e status
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .select('id, document_id, payment_method, status, amount, base_amount, gross_amount, fee_amount, currency, user_id, created_at');
+        .select('id, document_id, payment_method, status, amount, base_amount, gross_amount, fee_amount, currency, user_id, created_at, receipt_url');
 
       if (paymentsError) {
         console.error('Error loading payments data:', paymentsError);
       }
-      
+
       // ✅ Armazenar payments para cálculo do Total Value
       setPaymentsData(paymentsData || []);
 
@@ -253,7 +253,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       if (profilesError) {
         console.error('Error loading profiles data:', profilesError);
       }
-      
+
       // ✅ Armazenar profiles para cálculo do Total Value
       setProfilesData(profilesData || []);
 
@@ -268,25 +268,29 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       const documentsWithCorrectStatus = allDocuments.map(doc => {
         // Verificar se existe tradução para este documento
         let translationStatus = 'pending';
-        let translationInfo = translationsData?.find(translation => 
+        let translationInfo = translationsData?.find(translation =>
           translation.original_document_id === doc.verification_id || // Se tem verification_id, usar ele
           (translation.user_id === doc.user_id && translation.filename === doc.filename) // Fallback por user_id + filename
         );
         if (translationInfo) {
           translationStatus = 'completed';
         }
-        
+
         // Dados de pagamento - usar ID do documento principal
-        const paymentInfo = paymentsData?.find(payment => payment.document_id === doc.id);
-        
+        const paymentInfo = paymentsData?.find(payment =>
+          payment.document_id === doc.id ||
+          (payment.document_id && payment.document_id.split(',').includes(doc.id)) ||
+          (payment.receipt_url && payment.receipt_url.includes(doc.id))
+        );
+
         // Perfil do usuário
         const userProfile = profilesData?.find(profile => profile.id === doc.user_id);
         const userRole = userProfile?.role || 'user';
         const isAuthenticator = userRole === 'authenticator';
-        
+
         // Calcular valor para visualização: usar gross_amount se disponível, senão usar total_cost
         const displayAmount = paymentInfo?.gross_amount || doc.total_cost || 0;
-        
+
         return {
           ...doc,
           user_name: userProfile?.name || null,
@@ -300,8 +304,8 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
           display_name: isAuthenticator && doc.client_name && doc.client_name !== 'Cliente Padrão'
             ? `${doc.client_name} (${userProfile?.name || 'N/A'})`
             : doc.authenticated_by_name && doc.client_name && doc.client_name !== 'Cliente Padrão'
-            ? `${doc.client_name} (${doc.authenticated_by_name})`
-            : userProfile?.name || null,
+              ? `${doc.client_name} (${doc.authenticated_by_name})`
+              : userProfile?.name || null,
           user_role: userRole,
           // Para visualização: usar valor bruto se disponível, senão usar total_cost original
           // Manter total_cost original para cálculos de soma (receita líquida)
@@ -317,22 +321,22 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       });
 
       setExtendedDocuments(documentsWithCorrectStatus);
-      
+
       // Debug log para verificar a nova lógica de status
       console.log('🔍 [NOVA LÓGICA] Total documents loaded:', documentsWithCorrectStatus.length);
-      
+
       const statusCounts = documentsWithCorrectStatus.reduce((acc, doc) => {
         acc[doc.status || 'pending'] = (acc[doc.status || 'pending'] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
       console.log('🔍 [NOVA LÓGICA] Status distribution (final):', statusCounts);
-      
+
       const matchTypeCounts = documentsWithCorrectStatus.reduce((acc, doc) => {
         acc[doc._debug_match_type || 'unknown'] = (acc[doc._debug_match_type || 'unknown'] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
       console.log('🔍 [NOVA LÓGICA] Match type distribution:', matchTypeCounts);
-      
+
       const verificationCounts = {
         with_verification: documentsWithCorrectStatus.filter(d => d._debug_has_verification_record).length,
         without_verification: documentsWithCorrectStatus.filter(d => !d._debug_has_verification_record).length
@@ -361,13 +365,13 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
   const filteredDocuments = useMemo(() => {
     console.log(`🔍 [Filter Debug] Starting filter with statusFilter: "${statusFilter}", roleFilter: "${roleFilter}", searchTerm: "${searchTerm}"`);
     console.log(`🔍 [Filter Debug] Total documents to filter: ${extendedDocuments.length}`);
-    
+
     // Debug: mostrar todos os status únicos dos documentos (usar status da tabela documents_to_be_verified)
     const uniqueStatuses = [...new Set(extendedDocuments.map(doc => doc.status))];
     const uniqueTranslationStatuses = [...new Set(extendedDocuments.map(doc => doc.translation_status))];
     console.log(`🔍 [Filter Debug] Unique status (documents_to_be_verified):`, uniqueStatuses);
     console.log(`🔍 [Filter Debug] Unique translation_status (computed):`, uniqueTranslationStatuses);
-    
+
     const filtered = extendedDocuments.filter(doc => {
       // Filtro de busca textual
       const matchesSearch = searchTerm === '' ||
@@ -393,14 +397,14 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       let matchesRole = true;
       if (roleFilter !== 'all') {
         const userRole = doc.user_role || 'user'; // Default para 'user' se não tiver role
-        
+
         // Debug log detalhado para todos os documentos quando filtro user está ativo
         if (roleFilter === 'user') {
           console.log(`[Role Filter Debug - USER] Document: ${doc.filename}, user_role: ${userRole}, matchesRole: ${userRole === 'user'}`);
           console.log(`  - user_name: ${doc.user_name}`);
           console.log(`  - user_email: ${doc.user_email}`);
         }
-        
+
         if (roleFilter === 'authenticator') {
           matchesRole = userRole === 'authenticator';
         } else if (roleFilter === 'user') {
@@ -417,10 +421,10 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
 
       return matchesSearch && matchesStatus && matchesRole && matchesPaymentStatus;
     });
-    
+
     // Debug log para mostrar quantos documentos foram filtrados
     console.log(`[Filter Debug] Total documents: ${extendedDocuments.length}, Status filter: "${statusFilter}", Role filter: "${roleFilter}", Filtered: ${filtered.length}`);
-    
+
     // Log específico para status filter
     if (statusFilter !== 'all') {
       const statusMatches = filtered.filter(doc => doc.status === statusFilter);
@@ -428,7 +432,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       statusMatches.forEach(doc => {
         console.log(`  - ${doc.filename} (${doc.user_name})`);
       });
-      
+
       // Debug: verificar se há documentos com o status correto mas que não estão sendo filtrados
       const allStatusMatches = extendedDocuments.filter(doc => doc.status === statusFilter);
       console.log(`[Status Filter Debug] Total documents with status "${statusFilter}" in extendedDocuments: ${allStatusMatches.length}`);
@@ -440,7 +444,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         });
       }
     }
-    
+
     return filtered;
   }, [extendedDocuments, searchTerm, statusFilter, roleFilter, paymentStatusFilter]);
 
@@ -456,7 +460,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
   // Excluir autenticadores e usar apenas pagamentos com status 'completed'
   const totalValue = useMemo(() => {
     if (!paymentsData.length) return 0;
-    
+
     // Criar mapa de user_id -> role para verificar autenticadores
     const userRoleMap = new Map<string, string>();
     (profilesData || []).forEach((profile: any) => {
@@ -464,26 +468,26 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         userRoleMap.set(profile.id, profile.role);
       }
     });
-    
+
     // Buscar TODOS os pagamentos completed de usuários regulares (mesma lógica do StatsCards)
     let totalRevenue = 0;
-    
+
     paymentsData.forEach((payment: any) => {
       // Apenas pagamentos completed
       if (payment.status !== 'completed') {
         return;
       }
-      
+
       // Verificar se não é autenticador (excluir uploads de autenticadores)
       const userRole = userRoleMap.get(payment.user_id || '');
       if (userRole === 'authenticator') {
         return;
       }
-      
+
       // Se chegou aqui, é um pagamento completed de usuário regular
       totalRevenue += Number(payment.amount || 0);
     });
-    
+
     return totalRevenue;
   }, [paymentsData, profilesData]);
 
@@ -550,7 +554,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       ['TOTALS', '', '', '', '', '', totalValue.toFixed(2), '', '', '', `${filteredDocuments.length} documents`]
     ];
 
-    const csvContent = csvRows.map(row => 
+    const csvContent = csvRows.map(row =>
       row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
     ).join('\n');
 
@@ -569,7 +573,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
   const downloadAuthenticatorsReport = useCallback(() => {
     // Filtrar apenas documentos de autenticadores
     const authenticatorDocs = extendedDocuments.filter(doc => doc.user_role === 'authenticator');
-    
+
     // Calcular total de documentos de autenticadores
     const authenticatorTotal = authenticatorDocs.reduce((sum, doc) => {
       return sum + (doc.total_cost || 0);
@@ -595,7 +599,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       ['TOTALS', '', '', '', '', '', authenticatorTotal.toFixed(2), '', '', '', `${authenticatorDocs.length} documents`]
     ];
 
-    const csvContent = csvRows.map(row => 
+    const csvContent = csvRows.map(row =>
       row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
     ).join('\n');
 
@@ -620,32 +624,32 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         userRoleMap.set(profile.id, profile.role);
       }
     });
-    
+
     // Buscar APENAS pagamentos completed de usuários regulares (mesma lógica do Total Revenue)
     const paidPayments: any[] = [];
     let paidTotal = 0;
-    
+
     paymentsData.forEach((payment: any) => {
       // Apenas pagamentos completed
       if (payment.status !== 'completed') {
         return;
       }
-      
+
       // Verificar se não é autenticador
       const userRole = userRoleMap.get(payment.user_id || '');
       if (userRole === 'authenticator') {
         return;
       }
-      
+
       // Se chegou aqui, é um pagamento completed de usuário regular
       paidPayments.push(payment);
       paidTotal += Number(payment.amount || 0);
     });
-    
+
     // Buscar documentos correspondentes aos pagamentos
     const paidDocIds = new Set(paidPayments.map(p => p.document_id));
     const paidUserDocs = extendedDocuments.filter(doc => paidDocIds.has(doc.id));
-    
+
     // Criar mapa de document_id -> payment para lookup rápido
     const paymentMap = new Map<string, any>();
     paidPayments.forEach(payment => {
@@ -658,7 +662,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         // Buscar o pagamento correspondente (sempre deve existir)
         const payment = paymentMap.get(doc.id);
         const amountPaid = payment?.amount || 0;
-        
+
         return [
           doc.filename,
           doc.user_name || '',
@@ -679,7 +683,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       ['TOTALS', '', '', '', '', '', paidTotal.toFixed(2), '', '', '', '', `${paidUserDocs.length} documents`]
     ];
 
-    const csvContent = csvRows.map(row => 
+    const csvContent = csvRows.map(row =>
       row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
     ).join('\n');
 
@@ -871,11 +875,11 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                       {doc.payment_method ? (
                         doc.payment_method === 'card' ? '💳 Card' :
                           doc.payment_method === 'stripe' ? '💳 Stripe' :
-                          doc.payment_method === 'bank_transfer' ? '🏦 Bank' :
-                            doc.payment_method === 'paypal' ? '📱 PayPal' :
-                              doc.payment_method === 'zelle' ? '💰 Zelle' :
-                                doc.payment_method === 'upload' ? '📋 Upload' :
-                                  doc.payment_method
+                            doc.payment_method === 'bank_transfer' ? '🏦 Bank' :
+                              doc.payment_method === 'paypal' ? '📱 PayPal' :
+                                doc.payment_method === 'zelle' ? '💰 Zelle' :
+                                  doc.payment_method === 'upload' ? '📋 Upload' :
+                                    doc.payment_method
                       ) : 'N/A'}
                     </p>
                   </div>
@@ -964,7 +968,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                         </div>
                       </div>
                     </td>
-                    
+
                     {/* Amount */}
                     <td className="px-3 py-3 text-xs font-medium text-gray-900">
                       <div>
@@ -974,38 +978,38 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                         )}
                       </div>
                     </td>
-                    
+
                     {/* Payment Method */}
                     <td className="px-3 py-3 text-xs">
                       {doc.payment_method ? (
                         <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                           {doc.payment_method === 'card' ? '💳 Card' :
                             doc.payment_method === 'stripe' ? '💳 Stripe' :
-                            doc.payment_method === 'bank_transfer' ? '🏦 Bank' :
-                            doc.payment_method === 'paypal' ? '📱 PayPal' :
-                            doc.payment_method === 'zelle' ? '💰 Zelle' :
-                            doc.payment_method === 'upload' ? '📋 Upload' :
-                              doc.payment_method}
+                              doc.payment_method === 'bank_transfer' ? '🏦 Bank' :
+                                doc.payment_method === 'paypal' ? '📱 PayPal' :
+                                  doc.payment_method === 'zelle' ? '💰 Zelle' :
+                                    doc.payment_method === 'upload' ? '📋 Upload' :
+                                      doc.payment_method}
                         </span>
                       ) : (
                         <span className="text-gray-400">N/A</span>
                       )}
                     </td>
-                    
+
                     {/* Payment Status */}
                     <td className="px-3 py-3 text-xs">
                       <span className={`inline-flex px-2 py-1 font-medium rounded-full ${getPaymentStatusColor(doc.payment_status)}`}>
                         {getPaymentStatusText(doc.payment_status)}
                       </span>
                     </td>
-                    
+
                     {/* TRANSLATIONS - Status da tabela documents_to_be_verified */}
                     <td className="px-3 py-3 text-xs">
                       <span className={`inline-flex px-2 py-1 font-semibold rounded-full ${getStatusColor(doc.status || 'pending')}`}>
                         {doc.status || 'pending'}
                       </span>
                     </td>
-                    
+
                     {/* AUTHENTICATOR */}
                     <td className="px-3 py-3 text-xs">
                       <div className="truncate">
@@ -1017,12 +1021,12 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                         </div>
                       </div>
                     </td>
-                    
+
                     {/* Date */}
                     <td className="px-3 py-3 text-xs text-gray-500">
                       {new Date(doc.created_at || '').toLocaleDateString('pt-BR')}
                     </td>
-                    
+
                     {/* Details */}
                     <td className="px-3 py-3 text-xs text-right">
                       <button
@@ -1037,7 +1041,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
               </tbody>
             </table>
           </div>
-          
+
           {/* Controles de Paginação */}
           {totalItems > 0 && (
             <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
@@ -1065,7 +1069,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                   </p>
                 </div>
               </div>
-              
+
               {/* Controles completos para telas maiores */}
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div className="flex items-center space-x-2">
@@ -1079,7 +1083,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                       Valor total: <span className="font-medium text-green-600">${totalValue.toFixed(2)}</span>
                     </p>
                   </div>
-                  
+
                   {/* Seletor de itens por página */}
                   <select
                     value={itemsPerPage}
@@ -1095,7 +1099,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                     <option value={100}>100 por página</option>
                   </select>
                 </div>
-                
+
                 {/* Navegação de páginas */}
                 <div className="flex items-center space-x-2">
                   <button
@@ -1106,7 +1110,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                     <ChevronLeft className="h-5 w-5" />
                     <ChevronLeft className="h-5 w-5 -ml-1" />
                   </button>
-                  
+
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
@@ -1114,20 +1118,20 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  
+
                   {/* Números de página */}
                   <div className="flex items-center space-x-1">
                     {(() => {
                       const pages = [];
                       const maxVisiblePages = 5;
-                      
+
                       let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
                       let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-                      
+
                       if (endPage - startPage + 1 < maxVisiblePages) {
                         startPage = Math.max(1, endPage - maxVisiblePages + 1);
                       }
-                      
+
                       if (startPage > 1) {
                         pages.push(
                           <button
@@ -1146,23 +1150,22 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                           );
                         }
                       }
-                      
+
                       for (let i = startPage; i <= endPage; i++) {
                         pages.push(
                           <button
                             key={i}
                             onClick={() => setCurrentPage(i)}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                              i === currentPage
-                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                            }`}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${i === currentPage
+                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
                           >
                             {i}
                           </button>
                         );
                       }
-                      
+
                       if (endPage < totalPages) {
                         if (endPage < totalPages - 1) {
                           pages.push(
@@ -1181,11 +1184,11 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                           </button>
                         );
                       }
-                      
+
                       return pages;
                     })()}
                   </div>
-                  
+
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
@@ -1193,7 +1196,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
                   >
                     <ChevronRight className="h-5 w-5" />
                   </button>
-                  
+
                   <button
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
