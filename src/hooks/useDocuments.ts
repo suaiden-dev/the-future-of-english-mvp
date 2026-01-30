@@ -26,7 +26,7 @@ export function useDocuments(userId?: string) {
         .eq('user_id', userId)
         .neq('status', 'pending')  // não incluir documentos com status pending
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       setDocuments(data);
       setError(null);
@@ -63,13 +63,13 @@ export function useDocuments(userId?: string) {
         .insert(docToInsert)
         .select()
         .single();
-      
+
       if (error) throw error;
       setDocuments(prev => [newDocument, ...prev]);
-      
+
       // Enviar notificação de upload
       notifyDocumentUpload(userId, newDocument.filename, newDocument.id);
-      
+
       return newDocument;
     } catch (err) {
       console.error('DEBUG: [useDocuments] Erro ao criar documento:', err, JSON.stringify(err, null, 2));
@@ -85,7 +85,7 @@ export function useDocuments(userId?: string) {
         .eq('id', documentId)
         .select()
         .single();
-      
+
       if (error) throw error;
 
       // Notificar quando o documento inicia processamento
@@ -98,8 +98,8 @@ export function useDocuments(userId?: string) {
         }
       }
 
-      setDocuments(prev => 
-        prev.map(doc => 
+      setDocuments(prev =>
+        prev.map(doc =>
           doc.id === documentId ? updatedDocument : doc
         )
       );
@@ -128,7 +128,7 @@ export function useAllDocuments() {
   const fetchAllDocuments = async () => {
     try {
       setLoading(true);
-      
+
       // Check if Supabase is properly configured
       if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
         throw new Error('Supabase environment variables not configured');
@@ -167,7 +167,7 @@ export function useAllDocuments() {
         .eq('id', documentId)
         .select()
         .single();
-      
+
       if (error) throw error;
 
       // Notificar quando o documento inicia processamento
@@ -180,8 +180,8 @@ export function useAllDocuments() {
         }
       }
 
-      setDocuments(prev => 
-        prev.map(doc => 
+      setDocuments(prev =>
+        prev.map(doc =>
           doc.id === documentId ? updatedDocument : doc
         )
       );
@@ -216,7 +216,7 @@ export function useTranslatedDocuments(userId?: string) {
     }
     try {
       setLoading(true);
-      
+
       // 1. Buscar documentos já processados pelo autenticador na tabela translated_documents (PRIORIDADE MÁXIMA)
       const { data: translatedDocs, error: translatedError } = await supabase
         .from('translated_documents')
@@ -224,9 +224,9 @@ export function useTranslatedDocuments(userId?: string) {
         .eq('user_id', userId)
         .in('status', ['completed', 'finished', 'rejected'])
         .order('created_at', { ascending: false });
-      
+
       if (translatedError) throw translatedError;
-      
+
       // 2. Buscar documentos na tabela documents_to_be_verified (PRIORIDADE MÉDIA)
       // IMPORTANTE: Só incluir documentos com status que indicam conclusão do processo
       // O cliente só deve ver documentos que foram processados pelo autenticador
@@ -236,9 +236,9 @@ export function useTranslatedDocuments(userId?: string) {
         .eq('user_id', userId)
         .in('status', ['completed', 'rejected']) // APENAS status finais - remove 'pending' e 'processing'
         .order('created_at', { ascending: false });
-      
+
       if (verifiedError) throw verifiedError;
-      
+
       // 3. Buscar documentos na tabela documents (PRIORIDADE MÍNIMA)
       const { data: originalDocs, error: originalError } = await supabase
         .from('documents')
@@ -246,72 +246,67 @@ export function useTranslatedDocuments(userId?: string) {
         .eq('user_id', userId)
         .in('status', ['pending', 'processing'])
         .order('created_at', { ascending: false });
-      
+
       if (originalError) throw originalError;
-      
+
       console.log('[useTranslatedDocuments] DEBUG - Documentos translated_documents encontrados:', translatedDocs?.length || 0);
       console.log('[useTranslatedDocuments] DEBUG - Documentos documents_to_be_verified encontrados:', verifiedDocs?.length || 0);
       console.log('[useTranslatedDocuments] DEBUG - Documentos documents encontrados:', originalDocs?.length || 0);
-      
+
       // Aplicar lógica de prioridade em cascata usando as relações corretas entre tabelas
       const allDocs: any[] = [];
-      const processedFilenames = new Set<string>();
       const processedVerifiedIds = new Set<string>();
-      
+      const processedOriginalIds = new Set<string>();
+
       // PRIORIDADE 1: Documentos já processados (translated_documents)
       if (translatedDocs && translatedDocs.length > 0) {
         translatedDocs.forEach(doc => {
-          if (!processedFilenames.has(doc.filename)) {
-            allDocs.push({ ...doc, source: 'translated_documents' });
-            processedFilenames.add(doc.filename);
-            // Marcar o ID do documento verificado como processado
-            if (doc.original_document_id) {
-              processedVerifiedIds.add(doc.original_document_id);
-            }
-            console.log(`[useTranslatedDocuments] DEBUG - Adicionado da translated_documents: ${doc.filename} (original_document_id: ${doc.original_document_id}, status: ${doc.status})`);
+          allDocs.push({ ...doc, source: 'translated_documents' });
+          // Marcar o ID do documento verificado como processado
+          if (doc.original_document_id) {
+            processedVerifiedIds.add(doc.original_document_id);
           }
+          console.log(`[useTranslatedDocuments] DEBUG - Adicionado da translated_documents: ${doc.filename} (original_document_id: ${doc.original_document_id}, status: ${doc.status})`);
         });
       }
-      
+
       // PRIORIDADE 2: Documentos em verificação (documents_to_be_verified) que foram FINALIZADOS
-      // Só incluir documentos com status 'completed' ou 'rejected' (processados pelo autenticador)
-      // Documentos com 'pending' ou 'processing' ainda estão aguardando e NÃO devem aparecer para o cliente
       if (verifiedDocs && verifiedDocs.length > 0) {
         verifiedDocs.forEach(verifiedDoc => {
           // Verificar se este documento já foi processado (existe em translated_documents)
           const alreadyProcessed = processedVerifiedIds.has(verifiedDoc.id);
-          
-          if (!alreadyProcessed && !processedFilenames.has(verifiedDoc.filename)) {
+
+          if (!alreadyProcessed) {
             allDocs.push({ ...verifiedDoc, source: 'documents_to_be_verified' });
-            processedFilenames.add(verifiedDoc.filename);
+            // Se tiver um ID de documento original, marcar como processado
+            if (verifiedDoc.original_id) {
+              processedOriginalIds.add(verifiedDoc.original_id);
+            }
             console.log(`[useTranslatedDocuments] DEBUG - Adicionado da documents_to_be_verified: ${verifiedDoc.filename} (id: ${verifiedDoc.id}, status: ${verifiedDoc.status})`);
           }
         });
       }
-      
-      // PRIORIDADE 3: Documentos originais (documents) que NÃO foram enviados para verificação
+
+      // PRIORIDADE 3: Documentos originais (documents) que ainda estão sendo processados ou aguardando
       if (originalDocs && originalDocs.length > 0) {
         originalDocs.forEach(originalDoc => {
-          // Verificar se este documento já foi enviado para verificação (existe em documents_to_be_verified)
-          const alreadyInVerification = verifiedDocs?.some(verifiedDoc => 
-            verifiedDoc.filename === originalDoc.filename && verifiedDoc.user_id === originalDoc.user_id
-          );
-          
-          if (!alreadyInVerification && !processedFilenames.has(originalDoc.filename)) {
+          // Verificar se este documento já está em alguma das etapas seguintes
+          const alreadyInNextStep = processedOriginalIds.has(originalDoc.id) ||
+            verifiedDocs?.some(vd => vd.original_id === originalDoc.id || vd.filename === originalDoc.filename);
+
+          if (!alreadyInNextStep) {
             allDocs.push({ ...originalDoc, source: 'documents' });
-            processedFilenames.add(originalDoc.filename);
             console.log(`[useTranslatedDocuments] DEBUG - Adicionado da documents: ${originalDoc.filename}`);
           }
         });
       }
-      
+
       // Ordenar por data de criação
       allDocs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      
+
       console.log('[useTranslatedDocuments] DEBUG - Total de documentos únicos:', allDocs.length);
-      console.log('[useTranslatedDocuments] DEBUG - Filenames processados:', Array.from(processedFilenames));
       console.log('[useTranslatedDocuments] DEBUG - IDs de documentos verificados processados:', Array.from(processedVerifiedIds));
-      
+
       setDocuments(allDocs);
       setError(null);
     } catch (err) {

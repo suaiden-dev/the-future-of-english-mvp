@@ -40,7 +40,7 @@ export async function validateFile(file: File): Promise<{ valid: boolean; error?
  * @param paymentId - ID do pagamento (opcional, para validação adicional)
  */
 export async function verifyPayment(
-  documentId: string, 
+  documentId: string,
   paymentStatus?: string,
   paymentId?: string
 ): Promise<{ valid: boolean; error?: string }> {
@@ -102,7 +102,7 @@ export async function verifyPayment(
     }
 
     // Verificar se há pelo menos um pagamento confirmado
-    const hasConfirmedPayment = payments.some(p => 
+    const hasConfirmedPayment = payments.some(p =>
       p.status === 'completed' || p.status === 'verified'
     );
 
@@ -147,7 +147,7 @@ export async function validatePageCount(
 ): Promise<{ valid: boolean; actualPages?: number; error?: string }> {
   try {
     const actualPages = await countPdfPages(file);
-    
+
     if (actualPages !== expectedPages) {
       return {
         valid: false,
@@ -178,8 +178,8 @@ export async function uploadFileWithRetry(
 
       if (error) {
         // Apenas retry em erros de rede/timeout
-        const isNetworkError = 
-          error.message.includes('network') || 
+        const isNetworkError =
+          error.message.includes('network') ||
           error.message.includes('timeout') ||
           error.message.includes('Failed to fetch') ||
           error.message.includes('NetworkError');
@@ -297,16 +297,15 @@ export async function retryDocumentUpload(
     // 4. Validar número de páginas
     const pageValidation = await validatePageCount(file, document.pages);
     if (!pageValidation.valid) {
-      return { 
-        success: false, 
-        error: pageValidation.error || 'Page count does not match' 
+      return {
+        success: false,
+        error: pageValidation.error || 'Page count does not match'
       };
     }
 
     // 5. Gerar nome único para arquivo
     const filePath = generateUniqueFileName(
-      document.filename || file.name,
-      document.user_id
+      document.filename || file.name
     );
 
     // 6. Verificar se arquivo já existe no Storage (evitar duplicatas)
@@ -353,7 +352,7 @@ export async function retryDocumentUpload(
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (session?.access_token) {
         // Buscar dados completos do documento para o webhook
         const { data: fullDocument } = await supabase

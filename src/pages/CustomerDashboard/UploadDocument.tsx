@@ -36,7 +36,7 @@ export default function UploadDocument() {
   const [success, setSuccess] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   // Estados para os modais de pagamento
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showZelleModal, setShowZelleModal] = useState(false);
@@ -53,16 +53,16 @@ export default function UploadDocument() {
       setCurrentDocumentIds([]);
     }
   });
-  
+
   // Detecta se é mobile (iOS/Android)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  
+
   const translationTypes = [
     { value: 'Certified', label: 'Certified' },
     { value: 'Notarized', label: 'Notarized' },
   ];
-  
-  
+
+
   const targetLanguages = [
     'Portuguese',
     'Spanish',
@@ -88,7 +88,7 @@ export default function UploadDocument() {
     'MXN',
     'CHF',
   ];
-  
+
   function calcularValor(pages: number, extrato: boolean, tipoTrad: string) {
     let basePrice = tipoTrad === 'Notarized' ? 20 : 15; // $20 for Notarized, $15 for Certified
     let bankFee = extrato ? 10 : 0; // $10 additional fee for bank statements
@@ -121,33 +121,33 @@ export default function UploadDocument() {
 
   const handleFiles = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
-    
+
     setError(null);
     setSuccess(null);
-    
+
     const newDocuments: DocumentConfig[] = [];
-    
+
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       let pages = 1;
       let fileUrl: string | undefined;
-      
+
       console.log('DEBUG: File selected:', {
         name: file.name,
         type: file.type,
         size: file.size,
         lastModified: file.lastModified
       });
-      
+
       if (file.type === 'application/pdf') {
         try {
           console.log('DEBUG: Attempting to read PDF file...');
           const pdfjsLib = await loadPdfJs();
           console.log('DEBUG: PDF.js library loaded successfully');
-          
+
           const arrayBuffer = await file.arrayBuffer();
           console.log('DEBUG: File converted to ArrayBuffer, size:', arrayBuffer.byteLength);
-          
+
           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           console.log('DEBUG: PDF loaded successfully, pages:', pdf.numPages);
           pages = pdf.numPages;
@@ -156,11 +156,11 @@ export default function UploadDocument() {
           pages = 1;
         }
       }
-      
+
       if (file.type.startsWith('image/')) {
         fileUrl = URL.createObjectURL(file);
       }
-      
+
       const newDoc: DocumentConfig = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         file,
@@ -173,10 +173,10 @@ export default function UploadDocument() {
         sourceCurrency: 'USD',
         targetCurrency: 'BRL',
       };
-      
+
       newDocuments.push(newDoc);
     }
-    
+
     setDocuments(prev => [...prev, ...newDocuments]);
   };
 
@@ -191,40 +191,30 @@ export default function UploadDocument() {
   };
 
   const updateDocument = (id: string, updates: Partial<DocumentConfig>) => {
-    setDocuments(prev => prev.map(doc => 
+    setDocuments(prev => prev.map(doc =>
       doc.id === id ? { ...doc, ...updates } : doc
     ));
   };
 
-  // Função para gerar nome único do arquivo (igual ao autenticador)
-  function generateUniqueFilename(originalFilename: string): string {
-    const timestamp = Date.now();
-    const randomCode = Math.random().toString(36).substr(2, 8).toUpperCase();
-    const fileExtension = originalFilename.split('.').pop();
-    const baseName = originalFilename.replace(/\.[^/.]+$/, ""); // Remove extensão
-    
-    return `${baseName}_${timestamp}_${randomCode}.${fileExtension}`;
-  }
 
   const handleUpload = async () => {
     if (documents.length === 0 || !user) {
       setError('Por favor, adicione pelo menos um documento');
       return;
     }
-    
+
     setError(null);
     setSuccess(null);
     setIsUploading(true);
-    
+
     try {
       const documentIds: string[] = [];
-      
+
       // Criar documentos no banco para cada arquivo
       for (const doc of documents) {
-        // Gerar nome único para o arquivo
-        const uniqueFilename = generateUniqueFilename(doc.file.name);
+        const uniqueFilename = generateUniqueFileName(doc.file.name);
         console.log('DEBUG: Criando documento no banco:', doc.file.name);
-        
+
         const { data: newDocument, error: createError } = await supabase
           .from('documents')
           .insert({
@@ -256,14 +246,14 @@ export default function UploadDocument() {
 
         console.log('DEBUG: Documento criado:', newDocument.id);
         documentIds.push(newDocument.id);
-        
+
         // Atualizar o documento com o ID
         updateDocument(doc.id, { documentId: newDocument.id });
       }
-      
+
       // Armazenar os IDs dos documentos para usar nos modais de pagamento
       setCurrentDocumentIds(documentIds);
-      
+
       // Mostrar modal de seleção de método de pagamento
       setShowPaymentModal(true);
 
@@ -278,18 +268,18 @@ export default function UploadDocument() {
   // Função para redirecionar para checkout Zelle COM UPLOAD
   const handleZelleRedirect = async (amount: number) => {
     if (documents.length === 0 || !user || currentDocumentIds.length === 0) return;
-    
+
     try {
       setIsUploading(true);
       setError(null);
-      
+
       console.log('🚀 Uploading documents for Zelle payment...');
-      
+
       // Fazer upload de todos os arquivos para o Storage
       for (const doc of documents) {
         if (!doc.documentId) continue;
-        
-        const fileName = generateUniqueFileName(doc.file.name, user.id);
+
+        const fileName = generateUniqueFileName(doc.file.name);
         const { error: uploadError } = await supabase.storage
           .from('documents')
           .upload(fileName, doc.file);
@@ -309,7 +299,7 @@ export default function UploadDocument() {
         // Atualizar o documento no banco com file_url, payment_method e status zelle_pending
         const { error: updateError } = await supabase
           .from('documents')
-          .update({ 
+          .update({
             file_url: publicUrl,
             payment_method: 'zelle',
             status: 'zelle_pending'
@@ -332,9 +322,9 @@ export default function UploadDocument() {
         filename: firstDoc.file.name,
         pages: firstDoc.pages?.toString() || '1'
       });
-      
+
       navigate(`/zelle-checkout?${params.toString()}`);
-      
+
     } catch (err: any) {
       console.error('❌ Error preparing Zelle payment:', err);
       setError(err.message || 'Erro ao preparar pagamento Zelle');
@@ -348,19 +338,19 @@ export default function UploadDocument() {
       setError('Nenhum documento selecionado');
       return;
     }
-    
+
     try {
       setIsUploading(true);
       setError(null);
-      
+
       // Processar todos os documentos e criar uma sessão de checkout que inclua todos
       const documentItems = [];
-      
+
       for (const doc of documents) {
         if (!doc.documentId) continue;
-        
+
         let fileId = '';
-        
+
         if (isMobile) {
           // Mobile: Tentar usar IndexedDB primeiro, se falhar usar upload direto
           try {
@@ -378,7 +368,7 @@ export default function UploadDocument() {
             });
           } catch (indexedDBError) {
             // Fallback: Upload direto para Supabase Storage
-            const filePath = generateUniqueFileName(doc.file.name, user.id);
+            const filePath = generateUniqueFileName(doc.file.name);
             const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, doc.file);
             if (uploadError) throw uploadError;
             fileId = filePath;
@@ -398,17 +388,17 @@ export default function UploadDocument() {
             targetCurrency: doc.isExtrato ? doc.targetCurrency : null
           });
         }
-        
+
         // Determinar fileId e filePath baseado na plataforma
         // Se for mobile e fileId contém '/' (é um caminho), usar filePath, senão usar fileId
         const isFilePath = isMobile && fileId.includes('/');
-        
+
         const documentItem: any = {
           documentId: doc.documentId,
           pages: doc.pages,
           isNotarized: doc.tipoTrad === 'Notarized',
           isBankStatement: doc.isExtrato,
-          filename: generateUniqueFilename(doc.file.name),
+          filename: generateUniqueFileName(doc.file.name),
           originalFilename: doc.file.name,
           originalLanguage: doc.idiomaRaiz,
           targetLanguage: doc.idiomaDestino,
@@ -418,16 +408,16 @@ export default function UploadDocument() {
           fileSize: doc.file.size,
           fileType: doc.file.type
         };
-        
+
         if (isFilePath) {
           documentItem.filePath = fileId;
         } else {
           documentItem.fileId = fileId;
         }
-        
+
         documentItems.push(documentItem);
       }
-      
+
       // Criar payload com múltiplos documentos
       const payload = {
         documents: documentItems, // Array de documentos
@@ -470,7 +460,7 @@ export default function UploadDocument() {
 
       // Redirecionar para o Stripe Checkout
       window.location.href = url;
-      
+
     } catch (err: any) {
       console.error('ERROR: Erro ao processar pagamento Stripe:', err);
       setError(err.message || 'Erro ao processar pagamento');
@@ -484,13 +474,13 @@ export default function UploadDocument() {
     e.stopPropagation();
     setDragActive(true);
   };
-  
+
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
   };
-  
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -500,7 +490,7 @@ export default function UploadDocument() {
       handleFiles(files);
     }
   };
-  
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -519,7 +509,7 @@ export default function UploadDocument() {
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">{t('upload.pageTitle')}</h1>
           <p className="text-gray-600 text-lg">{t('upload.pageDescription')}</p>
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Upload Form */}
           <div className="lg:col-span-2">
@@ -587,7 +577,7 @@ export default function UploadDocument() {
                     <div className="flex flex-col items-center gap-2">
                       <Upload className="w-12 h-12 text-gray-400 mb-2" />
                       <p className="text-base text-gray-600 font-medium">
-                        {documents.length === 0 
+                        {documents.length === 0
                           ? t('upload.form.uploadArea.clickToUpload')
                           : 'Arraste e solte mais arquivos ou clique para adicionar'}
                       </p>
@@ -620,7 +610,7 @@ export default function UploadDocument() {
                             <X className="w-5 h-5" />
                           </button>
                         </div>
-                        
+
                         {doc.fileUrl && doc.file.type.startsWith('image/') && (
                           <div className="mb-4">
                             <img src={doc.fileUrl} alt="Preview" className="max-h-32 rounded shadow" />
@@ -725,7 +715,7 @@ export default function UploadDocument() {
                                 ))}
                               </select>
                             </div>
-                            
+
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 4.2. Target Currency (Translation To)
@@ -836,7 +826,7 @@ export default function UploadDocument() {
                   <Info className="w-5 h-5 text-tfe-blue-600" />
                   {t('upload.serviceInfo.title')}
                 </h3>
-                
+
                 <div className="space-y-6">
                   {/* Translation Types */}
                   <div>
@@ -860,7 +850,7 @@ export default function UploadDocument() {
                           <li>• {t('upload.serviceInfo.translationTypes.certified.features.3', '24-48 hour turnaround')}</li>
                         </ul>
                       </div>
-                      
+
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium text-gray-800">{t('upload.serviceInfo.translationTypes.notarized.title')}</span>
@@ -895,7 +885,7 @@ export default function UploadDocument() {
                           {t('upload.serviceInfo.documentTypes.regular.description')}
                         </p>
                       </div>
-                      
+
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium text-gray-800">{t('upload.serviceInfo.documentTypes.bankStatements.title')}</span>

@@ -75,7 +75,7 @@ export function PaymentSuccess() {
   const handlePaymentSuccess = async (sessionId: string) => {
     try {
       setIsUploading(true);
-      
+
       // Buscar informações da sessão do Stripe
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -98,7 +98,7 @@ export function PaymentSuccess() {
       const sessionData = await response.json();
       const metadata = sessionData.metadata || {};
       const userId = metadata.userId;
-      
+
       if (!userId) {
         setError('User ID not found in session metadata. Please contact support.');
         return;
@@ -106,7 +106,7 @@ export function PaymentSuccess() {
 
       // Detectar quantidade de documentos
       const documentCount = parseInt(metadata.documentCount || '1', 10);
-      
+
       console.log('📄 ========================================');
       console.log('📄 QUANTIDADE DE DOCUMENTOS:', documentCount);
       console.log('📄 METADADOS COMPLETOS:', JSON.stringify(metadata, null, 2));
@@ -114,25 +114,25 @@ export function PaymentSuccess() {
 
       // Coletar IDs dos documentos
       let documentIds: string[] = [];
-      
+
       // Primeiro, tentar documentIds (string separada por vírgula)
-        const documentIdsStr = metadata.documentIds || '';
+      const documentIdsStr = metadata.documentIds || '';
       if (documentIdsStr) {
         documentIds = documentIdsStr.split(',').filter((id: string) => id.trim());
         console.log('📄 IDs encontrados em documentIds:', documentIds);
       }
-        
+
       // Se não encontrou, tentar doc0_documentId, doc1_documentId, etc.
-        if (documentIds.length === 0) {
-          for (let i = 0; i < documentCount; i++) {
-            const docId = metadata[`doc${i}_documentId`];
-            if (docId) {
-              documentIds.push(docId);
-            }
+      if (documentIds.length === 0) {
+        for (let i = 0; i < documentCount; i++) {
+          const docId = metadata[`doc${i}_documentId`];
+          if (docId) {
+            documentIds.push(docId);
           }
+        }
         console.log('📄 IDs encontrados em docX_documentId:', documentIds);
       }
-      
+
       // Se ainda não encontrou, tentar documentId (documento único)
       if (documentIds.length === 0 && metadata.documentId) {
         documentIds = [metadata.documentId];
@@ -142,10 +142,10 @@ export function PaymentSuccess() {
       console.log('📄 IDs DOS DOCUMENTOS FINAIS:', documentIds);
       console.log('📄 TOTAL A PROCESSAR:', documentIds.length);
 
-        if (documentIds.length === 0) {
-          setError('No document IDs found. Please contact support.');
-          return;
-        }
+      if (documentIds.length === 0) {
+        setError('No document IDs found. Please contact support.');
+        return;
+      }
 
       // Verificar se simulação de erro está ativa (apenas desenvolvimento)
       const shouldSimulate = isUploadErrorSimulationActive();
@@ -159,18 +159,18 @@ export function PaymentSuccess() {
       }
 
       // Processar cada documento EXATAMENTE UMA VEZ
-        for (let i = 0; i < documentIds.length; i++) {
+      for (let i = 0; i < documentIds.length; i++) {
         const docId = documentIds[i].trim();
         console.log(`🔄 Processando documento ${i + 1}/${documentIds.length}: ${docId}`);
 
-          // Buscar dados do documento
-          const { data: docData, error: docError } = await supabase
-            .from('documents')
-            .select('*')
+        // Buscar dados do documento
+        const { data: docData, error: docError } = await supabase
+          .from('documents')
+          .select('*')
           .eq('id', docId)
-            .single();
+          .single();
 
-          if (docError || !docData) {
+        if (docError || !docData) {
           console.error(`Erro ao buscar documento ${docId}:`, docError);
           continue;
         }
@@ -178,14 +178,14 @@ export function PaymentSuccess() {
         // VERIFICAÇÃO: Se já tem file_url, pular (já foi processado)
         if (docData.file_url) {
           console.log(`⏭️ Documento ${docId} já tem file_url (${docData.file_url}), pulando`);
-            continue;
-          }
+          continue;
+        }
 
         // Atualizar status para processing (apenas se file_url for null)
         // Permite reprocessar documentos em processing que ainda não têm file_url
         // Isso garante que apenas uma execução consiga atualizar (atualização atômica)
         const { data: updateData, error: updateError } = await supabase
-            .from('documents')
+          .from('documents')
           .update({ status: 'processing', updated_at: new Date().toISOString() })
           .eq('id', docId)
           .is('file_url', null)
@@ -194,7 +194,7 @@ export function PaymentSuccess() {
         // Se não atualizou, outra execução já processou ou documento já tem file_url
         if (!updateData || updateData.length === 0) {
           console.log(`⏭️ Documento ${docId} não foi atualizado (já está sendo processado por outra execução ou já tem file_url), pulando`);
-            continue;
+          continue;
         }
 
         if (updateError) {
@@ -205,9 +205,9 @@ export function PaymentSuccess() {
         console.log(`✅ Documento ${docId} atualizado para processing - continuando processamento`);
 
         // Obter URL do arquivo
-          let publicUrl = docData.file_url;
-        
-          if (!publicUrl) {
+        let publicUrl = docData.file_url;
+
+        if (!publicUrl) {
           // Tentar obter do file_id
           if (docData.file_id) {
             const { data: { publicUrl: generatedUrl } } = supabase.storage
@@ -218,16 +218,15 @@ export function PaymentSuccess() {
             // Buscar arquivo do IndexedDB ou Storage via metadados
             const docIndex = i;
             const metadataFileId = metadata[`doc${docIndex}_fileId`] || metadata[`doc${docIndex}_filePath`] || metadata.fileId;
-            
+
             if (metadataFileId && metadataFileId.startsWith('file_')) {
               // IndexedDB
-                const storedFileData = await fileStorage.getFile(metadataFileId);
+              const storedFileData = await fileStorage.getFile(metadataFileId);
               if (storedFileData?.file) {
                 const filePath = generateUniqueFileName(
-                  docData.filename || metadata[`doc${docIndex}_filename`] || 'document.pdf',
-                  userId
+                  docData.filename || metadata[`doc${docIndex}_filename`] || 'document.pdf'
                 );
-                
+
                 const { error: uploadError } = await supabase.storage
                   .from('documents')
                   .upload(filePath, storedFileData.file, { upsert: false });
@@ -237,15 +236,15 @@ export function PaymentSuccess() {
                   const errorMessage = uploadError.message || '';
                   const errorString = JSON.stringify(uploadError);
                   const errorObj = uploadError as any;
-                  
-                  if (errorObj.statusCode === '409' || errorString.includes('409') || 
-                      errorMessage.includes('already exists') || errorMessage.includes('Duplicate')) {
+
+                  if (errorObj.statusCode === '409' || errorString.includes('409') ||
+                    errorMessage.includes('already exists') || errorMessage.includes('Duplicate')) {
                     // Arquivo já existe, usar existente
                     const { data: { publicUrl: existingUrl } } = supabase.storage
                       .from('documents')
                       .getPublicUrl(filePath);
                     publicUrl = existingUrl;
-                    
+
                     // Atualizar apenas file_id (file_url será atualizado antes do webhook de forma atômica)
                     await supabase
                       .from('documents')
@@ -265,10 +264,10 @@ export function PaymentSuccess() {
                     .from('documents')
                     .getPublicUrl(filePath);
                   publicUrl = newUrl;
-                  
+
                   // Atualizar apenas file_id (file_url será atualizado antes do webhook de forma atômica)
-                    await supabase
-                      .from('documents')
+                  await supabase
+                    .from('documents')
                     .update({ file_id: filePath })
                     .eq('id', docId);
                 }
@@ -279,7 +278,7 @@ export function PaymentSuccess() {
                 .from('documents')
                 .getPublicUrl(metadataFileId);
               publicUrl = storageUrl;
-              
+
               // Atualizar apenas file_id se necessário (file_url será atualizado antes do webhook de forma atômica)
               if (!docData.file_id || docData.file_id !== metadataFileId) {
                 await supabase
@@ -289,31 +288,31 @@ export function PaymentSuccess() {
               }
             }
           }
-          }
-          
-          if (!publicUrl) {
+        }
+
+        if (!publicUrl) {
           console.error(`❌ Não foi possível obter URL do arquivo para ${docId}`);
-            // Marcar como upload falhado
-            await markDocumentUploadFailed(docId, userId);
-            // Redirecionar para página de reupload
-            navigate(`/dashboard/retry-upload?documentId=${docId}&from=payment`);
-            continue;
-          }
-          
-          // Buscar dados do cliente
-          const { data: clientData } = await supabase
-            .from('profiles')
-            .select('name, email')
-            .eq('id', userId)
-            .single();
+          // Marcar como upload falhado
+          await markDocumentUploadFailed(docId, userId);
+          // Redirecionar para página de reupload
+          navigate(`/dashboard/retry-upload?documentId=${docId}&from=payment`);
+          continue;
+        }
+
+        // Buscar dados do cliente
+        const { data: clientData } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', userId)
+          .single();
 
         // VERIFICAÇÃO CRÍTICA ANTES DO WEBHOOK: Atualização atômica que marca o documento
         // Se esta atualização falhar, significa que outra execução já enviou para o webhook
         const { data: webhookLockData, error: webhookLockError } = await supabase
           .from('documents')
-          .update({ 
+          .update({
             file_url: publicUrl, // Marcar file_url ANTES de enviar webhook
-            updated_at: new Date().toISOString() 
+            updated_at: new Date().toISOString()
           })
           .eq('id', docId)
           .eq('status', 'processing') // Só atualiza se ainda estiver em processing
@@ -335,35 +334,35 @@ export function PaymentSuccess() {
 
         // Preparar payload do webhook
         const docIndex = i;
-          const docFilename = metadata[`doc${docIndex}_filename`] || docData.filename;
-          const docPages = parseInt(metadata[`doc${docIndex}_pages`] || docData.pages || '1', 10);
-          const docIsNotarized = metadata[`doc${docIndex}_isNotarized`] === 'true';
-          const docIsBankStatement = metadata[`doc${docIndex}_isBankStatement`] === 'true';
-          const docOriginalLanguage = metadata[`doc${docIndex}_originalLanguage`] || docData.original_language || 'Portuguese';
-          const docTargetLanguage = metadata[`doc${docIndex}_targetLanguage`] || docData.target_language || 'English';
-          const docDocumentType = metadata[`doc${docIndex}_documentType`] || docData.document_type || 'Certified';
-          const docPrice = docPages * (docIsNotarized ? 20 : 15) + (docIsBankStatement ? 10 : 0);
+        const docFilename = metadata[`doc${docIndex}_filename`] || docData.filename;
+        const docPages = parseInt(metadata[`doc${docIndex}_pages`] || docData.pages || '1', 10);
+        const docIsNotarized = metadata[`doc${docIndex}_isNotarized`] === 'true';
+        const docIsBankStatement = metadata[`doc${docIndex}_isBankStatement`] === 'true';
+        const docOriginalLanguage = metadata[`doc${docIndex}_originalLanguage`] || docData.original_language || 'Portuguese';
+        const docTargetLanguage = metadata[`doc${docIndex}_targetLanguage`] || docData.target_language || 'English';
+        const docDocumentType = metadata[`doc${docIndex}_documentType`] || docData.document_type || 'Certified';
+        const docPrice = docPages * (docIsNotarized ? 20 : 15) + (docIsBankStatement ? 10 : 0);
 
-          const webhookPayload = {
-            filename: docFilename,
-            original_filename: metadata[`doc${docIndex}_originalFilename`] || docFilename,
+        const webhookPayload = {
+          filename: docFilename,
+          original_filename: metadata[`doc${docIndex}_originalFilename`] || docFilename,
           original_document_id: docId,
-            url: publicUrl,
-            mimetype: 'application/pdf',
-            size: docData.file_size || 0,
-            user_id: userId,
-            pages: docPages,
-            paginas: docPages,
-            document_type: docDocumentType,
-            tipo_trad: docIsNotarized ? 'Notarized' : 'Certified',
-            total_cost: docPrice.toString(),
-            valor: docPrice.toString(),
-            source_language: docOriginalLanguage,
-            target_language: docTargetLanguage,
-            idioma_raiz: docOriginalLanguage,
-            idioma_destino: docTargetLanguage,
-            is_bank_statement: docIsBankStatement,
-            client_name: clientData?.name || metadata.clientName || 'Unknown Client',
+          url: publicUrl,
+          mimetype: 'application/pdf',
+          size: docData.file_size || 0,
+          user_id: userId,
+          pages: docPages,
+          paginas: docPages,
+          document_type: docDocumentType,
+          tipo_trad: docIsNotarized ? 'Notarized' : 'Certified',
+          total_cost: docPrice.toString(),
+          valor: docPrice.toString(),
+          source_language: docOriginalLanguage,
+          target_language: docTargetLanguage,
+          idioma_raiz: docOriginalLanguage,
+          idioma_destino: docTargetLanguage,
+          is_bank_statement: docIsBankStatement,
+          client_name: clientData?.name || metadata.clientName || 'Unknown Client',
           source_currency: metadata[`doc${docIndex}_sourceCurrency`] || null,
           target_currency: metadata[`doc${docIndex}_targetCurrency`] || null
         };
@@ -371,13 +370,13 @@ export function PaymentSuccess() {
         // Enviar para tradução
         try {
           const translationResponse = await fetch(`${supabaseUrl}/functions/v1/send-translation-webhook`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.access_token || ''}`
-              },
-              body: JSON.stringify(webhookPayload)
-            });
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token || ''}`
+            },
+            body: JSON.stringify(webhookPayload)
+          });
 
           if (translationResponse.ok) {
             console.log(`✅ Documento ${i + 1}/${documentIds.length} enviado para tradução`);
@@ -392,7 +391,7 @@ export function PaymentSuccess() {
 
       setSuccess(true);
       setUploadProgress(100);
-      
+
       // Log payment completion for each document
       try {
         const { Logger } = await import('../lib/loggingHelpers');
@@ -427,14 +426,14 @@ export function PaymentSuccess() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
           <AlertCircle className="w-16 h-16 text-tfe-red-500 mx-auto mb-4" />
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Processing Error</h1>
-        <p className="text-gray-600 mb-6">{error}</p>
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="bg-tfe-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-tfe-blue-700 transition-colors"
-        >
-          Back to Dashboard
-        </button>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Processing Error</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="bg-tfe-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-tfe-blue-700 transition-colors"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     );
@@ -445,10 +444,10 @@ export function PaymentSuccess() {
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Payment Confirmed!</h1>
-        <p className="text-gray-600 mb-6">
-          Your document has been successfully sent and is being processed.
-        </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Payment Confirmed!</h1>
+          <p className="text-gray-600 mb-6">
+            Your document has been successfully sent and is being processed.
+          </p>
           <div className="bg-green-50 p-4 rounded-lg mb-6">
             <p className="text-sm text-green-700 mb-4">
               Your document has been successfully processed and sent for translation.
@@ -486,7 +485,7 @@ export function PaymentSuccess() {
         <p className="text-gray-600 mb-6">
           Processing your document...
         </p>
-        
+
         {isUploading && (
           <div className="space-y-4">
             <div className="flex items-center justify-center space-x-2">
@@ -494,7 +493,7 @@ export function PaymentSuccess() {
               <span className="text-sm text-gray-600">Uploading file...</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
+              <div
                 className="bg-tfe-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               ></div>
@@ -508,7 +507,7 @@ export function PaymentSuccess() {
                     ⚠️ Important
                   </p>
                   <p className="text-xs text-amber-700">
-                    Please do not close this page or refresh the browser while the upload is in progress. 
+                    Please do not close this page or refresh the browser while the upload is in progress.
                   </p>
                 </div>
               </div>

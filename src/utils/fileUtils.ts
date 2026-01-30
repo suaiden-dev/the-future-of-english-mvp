@@ -1,53 +1,42 @@
 /**
  * Sanitiza o nome do arquivo removendo caracteres especiais e espaços
- * que podem causar problemas no upload para o Supabase Storage
+ * que podem causar problemas no upload para o Supabase Storage.
+ * Segue o padrão Lush America: minúsculas, troca espaços/especiais por underscore.
  */
 export function sanitizeFileName(fileName: string): string {
-  // Remove extensão do arquivo
+  // Remove extensão do arquivo para sanitizar apenas o corpo
   const lastDotIndex = fileName.lastIndexOf('.');
   const nameWithoutExt = lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
-  const extension = lastDotIndex !== -1 ? fileName.substring(lastDotIndex) : '';
 
   // Sanitiza o nome do arquivo
   const sanitizedName = nameWithoutExt
-    .replace(/[^a-zA-Z0-9_-]/g, '_') // Substitui caracteres especiais por underscore
-    .replace(/_+/g, '_') // Remove underscores múltiplos
-    .replace(/^_|_$/g, '') // Remove underscores no início e fim
-    .toLowerCase(); // Converte para minúsculas
+    .replace(/[^a-zA-Z0-9]/g, '_') // Substitui qualquer coisa que não seja letra ou número por underscore
+    .replace(/_+/g, '_')           // Remove underscores múltiplos
+    .replace(/^_|_$/g, '')         // Remove underscores no início e fim
+    .toLowerCase();                // Converte para minúsculas
 
-  // Se o nome ficou vazio, usa um nome padrão
-  const finalName = sanitizedName || 'document';
-
-  return finalName + extension;
+  return sanitizedName || 'document';
 }
 
 /**
- * Gera um nome único para o arquivo baseado no timestamp e nome sanitizado
+ * Gera um nome único para o arquivo seguindo o padrão Lush America:
+ * {nome_sanitizado}_{CÓDIGO}.{extensao}
  * 
- * Novo formato: YYYYMMDD_HHMMSS_Usuario_NomeOriginal.pdf
- * Exemplo: 20250115_143022_joao_silva_diploma_universidade.pdf
- * 
- * Estrutura:
- * - YYYYMMDD: Data (15/01/2025)
- * - HHMMSS: Hora (14:30:22)
- * - Usuario: Nome do usuário sanitizado
- * - NomeOriginal: Nome original do arquivo sanitizado
+ * @param originalFileName Nome original do arquivo (ex: "RG 2024.pdf")
+ * @returns Nome único (ex: "rg_2024_A1B2C3.pdf")
  */
-export function generateUniqueFileName(originalFileName: string, userId: string, userName?: string): string {
-  const sanitizedName = sanitizeFileName(originalFileName);
+export function generateUniqueFileName(originalFileName: string): string {
+  const sanitizedBase = sanitizeFileName(originalFileName);
 
-  // Formatar data atual de forma legível
-  const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
-  const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
+  // Extrai a extensão original
+  const lastDotIndex = originalFileName.lastIndexOf('.');
+  const extension = lastDotIndex !== -1 ? originalFileName.substring(lastDotIndex).toLowerCase() : '';
 
-  // Usar nome do usuário se disponível, senão usar userId abreviado
-  const userIdentifier = userName ?
-    userName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() :
-    userId.substring(0, 8);
+  // Gera sufixo aleatório de 6 caracteres (Lush America Style)
+  const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  // Estrutura: YYYYMMDD_HHMMSS_Usuario_NomeOriginal.pdf
-  return `${userId}/${dateStr}_${timeStr}_${userIdentifier}_${sanitizedName}`;
+  // Montagem final: nome_sanitizado_CÓDIGO.extensao
+  return `${sanitizedBase}_${randomCode}${extension}`;
 }
 
 /**
