@@ -6,6 +6,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+/**
+ * Converte URL pública do Supabase Storage para URL de proxy n8n-storage-access.
+ * Isso permite que o n8n acesse arquivos mesmo com buckets privados.
+ */
+function convertToN8nProxyUrl(publicUrl: string, supabaseUrl: string): string {
+  if (!publicUrl || !publicUrl.includes('/storage/v1/object/public/')) {
+    return publicUrl; // Retorna original se não for URL de storage público
+  }
+
+  try {
+    const url = new URL(publicUrl);
+    const pathParts = url.pathname.split('/storage/v1/object/public/');
+
+    if (pathParts.length === 2) {
+      const [bucketName, ...filePath] = pathParts[1].split('/');
+      const path = filePath.join('/');
+      const n8nToken = Deno.env.get('N8N_STORAGE_SECRET') || 'tfoe_n8n_2026';
+
+      const proxyUrl = `${supabaseUrl}/functions/v1/n8n-storage-access?bucket=${encodeURIComponent(bucketName)}&path=${encodeURIComponent(path)}&token=${encodeURIComponent(n8nToken)}`;
+      console.log(`[URL Conversion] ${publicUrl} -> ${proxyUrl}`);
+      return proxyUrl;
+    }
+  } catch (error) {
+    console.error('[URL Conversion] Error:', error);
+  }
+
+  return publicUrl;
+}
+
 
 Deno.serve(async (req: Request) => {
   console.log(`[${new Date().toISOString()}] Edge Function: send-translation-webhook called`);
@@ -33,7 +62,7 @@ Deno.serve(async (req: Request) => {
     // Create Supabase client with service role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
+
     console.log("Supabase URL:", supabaseUrl ? "✓ Set" : "✗ Missing");
     console.log("Service Role Key:", supabaseServiceKey ? "✓ Set" : "✗ Missing");
 
@@ -48,7 +77,7 @@ Deno.serve(async (req: Request) => {
     console.log("=== WEBHOOK CALL START ===");
     console.log("Timestamp:", new Date().toISOString());
     console.log("Raw request body:", requestBody);
-    
+
     const parsedBody = JSON.parse(requestBody);
     console.log("Parsed request body:", parsedBody);
     console.log("Request headers:", Object.fromEntries(req.headers.entries()));
@@ -63,38 +92,38 @@ Deno.serve(async (req: Request) => {
 
 
     // Recebe o evento do Supabase Storage ou do frontend
-    const { 
-      filename, 
+    const {
+      filename,
       original_filename,
       original_document_id,
-      url, 
-      mimetype, 
-      size, 
-      record, 
-      user_id, 
+      url,
+      mimetype,
+      size,
+      record,
+      user_id,
       pages,
       paginas,
       document_type,
-      tipo_trad, 
+      tipo_trad,
       total_cost,
-      valor, 
+      valor,
       source_language,
       target_language,
       idioma_raiz,
       idioma_destino,
-      is_bank_statement, 
+      is_bank_statement,
       client_name,
       source_currency,
       target_currency
     } = parsedBody;
-    
+
     // Debug logs para idiomas e moedas
     console.log("=== LANGUAGE & CURRENCY DEBUG ===");
     console.log("source_language:", source_language);
     console.log("target_language:", target_language);
     console.log("idioma_raiz:", idioma_raiz);
     console.log("idioma_destino:", idioma_destino);
-    
+
     // Debug logs para campos originais
     console.log("=== ORIGINAL FIELDS DEBUG ===");
     console.log("original_filename:", original_filename);
@@ -102,7 +131,7 @@ Deno.serve(async (req: Request) => {
     console.log("source_currency:", source_currency);
     console.log("target_currency:", target_currency);
     console.log("is_bank_statement:", is_bank_statement);
-    
+
     let payload;
 
     if (record) {
@@ -110,7 +139,7 @@ Deno.serve(async (req: Request) => {
       console.log("Processing storage trigger payload");
       const bucket = record.bucket_id || record.bucket || record.bucketId;
       const path = record.name || record.path || record.file_name;
-      
+
       // Corrigir a geração da URL pública
       let publicUrl;
       if (url && url.startsWith('http')) {
@@ -123,14 +152,14 @@ Deno.serve(async (req: Request) => {
           .getPublicUrl(path);
         publicUrl = generatedUrl;
       }
-      
+
       console.log("Generated public URL:", publicUrl);
-      
+
       payload = {
         filename: path,
         url: publicUrl,
         mimetype: record.mimetype || record.metadata?.mimetype || "application/octet-stream",
-        size: record.size || record.metadata?.size || null,
+        size: record.size || (record.metadata ? record.metadata.size : null) || 0,
         user_id: record.user_id || record.metadata?.user_id || null,
         // Sempre usar campos padronizados
         pages: record.pages || pages || paginas || 1,
@@ -156,7 +185,7 @@ Deno.serve(async (req: Request) => {
       console.log("URL received:", url);
       console.log("User ID:", user_id);
       console.log("Filename:", filename);
-      
+
       // Verificar se a URL já é válida
       let finalUrl = url;
       if (url && !url.startsWith('http')) {
@@ -167,13 +196,13 @@ Deno.serve(async (req: Request) => {
           const fileName = urlParts[urlParts.length - 1];
           const userFolder = urlParts[urlParts.length - 2];
           const filePath = `${userFolder}/${fileName}`;
-          
+
           console.log("Extracted file path:", filePath);
-          
+
           const { data: { publicUrl: generatedUrl } } = supabase.storage
             .from('documents')
             .getPublicUrl(filePath);
-          
+
           finalUrl = generatedUrl;
           console.log("Generated public URL from path:", finalUrl);
         } catch (urlError) {
@@ -182,15 +211,15 @@ Deno.serve(async (req: Request) => {
           finalUrl = url;
         }
       }
-      
-      payload = { 
-        filename: filename, 
+
+      payload = {
+        filename: filename,
         original_filename: original_filename || null, // Nome original para exibição
         original_document_id: original_document_id || null, // ID do documento original
-        url: finalUrl, 
-        mimetype, 
-        size, 
-        user_id: user_id || null, 
+        url: finalUrl,
+        mimetype,
+        size,
+        user_id: user_id || null,
         // Sempre usar campos padronizados
         pages: pages || paginas || 1,
         document_type: document_type || tipo_trad || 'Certificado', // Priorizar document_type do frontend
@@ -209,13 +238,19 @@ Deno.serve(async (req: Request) => {
         tableName: 'profiles',
         schema: 'public'
       };
-      
+
       console.log("🔍 DEBUG: Filename recebido no webhook:", filename);
       console.log("🔍 DEBUG: Original filename recebido:", original_filename);
       console.log("Final payload for frontend:", JSON.stringify(payload, null, 2));
     }
 
     console.log("Final payload for n8n webhook:", JSON.stringify(payload, null, 2));
+
+    // Converter URL pública para URL de proxy (para funcionar com buckets privados)
+    if (payload.url) {
+      payload.url = convertToN8nProxyUrl(payload.url, supabaseUrl);
+      console.log("URL converted for n8n proxy:", payload.url);
+    }
 
     // Verificar se o arquivo é um PDF antes de enviar para o n8n
     const isPdf = payload.isPdf || payload.mimetype === 'application/pdf' || payload.filename.toLowerCase().endsWith('.pdf');
@@ -231,7 +266,7 @@ Deno.serve(async (req: Request) => {
 
     const webhookResponse = await fetch(webhookUrl, {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
         "User-Agent": "Supabase-Edge-Function/1.0"
       },
@@ -247,14 +282,14 @@ Deno.serve(async (req: Request) => {
       try {
         console.log("Updating document status to processing...");
         console.log("Looking for document with user_id:", user_id, "and filename:", filename);
-        
+
         const { data: updateData, error: updateError } = await supabase
           .from('documents')
           .update({ status: 'processing' })
           .eq('user_id', user_id)
           .eq('filename', filename)
           .select();
-        
+
         if (updateError) {
           console.error("Error updating document status:", updateError);
         } else {
@@ -297,7 +332,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("Error in send-translation-webhook:", error);
     console.error("Error stack:", error.stack);
-    
+
     const errorResponse = {
       success: false,
       error: error.message,

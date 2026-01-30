@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { FileText, Download, Eye, Calendar, DollarSign, User, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Download, Calendar, DollarSign, User, CheckCircle, XCircle } from 'lucide-react';
 import { getValidFileUrl } from '../../utils/fileUtils';
+import { DocumentViewerModal } from '../../components/DocumentViewerModal';
 import { TranslatedDocumentsFilters } from '../../components/TranslatedDocumentsFilters';
 import { DateRange } from '../../components/DateRangeFilter';
 
@@ -48,7 +49,9 @@ export default function TranslatedDocuments() {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
-  
+  const [showDocViewer, setShowDocViewer] = useState(false);
+  const [docToView, setDocToView] = useState<{ url: string; filename: string } | null>(null);
+
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -57,7 +60,7 @@ export default function TranslatedDocuments() {
     endDate: null,
     preset: 'all'
   });
-  
+
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const documentsPerPage = 10;
@@ -65,12 +68,12 @@ export default function TranslatedDocuments() {
   useEffect(() => {
     async function fetchTranslatedDocuments() {
       if (!user) return;
-      
+
       setLoading(true);
       setError(null);
       try {
         console.log('[TranslatedDocuments] Fetching documents for authenticator:', user.id);
-        
+
         // Se for admin, mostra todos os documentos. Se for authenticator, mostra apenas os que ele autenticou
         let query = supabase
           .from('translated_documents')
@@ -81,27 +84,27 @@ export default function TranslatedDocuments() {
               email
             )
           `);
-        
+
         // Se não for admin, filtra apenas os documentos autenticados pelo usuário atual
         if (user.role !== 'admin') {
           query = query.eq('authenticated_by', user.id);
         }
-        
+
         // Aplicar filtros de data se fornecidos
         if (dateRange.startDate) {
           const startDate = new Date(dateRange.startDate);
           startDate.setHours(0, 0, 0, 0);
           query = query.gte('created_at', startDate.toISOString());
         }
-        
+
         if (dateRange.endDate) {
           const endDate = new Date(dateRange.endDate);
           endDate.setHours(23, 59, 59, 999);
           query = query.lte('created_at', endDate.toISOString());
         }
-        
+
         const { data, error } = await query.order('created_at', { ascending: false });
-        
+
         if (error) {
           console.error('[TranslatedDocuments] Error fetching documents:', error);
           setError(error.message);
@@ -134,7 +137,7 @@ export default function TranslatedDocuments() {
         doc.user_email?.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Filtro de status
-      const matchesStatus = statusFilter === 'all' || 
+      const matchesStatus = statusFilter === 'all' ||
         (statusFilter === 'authenticated' && doc.is_authenticated) ||
         (statusFilter === 'pending' && !doc.is_authenticated);
 
@@ -217,8 +220,8 @@ export default function TranslatedDocuments() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Translated Documents</h1>
             <p className="text-sm sm:text-base text-gray-600">
-              {user?.role === 'admin' 
-                ? 'View all documents that have been translated and sent to clients.' 
+              {user?.role === 'admin'
+                ? 'View all documents that have been translated and sent to clients.'
                 : 'View documents that you have authenticated and sent to clients.'
               }
             </p>
@@ -284,7 +287,7 @@ export default function TranslatedDocuments() {
               <p className="text-red-500 text-base">Error: {error}</p>
             </div>
           )}
-          
+
           {/* Mobile Cards View */}
           <div className="block sm:hidden space-y-4">
             {currentDocuments.map(doc => (
@@ -394,12 +397,13 @@ export default function TranslatedDocuments() {
                                   alert('No PDF file available to view.');
                                   return;
                                 }
-                                
+
                                 const validUrl = await getValidFileUrl(doc.translated_file_url);
-                                window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                setDocToView({ url: validUrl, filename: doc.filename });
+                                setShowDocViewer(true);
                               } catch (error) {
                                 console.error('Error opening PDF:', error);
-                                alert((error as Error).message || 'Failed to open PDF. The file may be corrupted or inaccessible.');
+                                alert((error as Error).message || 'Failed to open PDF.');
                               }
                             }}
                             className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
@@ -499,7 +503,7 @@ export default function TranslatedDocuments() {
               <p className="text-sm text-gray-500">Try adjusting your search or filter criteria.</p>
             </div>
           )}
-          
+
           {/* Controles de Paginação */}
           {filteredDocuments.length > 0 && (
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
@@ -515,23 +519,22 @@ export default function TranslatedDocuments() {
                   >
                     Previous
                   </button>
-                  
+
                   <div className="flex items-center gap-1">
                     {Array.from({ length: totalPagesForPagination }, (_, i) => i + 1).map(page => (
                       <button
                         key={page}
                         onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                          currentPage === page
-                            ? 'bg-tfe-blue-600 text-white'
-                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                        }`}
+                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentPage === page
+                          ? 'bg-tfe-blue-600 text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                          }`}
                       >
                         {page}
                       </button>
                     ))}
                   </div>
-                  
+
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPagesForPagination}
@@ -582,6 +585,17 @@ export default function TranslatedDocuments() {
             )}
           </div>
         </div>
+      )}
+      {/* Document Viewer Modal */}
+      {showDocViewer && docToView && (
+        <DocumentViewerModal
+          url={docToView.url}
+          filename={docToView.filename}
+          onClose={() => {
+            setShowDocViewer(false);
+            setDocToView(null);
+          }}
+        />
       )}
     </div>
   );

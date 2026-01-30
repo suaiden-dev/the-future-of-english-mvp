@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Folder as FolderIcon, FileText, Plus, MoreVertical, ArrowLeft, Grid, List, Download, Eye, Edit2, Trash2 } from 'lucide-react';
+import { Folder as FolderIcon, FileText, Plus, MoreVertical, ArrowLeft, Grid, List, Download, Eye, Edit2, Trash2, X, ZoomIn, ZoomOut, RotateCw, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useFolders } from '../../hooks/useFolders';
 import { useTranslatedDocuments } from '../../hooks/useDocuments';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { convertPublicToSecure } from '../../lib/storage';
 
 export default function MyDocumentsPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -29,6 +28,16 @@ export default function MyDocumentsPage() {
   const [editingFolderName, setEditingFolderName] = useState('');
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
+  // Estados para o visualizador inline
+  const [showViewer, setShowViewer] = useState(false);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [viewerType, setViewerType] = useState<'pdf' | 'image' | 'unknown'>('unknown');
+  const [loadingViewer, setLoadingViewer] = useState(false);
+  const [viewerError, setViewerError] = useState<string | null>(null);
+  const [imageZoom, setImageZoom] = useState(1);
+  const [imageRotation, setImageRotation] = useState(0);
+  const [viewingFilename, setViewingFilename] = useState<string>('');
+
   const { folders, createFolder, updateFolder, deleteFolder, loading: foldersLoading } = useFolders(user?.id);
   const { documents, loading: docsLoading, refetch } = useTranslatedDocuments(user?.id);
 
@@ -48,9 +57,68 @@ export default function MyDocumentsPage() {
   // Cleanup touch drag on unmount
   useEffect(() => {
     return () => {
-      // Cleanup removed - no more touch drag
+      // Cleanup viewer URL
+      if (viewerUrl && viewerUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(viewerUrl);
+      }
     };
-  }, []);
+  }, [viewerUrl]);
+
+  // Função para visualizar arquivo no modal
+  const handleViewFile = async (url: string, filename: string) => {
+    setLoadingViewer(true);
+    setViewerError(null);
+    setShowViewer(true);
+    setImageZoom(1);
+    setImageRotation(0);
+    setViewingFilename(filename);
+
+    try {
+      const secureUrl = await convertPublicToSecure(url);
+      console.log('🔒 URL segura para visualização:', secureUrl);
+
+      const response = await fetch(secureUrl);
+      if (!response.ok) {
+        throw new Error(`Erro ao carregar arquivo: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const extension = filename.split('.').pop()?.toLowerCase() || '';
+      const contentType = blob.type || '';
+
+      if (contentType.includes('pdf') || extension === 'pdf') {
+        setViewerType('pdf');
+      } else if (contentType.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(extension)) {
+        setViewerType('image');
+      } else {
+        setViewerType('unknown');
+      }
+
+      setViewerUrl(blobUrl);
+      setLoadingViewer(false);
+    } catch (error) {
+      console.error('❌ Erro ao carregar arquivo:', error);
+      setViewerError('Erro ao carregar o arquivo. Tente novamente.');
+      setLoadingViewer(false);
+    }
+  };
+
+  const closeViewer = () => {
+    if (viewerUrl && viewerUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(viewerUrl);
+    }
+    setShowViewer(false);
+    setViewerUrl(null);
+    setViewerType('unknown');
+    setViewerError(null);
+    setViewingFilename('');
+  };
+
+  const handleZoomIn = () => setImageZoom(prev => Math.min(prev + 0.25, 3));
+  const handleZoomOut = () => setImageZoom(prev => Math.max(prev - 0.25, 0.25));
+  const handleRotate = () => setImageRotation(prev => (prev + 90) % 360);
 
   // Close dropdown when clicking outside or changing folder
   useEffect(() => {
@@ -102,18 +170,18 @@ export default function MyDocumentsPage() {
         .select('id, folder_id, filename')
         .eq('id', fileId)
         .single();
-      
+
       if (checkError) {
         throw checkError;
       }
-      
+
       // Atualizar folder_id do arquivo
       const { data, error } = await supabase
         .from('translated_documents')
         .update({ folder_id: folderId })
         .eq('id', fileId)
         .select();
-      
+
       if (error) throw error;
       await refetch();
       setTimeout(() => setMovingFileId(null), 800); // animação mais suave
@@ -269,7 +337,7 @@ export default function MyDocumentsPage() {
 
     try {
       await updateFolder(selectedFolder.id, { name: editingFolderName.trim() });
-      
+
       // Fechar modal e limpar estados
       setShowRenameFolderModal(false);
       setSelectedFolder(null);
@@ -291,7 +359,7 @@ export default function MyDocumentsPage() {
 
     try {
       await deleteFolder(selectedFolder.id);
-      
+
       // Fechar modal e limpar estados
       setShowDeleteFolderModal(false);
       setSelectedFolder(null);
@@ -359,7 +427,7 @@ export default function MyDocumentsPage() {
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"
             onClick={() => setShowNewFolder(true)}
           >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> 
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="hidden sm:inline">New Folder</span>
             <span className="sm:hidden">Folder</span>
           </button>
@@ -383,22 +451,20 @@ export default function MyDocumentsPage() {
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex bg-gray-100 rounded-lg p-1">
           <button
-            className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-              viewMode === 'grid' 
-                ? 'bg-white text-tfe-blue-600 shadow-sm' 
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
+            className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${viewMode === 'grid'
+              ? 'bg-white text-tfe-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-800'
+              }`}
             onClick={() => setViewMode('grid')}
           >
             <Grid className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Grid</span>
           </button>
           <button
-            className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-              viewMode === 'list' 
-                ? 'bg-white text-tfe-blue-600 shadow-sm' 
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
+            className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${viewMode === 'list'
+              ? 'bg-white text-tfe-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-800'
+              }`}
             onClick={() => setViewMode('list')}
           >
             <List className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -426,148 +492,145 @@ export default function MyDocumentsPage() {
 
       {/* Grid View */}
       {viewMode === 'grid' && (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6"
-        onDragOver={e => {
-          e.preventDefault();
-          if (!dragOverFolderId && draggedFileId) {
-            if (!dragOverRoot) setDragOverRoot(true);
-          }
-        }}
-        onDragLeave={e => {
-          if (!dragOverFolderId && draggedFileId) {
-            setDragOverRoot(false);
-          }
-        }}
-        onDrop={e => {
-          e.preventDefault();
-          if (!dragOverFolderId && draggedFileId) {
-            setDragOverRoot(false);
-            handleMoveFileToFolder(draggedFileId, null);
-            setDraggedFileId(null);
-          }
-        }}
-        style={{ minHeight: 120, background: dragOverRoot && draggedFileId ? '#e0f2fe' : '#fff', transition: 'background 0.2s' }}
-      >
-        {foldersLoading && <span>Loading folders...</span>}
-        {currentFolders.map((item) => (
-          <div
-            key={item.id}
-            className={`group relative bg-gray-50 rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center shadow hover:shadow-md transition cursor-pointer border border-gray-100 hover:border-tfe-blue-400 ${dragOverFolderId === item.id ? 'ring-2 ring-tfe-blue-400' : ''}`}
-            onClick={() => setCurrentFolderId(item.id)}
-            title={`Open folder ${item.name}`}
-                          onDragOver={e => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6"
+          onDragOver={e => {
+            e.preventDefault();
+            if (!dragOverFolderId && draggedFileId) {
+              if (!dragOverRoot) setDragOverRoot(true);
+            }
+          }}
+          onDragLeave={e => {
+            if (!dragOverFolderId && draggedFileId) {
+              setDragOverRoot(false);
+            }
+          }}
+          onDrop={e => {
+            e.preventDefault();
+            if (!dragOverFolderId && draggedFileId) {
+              setDragOverRoot(false);
+              handleMoveFileToFolder(draggedFileId, null);
+              setDraggedFileId(null);
+            }
+          }}
+          style={{ minHeight: 120, background: dragOverRoot && draggedFileId ? '#e0f2fe' : '#fff', transition: 'background 0.2s' }}
+        >
+          {foldersLoading && <span>Loading folders...</span>}
+          {currentFolders.map((item) => (
+            <div
+              key={item.id}
+              className={`group relative bg-gray-50 rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center shadow hover:shadow-md transition cursor-pointer border border-gray-100 hover:border-tfe-blue-400 ${dragOverFolderId === item.id ? 'ring-2 ring-tfe-blue-400' : ''}`}
+              onClick={() => setCurrentFolderId(item.id)}
+              title={`Open folder ${item.name}`}
+              onDragOver={e => {
                 e.preventDefault();
                 setDragOverFolderId(item.id);
               }}
-            onDragLeave={() => {
-              setDragOverFolderId(null);
-              if (openFolderTimeout.current) clearTimeout(openFolderTimeout.current);
-            }}
-            onDrop={e => {
-              e.preventDefault();
-              console.log('[DRAG-DROP] Drop na pasta:', item.id, 'arquivo:', draggedFileId);
-              setDragOverFolderId(null);
-              if (openFolderTimeout.current) clearTimeout(openFolderTimeout.current);
-              if (draggedFileId) {
-                console.log('[DRAG-DROP] Executando movimentação...');
-                handleMoveFileToFolder(draggedFileId, item.id);
-                setDraggedFileId(null);
-              } else {
-                console.log('[DRAG-DROP] Nenhum arquivo sendo arrastado');
-              }
-            }}
-          >
-            <FolderIcon className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-500 mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-gray-800 font-medium text-center truncate w-full text-sm sm:text-base">{item.name}</span>
-            <div className="absolute top-2 right-2">
-              <div className="relative dropdown-container">
-                <button 
-                  className="p-1 text-gray-400 hover:text-gray-600 rounded transition-opacity opacity-0 group-hover:opacity-100"
-                  aria-label="More options"
-                  title="More options"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenDropdownId(openDropdownId === item.id ? null : item.id);
-                  }}
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-                {openDropdownId === item.id && (
-                  <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+              onDragLeave={() => {
+                setDragOverFolderId(null);
+                if (openFolderTimeout.current) clearTimeout(openFolderTimeout.current);
+              }}
+              onDrop={e => {
+                e.preventDefault();
+                console.log('[DRAG-DROP] Drop na pasta:', item.id, 'arquivo:', draggedFileId);
+                setDragOverFolderId(null);
+                if (openFolderTimeout.current) clearTimeout(openFolderTimeout.current);
+                if (draggedFileId) {
+                  console.log('[DRAG-DROP] Executando movimentação...');
+                  handleMoveFileToFolder(draggedFileId, item.id);
+                  setDraggedFileId(null);
+                } else {
+                  console.log('[DRAG-DROP] Nenhum arquivo sendo arrastado');
+                }
+              }}
+            >
+              <FolderIcon className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-500 mb-2 group-hover:scale-110 transition-transform" />
+              <span className="text-gray-800 font-medium text-center truncate w-full text-sm sm:text-base">{item.name}</span>
+              <div className="absolute top-2 right-2">
+                <div className="relative dropdown-container">
+                  <button
+                    className="p-1 text-gray-400 hover:text-gray-600 rounded transition-opacity opacity-0 group-hover:opacity-100"
+                    aria-label="More options"
+                    title="More options"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenDropdownId(openDropdownId === item.id ? null : item.id);
+                    }}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {openDropdownId === item.id && (
+                    <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenDropdownId(null);
-                        handleOpenRenameFolder(item);
-                      }}
-                      className="w-full px-3 py-1 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                      <span>Rename</span>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenDropdownId(null);
-                        handleOpenDeleteFolder(item);
-                      }}
-                      className="w-full px-3 py-1 text-left text-sm text-tfe-red-600 hover:bg-tfe-red-50 flex items-center space-x-2"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Delete</span>
-                    </button>
-                  </div>
-                )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          handleOpenRenameFolder(item);
+                        }}
+                        className="w-full px-3 py-1 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span>Rename</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          handleOpenDeleteFolder(item);
+                        }}
+                        className="w-full px-3 py-1 text-left text-sm text-tfe-red-600 hover:bg-tfe-red-50 flex items-center space-x-2"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-        {docsLoading && (
-          <div className="col-span-1 sm:col-span-2 md:col-span-4 flex gap-4">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="bg-gray-100 rounded-xl p-4 flex-1 min-h-[90px] animate-pulse" />
-            ))}
-          </div>
-        )}
-        {currentDocuments.map((item) => (
-          <div
-            key={item.id}
-            className={`group relative rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center shadow cursor-pointer border transition-all duration-500 ${
-              movingFileId === item.id 
-                ? 'bg-green-50 border-green-200 shadow-lg scale-105 transform' 
+          ))}
+          {docsLoading && (
+            <div className="col-span-1 sm:col-span-2 md:col-span-4 flex gap-4">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="bg-gray-100 rounded-xl p-4 flex-1 min-h-[90px] animate-pulse" />
+              ))}
+            </div>
+          )}
+          {currentDocuments.map((item) => (
+            <div
+              key={item.id}
+              className={`group relative rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center shadow cursor-pointer border transition-all duration-500 ${movingFileId === item.id
+                ? 'bg-green-50 border-green-200 shadow-lg scale-105 transform'
                 : 'bg-gray-50 border-gray-100 hover:shadow-md hover:border-tfe-blue-400'
-            }`}
-            onClick={() => setSelectedFile(item)}
-            title={`Open file ${item.filename}`}
-            draggable={true}
-                          onDragStart={() => {
+                }`}
+              onClick={() => setSelectedFile(item)}
+              title={`Open file ${item.filename}`}
+              draggable={true}
+              onDragStart={() => {
                 setDraggedFileId(item.id);
               }}
               onDragEnd={() => {
                 setDraggedFileId(null);
               }}
-            style={{ 
-              opacity: movingFileId === item.id ? 0.8 : 1, 
-              transition: 'all 0.5s ease-in-out',
-              transform: movingFileId === item.id ? 'scale(1.05) translateY(-2px)' : 'scale(1) translateY(0)'
-            }}
-          >
-            <FileText className={`w-8 h-8 sm:w-10 sm:h-10 mb-2 transition-all duration-500 ${
-              movingFileId === item.id 
-                ? 'text-green-500 scale-110' 
+              style={{
+                opacity: movingFileId === item.id ? 0.8 : 1,
+                transition: 'all 0.5s ease-in-out',
+                transform: movingFileId === item.id ? 'scale(1.05) translateY(-2px)' : 'scale(1) translateY(0)'
+              }}
+            >
+              <FileText className={`w-8 h-8 sm:w-10 sm:h-10 mb-2 transition-all duration-500 ${movingFileId === item.id
+                ? 'text-green-500 scale-110'
                 : 'text-tfe-blue-500 group-hover:scale-110'
-            }`} />
-            <span className={`font-medium text-center truncate w-full text-sm sm:text-base transition-colors duration-500 ${
-              movingFileId === item.id 
-                ? 'text-green-700' 
+                }`} />
+              <span className={`font-medium text-center truncate w-full text-sm sm:text-base transition-colors duration-500 ${movingFileId === item.id
+                ? 'text-green-700'
                 : 'text-gray-800'
-            }`}>
-              {item.original_filename || item.filename}
-            </span>
-          </div>
-        ))}
-      </div>
+                }`}>
+                {item.original_filename || item.filename}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* List View */}
@@ -632,8 +695,8 @@ export default function MyDocumentsPage() {
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
                 <div className="relative dropdown-container">
-                  <button 
-                    className="text-gray-400 hover:text-gray-700 p-1 rounded-full" 
+                  <button
+                    className="text-gray-400 hover:text-gray-700 p-1 rounded-full"
                     title="More options"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -678,37 +741,34 @@ export default function MyDocumentsPage() {
           {currentDocuments.map((item) => (
             <div
               key={item.id}
-              className={`group relative rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 shadow cursor-pointer border transition-all duration-500 ${
-                movingFileId === item.id 
-                  ? 'bg-green-50 border-green-200 shadow-lg' 
-                  : 'bg-gray-50 border-gray-100 hover:shadow-md hover:border-tfe-blue-400'
-              }`}
+              className={`group relative rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 shadow cursor-pointer border transition-all duration-500 ${movingFileId === item.id
+                ? 'bg-green-50 border-green-200 shadow-lg'
+                : 'bg-gray-50 border-gray-100 hover:shadow-md hover:border-tfe-blue-400'
+                }`}
               onClick={() => setSelectedFile(item)}
               title={`Open file ${item.filename}`}
               draggable={true}
-                              onDragStart={() => {
-                  setDraggedFileId(item.id);
-                }}
-                onDragEnd={() => {
-                  setDraggedFileId(null);
-                }}
-              style={{ 
-                opacity: movingFileId === item.id ? 0.9 : 1, 
+              onDragStart={() => {
+                setDraggedFileId(item.id);
+              }}
+              onDragEnd={() => {
+                setDraggedFileId(null);
+              }}
+              style={{
+                opacity: movingFileId === item.id ? 0.9 : 1,
                 transition: 'all 0.5s ease-in-out',
                 transform: movingFileId === item.id ? 'translateX(4px)' : 'translateX(0)'
               }}
             >
-              <FileText className={`w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0 transition-all duration-500 ${
-                movingFileId === item.id 
-                  ? 'text-green-500 scale-110' 
-                  : 'text-tfe-blue-500'
-              }`} />
+              <FileText className={`w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0 transition-all duration-500 ${movingFileId === item.id
+                ? 'text-green-500 scale-110'
+                : 'text-tfe-blue-500'
+                }`} />
               <div className="flex-1 min-w-0">
-                <span className={`font-medium truncate block text-sm sm:text-base transition-colors duration-500 ${
-                  movingFileId === item.id 
-                    ? 'text-green-700' 
-                    : 'text-gray-800'
-                }`}>
+                <span className={`font-medium truncate block text-sm sm:text-base transition-colors duration-500 ${movingFileId === item.id
+                  ? 'text-green-700'
+                  : 'text-gray-800'
+                  }`}>
                   {item.original_filename || item.filename}
                 </span>
                 <span className="text-xs sm:text-sm text-gray-500">
@@ -716,23 +776,24 @@ export default function MyDocumentsPage() {
                 </span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
-                <button 
-                  className="text-gray-400 hover:text-tfe-blue-600 p-2 rounded-full transition-colors" 
+                <button
+                  className="text-gray-400 hover:text-tfe-blue-600 p-2 rounded-full transition-colors"
                   title="View document"
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(item.translated_file_url, '_blank');
+                    handleViewFile(item.translated_file_url, item.filename || 'document');
                   }}
                 >
                   <Eye className="w-4 h-4" />
                 </button>
-                <button 
-                  className="text-gray-400 hover:text-green-600 p-2 rounded-full transition-colors" 
+                <button
+                  className="text-gray-400 hover:text-green-600 p-2 rounded-full transition-colors"
                   title="Download document"
                   onClick={async (e) => {
                     e.stopPropagation();
                     try {
-                      const response = await fetch(item.translated_file_url);
+                      const secureUrl = await convertPublicToSecure(item.translated_file_url);
+                      const response = await fetch(secureUrl);
                       const blob = await response.blob();
                       const url = window.URL.createObjectURL(blob);
                       const link = document.createElement('a');
@@ -797,7 +858,7 @@ export default function MyDocumentsPage() {
             <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-gray-900">File Details</h3>
             <div className="space-y-3 mb-4 sm:mb-6">
               <div>
-                <span className="font-medium text-gray-700 text-sm sm:text-base">Name:</span> 
+                <span className="font-medium text-gray-700 text-sm sm:text-base">Name:</span>
                 {isRenaming ? (
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
                     <input
@@ -835,33 +896,32 @@ export default function MyDocumentsPage() {
                 )}
               </div>
               <div>
-                <span className="font-medium text-gray-700 text-sm sm:text-base">Type:</span> 
+                <span className="font-medium text-gray-700 text-sm sm:text-base">Type:</span>
                 <span className="ml-2 text-gray-900 text-sm sm:text-base">
                   {selectedFile.filename?.split('.').pop()?.toUpperCase() || 'Unknown'}
                 </span>
               </div>
               <div>
-                <span className="font-medium text-gray-700 text-sm sm:text-base">Created:</span> 
+                <span className="font-medium text-gray-700 text-sm sm:text-base">Created:</span>
                 <span className="ml-2 text-gray-900 text-sm sm:text-base">
                   {selectedFile.created_at ? formatDate(selectedFile.created_at) : 'Unknown date'}
                 </span>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button 
+              <button
                 className="flex-1 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors flex items-center justify-center gap-2 text-sm"
-                onClick={() => {
-                  window.open(selectedFile.translated_file_url, '_blank');
-                }}
+                onClick={() => handleViewFile(selectedFile.translated_file_url, selectedFile.filename || 'document')}
               >
                 <Eye className="w-4 h-4" />
                 View
               </button>
-              <button 
+              <button
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm"
                 onClick={async () => {
                   try {
-                    const response = await fetch(selectedFile.translated_file_url);
+                    const secureUrl = await convertPublicToSecure(selectedFile.translated_file_url);
+                    const response = await fetch(secureUrl);
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
@@ -882,7 +942,7 @@ export default function MyDocumentsPage() {
               </button>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3">
-              <button 
+              <button
                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
                 onClick={() => {
                   setIsRenaming(true);
@@ -892,7 +952,7 @@ export default function MyDocumentsPage() {
               >
                 Rename
               </button>
-              <button 
+              <button
                 className="flex-1 px-4 py-2 bg-tfe-red-100 text-tfe-red-600 rounded-lg font-medium hover:bg-tfe-red-200 transition-colors text-sm"
                 onClick={() => setShowDeleteConfirm(true)}
               >
@@ -909,11 +969,11 @@ export default function MyDocumentsPage() {
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-md sm:min-w-[400px] relative animate-fade-in">
             <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900">Confirm Delete</h3>
             <p className="text-gray-700 mb-4 sm:mb-6 text-sm sm:text-base">
-              Are you sure you want to delete <strong>"{selectedFile.filename}"</strong>? 
+              Are you sure you want to delete <strong>"{selectedFile.filename}"</strong>?
               This action will remove the file from your documents list, but the file will remain in our system.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button 
+              <button
                 className="flex-1 px-4 py-2 bg-tfe-red-600 text-white rounded-lg font-medium hover:bg-tfe-red-700 transition-colors text-sm"
                 onClick={() => {
                   handleDeleteFile();
@@ -922,7 +982,7 @@ export default function MyDocumentsPage() {
               >
                 Delete
               </button>
-              <button 
+              <button
                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
                 onClick={() => setShowDeleteConfirm(false)}
               >
@@ -999,7 +1059,7 @@ export default function MyDocumentsPage() {
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-md sm:min-w-[400px] relative animate-fade-in">
             <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900">Confirm Delete</h3>
             <p className="text-gray-700 mb-4 sm:mb-6 text-sm sm:text-base">
-              Are you sure you want to delete the folder <strong>"{selectedFolder.name}"</strong>? 
+              Are you sure you want to delete the folder <strong>"{selectedFolder.name}"</strong>?
               This action cannot be undone and will remove the folder and all its contents.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -1031,6 +1091,124 @@ export default function MyDocumentsPage() {
 
       {/* Touch Drag Indicator */}
       {/* Removed touch drag indicator */}
+
+      {/* Modal de Visualização de Documento */}
+      {showViewer && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl w-[95vw] h-[95vh] max-w-6xl flex flex-col overflow-hidden shadow-2xl">
+            {/* Header do Viewer */}
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-100 border-b">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <span className="font-medium text-gray-900 truncate max-w-[300px]">
+                  {viewingFilename || 'Document'}
+                </span>
+                {viewerType === 'pdf' && (
+                  <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">PDF</span>
+                )}
+                {viewerType === 'image' && (
+                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">Image</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {viewerType === 'image' && viewerUrl && (
+                  <>
+                    <button
+                      onClick={handleZoomOut}
+                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      title="Zoom Out"
+                    >
+                      <ZoomOut className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <span className="text-sm text-gray-600 min-w-[50px] text-center">{Math.round(imageZoom * 100)}%</span>
+                    <button
+                      onClick={handleZoomIn}
+                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      title="Zoom In"
+                    >
+                      <ZoomIn className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button
+                      onClick={handleRotate}
+                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      title="Rotate"
+                    >
+                      <RotateCw className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <div className="w-px h-6 bg-gray-300 mx-2" />
+                  </>
+                )}
+                <button
+                  onClick={closeViewer}
+                  className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                  title="Close"
+                >
+                  <X className="w-5 h-5 text-gray-600 hover:text-red-600" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conteúdo do Viewer */}
+            <div className="flex-1 overflow-auto bg-gray-800 flex items-center justify-center">
+              {loadingViewer && (
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="w-12 h-12 text-white animate-spin" />
+                  <p className="text-white text-lg">Loading document...</p>
+                </div>
+              )}
+
+              {viewerError && (
+                <div className="flex flex-col items-center gap-4 text-center p-8">
+                  <XCircle className="w-16 h-16 text-red-400" />
+                  <p className="text-white text-lg">{viewerError}</p>
+                  <button
+                    onClick={closeViewer}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+
+              {!loadingViewer && !viewerError && viewerUrl && viewerType === 'pdf' && (
+                <iframe
+                  src={viewerUrl}
+                  className="w-full h-full border-0"
+                  title="PDF Viewer"
+                />
+              )}
+
+              {!loadingViewer && !viewerError && viewerUrl && viewerType === 'image' && (
+                <div className="w-full h-full overflow-auto flex items-center justify-center p-4">
+                  <img
+                    src={viewerUrl}
+                    alt="Document"
+                    className="max-w-none transition-transform duration-200"
+                    style={{
+                      transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
+                      transformOrigin: 'center center'
+                    }}
+                  />
+                </div>
+              )}
+
+              {!loadingViewer && !viewerError && viewerUrl && viewerType === 'unknown' && (
+                <div className="flex flex-col items-center gap-4 text-center p-8">
+                  <FileText className="w-16 h-16 text-gray-400" />
+                  <p className="text-white text-lg">File format not supported for inline viewing.</p>
+                  <p className="text-gray-400">Use the download button to download the file.</p>
+                  <button
+                    onClick={closeViewer}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

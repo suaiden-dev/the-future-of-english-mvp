@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { XCircle, FileText, Calendar, Hash, Shield, Globe, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { XCircle, FileText, Calendar, Hash, Shield, Globe, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { getStatusColor, getStatusIcon } from '../../utils/documentUtils';
 import { Document } from '../../App';
 import { db } from '../../lib/supabase';
-import { ImageViewerModal } from '../../components/ImageViewerModal';
 import { getValidFileUrl } from '../../utils/fileUtils';
+import { DocumentViewerModal } from '../../components/DocumentViewerModal';
 
 interface DocumentDetailsModalProps {
   document: Document | null;
@@ -21,24 +21,22 @@ interface TranslatedDocumentInfo {
 
 export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModalProps) {
   const [translatedInfo, setTranslatedInfo] = useState<TranslatedDocumentInfo | null>(null);
-  const [loadingTranslated, setLoadingTranslated] = useState(false);
-  const [showImageViewer, setShowImageViewer] = useState(false);
-  const [imageToView, setImageToView] = useState<{ url: string; filename: string } | null>(null);
+
+  const [showDocViewer, setShowDocViewer] = useState(false);
+  const [docToView, setDocToView] = useState<{ url: string; filename: string } | null>(null);
 
   // Buscar informações do documento traduzido quando o modal abrir
   useEffect(() => {
     const fetchTranslatedInfo = async () => {
       if (!document?.id) return;
-      
-      setLoadingTranslated(true);
+
+
       try {
         const translatedData = await db.getVerificationCode(document.id);
         setTranslatedInfo(translatedData);
       } catch (error) {
         console.error('Erro ao buscar código de verificação:', error);
         setTranslatedInfo(null);
-      } finally {
-        setLoadingTranslated(false);
       }
     };
 
@@ -65,24 +63,13 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
     return `R$ ${valor.toFixed(2)}`;
   };
 
-  // Função para verificar se é uma imagem
-  const isImageFile = (filename: string) => {
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-    const extension = filename?.split('.').pop()?.toLowerCase();
-    return imageExtensions.includes(extension || '');
-  };
 
   // Função para visualizar arquivo
   const handleViewFile = async (url: string, filename: string) => {
     try {
       const validUrl = await getValidFileUrl(url);
-      if (isImageFile(filename)) {
-        setImageToView({ url: validUrl, filename });
-        setShowImageViewer(true);
-      } else {
-        // Para PDFs e outros arquivos, abrir em nova aba
-        window.open(validUrl, '_blank');
-      }
+      setDocToView({ url: validUrl, filename });
+      setShowDocViewer(true);
     } catch (error) {
       console.error('Error opening file:', error);
       alert((error as Error).message || 'Failed to open file.');
@@ -94,19 +81,19 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
     try {
       // Obter uma URL válida
       const validUrl = await getValidFileUrl(url);
-      
+
       // Fazer o download
       const response = await fetch(validUrl);
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
-      
+
       const link = window.document.createElement('a');
       link.href = downloadUrl;
       link.download = filename;
       window.document.body.appendChild(link);
       link.click();
       window.document.body.removeChild(link);
-      
+
       // Limpar o URL do blob
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
@@ -183,10 +170,10 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
           {/* Status */}
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">Status:</span>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(document)}`}>
-                  {getStatusIcon(document)}
-                  <span className="ml-1 capitalize">{document.file_url ? 'Completed' : document.status}</span>
-                </span>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(document)}`}>
+              {getStatusIcon(document)}
+              <span className="ml-1 capitalize">{document.file_url ? 'Completed' : document.status}</span>
+            </span>
           </div>
 
           {/* Upload Date */}
@@ -195,8 +182,8 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
             <div className="flex items-center text-sm text-gray-900">
               <Calendar className="w-4 h-4 mr-1" />
               <span className="text-gray-700">
-                {document.upload_date ? new Date(document.upload_date).toLocaleDateString('pt-BR') : 
-                 document.created_at ? new Date(document.created_at).toLocaleDateString('pt-BR') : '-'}
+                {document.upload_date ? new Date(document.upload_date).toLocaleDateString('pt-BR') :
+                  document.created_at ? new Date(document.created_at).toLocaleDateString('pt-BR') : '-'}
               </span>
             </div>
           </div>
@@ -213,18 +200,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
           </div>
 
           {/* Verification Code */}
-          {loadingTranslated ? (
-            <div className="bg-tfe-blue-50 p-4 rounded-lg">
-              <div className="flex items-center mb-2">
-                <Hash className="w-5 h-5 text-tfe-blue-600 mr-2" />
-                <span className="font-medium text-tfe-blue-950">Verification Code</span>
-              </div>
-              <div className="flex items-center justify-center py-4">
-                <Clock className="w-5 h-5 animate-spin text-tfe-blue-600 mr-2" />
-                <span className="text-sm text-tfe-blue-700">Loading verification code...</span>
-              </div>
-            </div>
-          ) : translatedInfo?.verification_code ? (
+          {translatedInfo?.verification_code && (
             <div className="bg-tfe-blue-50 p-4 rounded-lg">
               <div className="flex items-center mb-2">
                 <Hash className="w-5 h-5 text-tfe-blue-600 mr-2" />
@@ -235,30 +211,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
                 Use this code to verify the authenticity of your translated document.
               </p>
             </div>
-          ) : document.verification_code ? (
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <div className="flex items-center mb-2">
-                <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
-                <span className="font-medium text-yellow-950">Temporary Code</span>
-              </div>
-              <p className="font-mono text-lg text-yellow-950 mb-2">{document.verification_code}</p>
-              <p className="text-sm text-yellow-700">
-                This is a temporary code. The final verification code will be available when the translation is completed.
-              </p>
-            </div>
-          ) : (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center mb-2">
-                <AlertCircle className="w-5 h-5 text-gray-600 mr-2" />
-                <span className="font-medium text-gray-950">Processing Status</span>
-              </div>
-              <p className="text-sm text-gray-700">
-                Your document is still being processed by our system. The verification code will be available once the translation is completed and authenticated.
-              </p>
-            </div>
           )}
-
-          {/* Authentication Status */}
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">Authenticated:</span>
             <div className="flex items-center">
@@ -319,7 +272,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
                 Translation in Progress
               </h4>
               <p className="text-sm text-tfe-blue-800">
-                Our certified translators are currently working on your document. 
+                Our certified translators are currently working on your document.
                 You'll be notified when it's completed.
               </p>
             </div>
@@ -332,42 +285,42 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
                 Translation Complete
               </h4>
               <p className="text-sm text-green-800">
-                Your certified translation is ready for download. The document includes 
+                Your certified translation is ready for download. The document includes
                 official authentication and is accepted by USCIS.
               </p>
-                             <div className="flex gap-2 mt-3">
-                 {translatedInfo?.translated_file_url ? (
-                   <>
-                                           <button 
-                        className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
-                        onClick={() => handleDownload(translatedInfo.translated_file_url, `translated_${document.filename}`)}
-                      >
-                        Download Translation
-                      </button>
-                     <button 
-                       className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                       onClick={() => handleViewFile(translatedInfo.translated_file_url, `translated_${document.filename}`)}
-                     >
-                       View Translation
-                     </button>
-                   </>
-                 ) : document.file_url && (
-                   <>
-                                           <button 
-                        className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
-                        onClick={() => handleDownload(document.file_url!, document.filename)}
-                      >
-                        Download Original
-                      </button>
-                     <button 
-                       className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                       onClick={() => handleViewFile(document.file_url!, document.filename)}
-                     >
-                       View Original
-                     </button>
-                   </>
-                 )}
-               </div>
+              <div className="flex gap-2 mt-3">
+                {translatedInfo?.translated_file_url ? (
+                  <>
+                    <button
+                      className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+                      onClick={() => handleDownload(translatedInfo.translated_file_url, `translated_${document.filename}`)}
+                    >
+                      Download Translation
+                    </button>
+                    <button
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                      onClick={() => handleViewFile(translatedInfo.translated_file_url, `translated_${document.filename}`)}
+                    >
+                      View Translation
+                    </button>
+                  </>
+                ) : document.file_url && (
+                  <>
+                    <button
+                      className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+                      onClick={() => handleDownload(document.file_url!, document.filename)}
+                    >
+                      Download Original
+                    </button>
+                    <button
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                      onClick={() => handleViewFile(document.file_url!, document.filename)}
+                    >
+                      View Original
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
@@ -414,20 +367,22 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
           >
             Close
           </button>
-                 </div>
-       </div>
+        </div>
+      </div>
 
-       {/* Image Viewer Modal */}
-       {showImageViewer && imageToView && (
-         <ImageViewerModal
-           imageUrl={imageToView.url}
-           filename={imageToView.filename}
-           onClose={() => {
-             setShowImageViewer(false);
-             setImageToView(null);
-           }}
-         />
-       )}
-     </div>
-   );
- }
+      {/* Document Viewer Modal (PDF & Image) */}
+      {
+        showDocViewer && docToView && (
+          <DocumentViewerModal
+            url={docToView.url}
+            filename={docToView.filename}
+            onClose={() => {
+              setShowDocViewer(false);
+              setDocToView(null);
+            }}
+          />
+        )
+      }
+    </div >
+  );
+}

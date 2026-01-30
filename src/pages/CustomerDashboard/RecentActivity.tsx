@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Clock, FileText, Download } from 'lucide-react';
 import { Document } from '../../App';
-import { db } from '../../lib/supabase'; // Supondo que 'db' seja um wrapper com helpers
 import { supabase } from '../../lib/supabase';
 import { useI18n } from '../../contexts/I18nContext';
+import { convertPublicToSecure } from '../../lib/storage';
 
 interface RecentActivityProps {
   documents: Document[];
@@ -32,7 +32,7 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
       .eq('user_id', userId)
       .then(({ data }) => {
         setTranslatedDocs(data || []);
-  console.log('[DEBUG] translatedDocs do Supabase:', data);
+        console.log('[DEBUG] translatedDocs do Supabase:', data);
       });
   }, [documents]);
 
@@ -43,8 +43,8 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
     console.log('[DEBUG] translatedDocs para merge:', translatedDocs);
     // Para cada documento, se houver translated com mesmo filename, substitui info
     const merged = documents.map(doc => {
-  // Se houver original_filename, priorizar para exibição
-  const displayFilename = doc.original_filename || doc.filename;
+      // Se houver original_filename, priorizar para exibição
+      const displayFilename = doc.original_filename || doc.filename;
       // Busca apenas por user_id e filename semelhante
       const docFilename = (doc.filename || '').toLowerCase().trim();
       const translated = translatedDocs.find(td => {
@@ -88,13 +88,13 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
       }
 
       setLoading(true);
-      
-      console.log('🔍 Documentos na RecentActivity:', recentDocuments.map(doc => ({ 
-        id: doc.id, 
+
+      console.log('🔍 Documentos na RecentActivity:', recentDocuments.map(doc => ({
+        id: doc.id,
         filename: doc.filename,
-        user_id: doc.user_id 
+        user_id: doc.user_id
       })));
-      
+
       // Buscar por user_id em vez de document_id (que não existe)
       const { data, error } = await supabase
         .from('documents_to_be_verified')
@@ -108,9 +108,9 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
         setLoading(false);
         return;
       }
-      
+
       console.log('🔍 Dados encontrados na documents_to_be_verified:', data);
-      
+
       // Mapear por filename em vez de document_id
       const statusMap: DocumentStatus = {};
       data?.forEach(item => {
@@ -130,63 +130,15 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
     fetchDocumentStatuses();
   }, [recentDocuments]); // A dependência agora é estável graças ao useMemo
 
-  // Função para download automático (lógica mantida, pois estava correta)
+  // Função para download automático - agora usando URLs seguras
   const handleDownload = async (url: string, filename: string) => {
     try {
-      const response = await fetch(url);
-      
-      if (!response.ok && response.status === 403) {
-        console.log('URL expirado, regenerando URL...');
-        const urlParts = url.split('/');
-        const filePath = urlParts.slice(-2).join('/');
-        
-        // Tentar URL público primeiro
-        const publicUrl = await db.generatePublicUrl(filePath);
-        if (publicUrl) {
-          try {
-            const publicResponse = await fetch(publicUrl);
-            if (publicResponse.ok) {
-              const blob = await publicResponse.blob();
-              const downloadUrl = window.URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = downloadUrl;
-              link.download = filename;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              window.URL.revokeObjectURL(downloadUrl);
-              return;
-            }
-          } catch (error) {
-            console.log('URL público falhou, tentando URL pré-assinado...');
-          }
-        }
-        
-        // Tentar URL pré-assinado
-        const signedUrl = await db.generateSignedUrl(filePath);
-        if (signedUrl) {
-          try {
-            const signedResponse = await fetch(signedUrl);
-            if (signedResponse.ok) {
-              const blob = await signedResponse.blob();
-              const downloadUrl = window.URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = downloadUrl;
-              link.download = filename;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              window.URL.revokeObjectURL(downloadUrl);
-              return;
-            }
-          } catch (error) {
-            console.error('Erro ao baixar com URL pré-assinada:', error);
-          }
-        }
-        
-        throw new Error('Não foi possível baixar o arquivo. Tente novamente mais tarde.');
-      }
-      
+      // Converter URL pública para URL segura
+      const secureUrl = await convertPublicToSecure(url);
+      console.log('[handleDownload] URL segura:', secureUrl);
+
+      const response = await fetch(secureUrl);
+
       if (response.ok) {
         const blob = await response.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
@@ -206,78 +158,15 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
     }
   };
 
-  // Função para buscar documento traduzido quando status for completed
-  const handleViewDocument = async (doc: Document) => {
-    const currentStatus = documentStatuses[doc.id] || doc.status;
-    
-    console.log(`🎯 View clicked - Doc: ${doc.filename}, Status: ${currentStatus}`);
-    console.log(`🔍 Documento completo:`, doc);
-    console.log(`🔍 User ID que vamos buscar:`, doc.user_id);
-    
-    // Se o documento está completed, buscar o documento traduzido
-    if (currentStatus === 'completed') {
-      try {
-        console.log(`🔍 Fazendo busca na translated_documents com user_id: ${doc.user_id}`);
-        
-        // Primeiro, vamos ver TODOS os documentos traduzidos para este usuário
-        const { data: allTranslatedDocs, error: allError } = await supabase
-          .from('translated_documents')
-          .select('*')
-          .eq('user_id', doc.user_id);
-
-        console.log('🎯 TODOS documentos traduzidos para este user_id:', allTranslatedDocs);
-        console.log('🎯 Error da busca geral:', allError);
-
-        // Agora a busca específica - remover .single() pois pode haver múltiplos documentos
-        const { data: translatedDocs, error } = await supabase
-          .from('translated_documents')
-          .select('translated_file_url, filename')
-          .eq('user_id', doc.user_id);
-
-        console.log('🎯 Documentos traduzidos encontrados:', translatedDocs);
-        console.log('🎯 Error:', error);
-
-        // Procurar o documento traduzido que corresponde ao filename atual
-        const translatedDoc = translatedDocs?.find(td => td.filename === doc.filename && td.user_id === doc.user_id);
-        console.log('🎯 Documento traduzido correspondente:', translatedDoc);
-
-        if (translatedDoc && translatedDoc.translated_file_url && !error) {
-          // Mostrar documento traduzido
-          const fileExtension = doc.filename?.split('.').pop()?.toLowerCase();
-          const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-          
-          if (imageExtensions.includes(fileExtension || '')) {
-            // Para imagens, criar um documento temporário com a URL traduzida
-            const translatedDocForViewing = {
-              ...doc,
-              file_url: translatedDoc.translated_file_url
-            };
-            onViewDocument(translatedDocForViewing);
-          } else {
-            // Para PDFs, abrir a URL traduzida diretamente
-            window.open(translatedDoc.translated_file_url, '_blank');
-          }
-          return;
-        }
-      } catch (error) {
-        console.error('Erro ao buscar documento traduzido:', error);
-      }
-    }
-    
-    // Fallback: mostrar documento original
-    const fileExtension = doc.filename?.split('.').pop()?.toLowerCase();
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-    if (imageExtensions.includes(fileExtension || '')) {
-      onViewDocument(doc);
-    } else {
-      window.open(doc.file_url!, '_blank');
-    }
+  // Simplificado: Visualização delegada para o componente pai (que abre o modal)
+  const handleViewDocument = (doc: Document) => {
+    onViewDocument(doc);
   };
 
   // O restante do componente (getStatusBadge e JSX) permanece o mesmo.
   const getStatusBadge = (doc: Document) => {
-  // Se for documento traduzido, sempre completed
-  const currentStatus = (doc as any).translated ? 'completed' : (documentStatuses[doc.id] || doc.status);
+    // Se for documento traduzido, sempre completed
+    const currentStatus = (doc as any).translated ? 'completed' : (documentStatuses[doc.id] || doc.status);
     let color = '';
     let text = '';
     switch (currentStatus) {
