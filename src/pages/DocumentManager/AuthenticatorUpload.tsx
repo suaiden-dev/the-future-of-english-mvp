@@ -234,9 +234,10 @@ export default function AuthenticatorUpload() {
       // Verificar se o documento já existe na tabela documents
       console.log('DEBUG: Verificando se documento já existe na tabela documents...');
       // Gerar nome único para o arquivo usando o padrão centralizado (Lush America)
-      const uniqueFilename = generateUniqueFileName(selectedFile?.name || 'document');
+      const rawUniqueFilename = generateUniqueFileName(selectedFile?.name || 'document');
+      const uniqueFilename = `${user?.id}/${rawUniqueFilename}`;
       console.log('DEBUG: Nome original:', selectedFile?.name);
-      console.log('DEBUG: Nome único gerado:', uniqueFilename);
+      console.log('DEBUG: Nome único gerado com pasta:', uniqueFilename);
 
       // Como agora usamos nomes únicos, não precisamos verificar duplicatas
       // Sempre criaremos um novo documento
@@ -439,7 +440,8 @@ export default function AuthenticatorUpload() {
 
       // Upload direto para Supabase Storage
       console.log('DEBUG: Fazendo upload para Supabase Storage');
-      const filePath = generateUniqueFileName(selectedFile.name);
+      const rawFilePath = generateUniqueFileName(selectedFile.name);
+      const filePath = `${user.id}/${rawFilePath}`;
       console.log('DEBUG: Tentando upload para Supabase Storage:', filePath);
 
       const { data, error: uploadError } = await supabase.storage.from('documents').upload(filePath, selectedFile);
@@ -448,7 +450,8 @@ export default function AuthenticatorUpload() {
       let receiptPath = null;
       if (receiptFile) {
         try {
-          const receiptFilePath = generateUniqueFileName(`receipt_${receiptFile.name}`);
+          const rawReceiptFilePath = generateUniqueFileName(`receipt_${receiptFile.name}`);
+          const receiptFilePath = `${user.id}/${rawReceiptFilePath}`;
           const { data: receiptData, error: receiptError } = await supabase.storage
             .from('documents')
             .upload(receiptFilePath, receiptFile);

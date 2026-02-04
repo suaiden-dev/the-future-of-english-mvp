@@ -191,11 +191,15 @@ Deno.serve(async (req: Request) => {
       if (url && !url.startsWith('http')) {
         // Se a URL não é completa, tentar gerar uma URL pública
         try {
-          // Extrair o caminho do arquivo da URL
+          // Extrair o caminho do arquivo da URL de forma robusta
           const urlParts = url.split('/');
           const fileName = urlParts[urlParts.length - 1];
-          const userFolder = urlParts[urlParts.length - 2];
-          const filePath = `${userFolder}/${fileName}`;
+          const userFolder = urlParts.length >= 2 ? urlParts[urlParts.length - 2] : null;
+
+          // Se não houver folder (arquivo na raiz), usar apenas o filename
+          const filePath = userFolder && userFolder !== "" && !userFolder.includes(':')
+            ? `${userFolder}/${fileName}`
+            : fileName;
 
           console.log("Extracted file path:", filePath);
 
