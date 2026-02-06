@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { X, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
@@ -26,8 +27,13 @@ const ChatBot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [msgCount, setMsgCount] = useState(0);
+  const [lastMsgTimestamp, setLastMsgTimestamp] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const MAX_SESSION_MESSAGES = 15;
+  const COOLDOWN_SECONDS = 3;
 
   // Add welcome message when chat is opened for the first time
   useEffect(() => {
@@ -53,11 +59,31 @@ const ChatBot = () => {
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
+    
+    // Antigravity optimization: Rate limiting
+    const now = Date.now();
+    const secondsSinceLastMsg = (now - lastMsgTimestamp) / 1000;
+    
+    if (secondsSinceLastMsg < COOLDOWN_SECONDS) {
+      toast.error(`Please wait ${Math.ceil(COOLDOWN_SECONDS - secondsSinceLastMsg)}s before sending another message.`);
+      return;
+    }
+    
+    if (msgCount >= MAX_SESSION_MESSAGES) {
+      toast.error("You reached the message limit for this session. Please log in for more access!");
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "⚠️ Você atingiu o limite de mensagens desta sessão anônima. Para continuar nossa conversa ou tirar mais dúvidas, por favor faça login ou cadastre-se na plataforma!" 
+      }]);
+      return;
+    }
 
     const userMessage: Message = { role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    setMsgCount(prev => prev + 1);
+    setLastMsgTimestamp(now);
 
     let assistantContent = "";
 
