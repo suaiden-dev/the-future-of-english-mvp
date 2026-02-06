@@ -6,10 +6,11 @@ import { ZelleReceiptsAdmin } from '../../components/ZelleReceiptsAdmin';
 import { AffiliateWithdrawals } from './AffiliateWithdrawals';
 import { DraftCleanupApproval } from './DraftCleanupApproval';
 import { Document } from '../../App';
-import { Home, Receipt, DollarSign, FileX, TestTube } from 'lucide-react';
+import { Home, Receipt, DollarSign, FileX, TestTube, MessageSquare } from 'lucide-react';
 import { UploadSimulationPanel } from './UploadSimulationPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { DateRange } from '../../components/DateRangeFilter';
+import { ContactsTab } from './ContactsTab';
 
 interface AdminDashboardProps {
   documents: Document[];
@@ -17,7 +18,7 @@ interface AdminDashboardProps {
 
 export function AdminDashboard({ documents }: AdminDashboardProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup' | 'test-tools'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'contacts' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup' | 'test-tools'>('overview');
   const [dateRange, setDateRange] = useState<DateRange>({
     startDate: null,
     endDate: null,
@@ -26,9 +27,11 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Detectar aba ativa pela URL (similar ao FinanceDashboard)
+  // Detectar aba ativa pela URL
   useEffect(() => {
-    if (location.hash === '#zelle-receipts') {
+    if (location.hash === '#contacts') {
+      setActiveTab('contacts');
+    } else if (location.hash === '#zelle-receipts') {
       setActiveTab('zelle-receipts');
     } else if (location.hash === '#affiliate-withdrawals') {
       setActiveTab('affiliate-withdrawals');
@@ -49,7 +52,7 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
     setSelectedDocument(null);
   };
 
-  const handleTabChange = (tab: 'overview' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup' | 'test-tools') => {
+  const handleTabChange = (tab: 'overview' | 'contacts' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup' | 'test-tools') => {
     setActiveTab(tab);
     // Atualizar a URL para refletir a aba ativa
     if (tab === 'overview') {
@@ -61,6 +64,7 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
+    { id: 'contacts', label: 'Contacts', icon: MessageSquare },
     { id: 'zelle-receipts', label: 'Zelle Receipts', icon: Receipt },
     { id: 'affiliate-withdrawals', label: 'Affiliate Withdrawals', icon: DollarSign },
     { id: 'draft-cleanup', label: 'Draft Cleanup', icon: FileX },
@@ -126,6 +130,12 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
                 dateRange={dateRange}
                 onDateRangeChange={setDateRange}
               />
+            </div>
+          )}
+
+          {activeTab === 'contacts' && (
+            <div className="space-y-4 sm:space-y-6 w-full">
+              <ContactsTab />
             </div>
           )}
 

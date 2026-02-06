@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Footer } from '../components/Footer';
-import { Chatbot } from '../components/Chatbot';
+import { ChatbotHome } from '../components/ChatbotHome';
 
 export function Translations() {
   const navigate = useNavigate();
@@ -681,7 +681,7 @@ export function Translations() {
 
       
       <Footer />
-      <Chatbot />
+      <ChatbotHome />
     </div>
   );
 }

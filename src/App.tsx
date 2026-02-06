@@ -4,6 +4,7 @@ import { useDocuments, useAllDocuments } from './hooks/useDocuments';
 import { useFolders } from './hooks/useFolders';
 import { ToastProvider } from './contexts/ToastContext';
 import { I18nProvider } from './contexts/I18nContext';
+import { Toaster } from 'sonner';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { AdminLayout } from './components/AdminLayout';
@@ -11,6 +12,7 @@ import { NotificationBell } from './components/NotificationBell';
 import { Mentorship as Home } from './pages/Home';
 import { Translations } from './pages/Translations';
 import { AdminDashboard } from './pages/AdminDashboard';
+
 import { UserManagement } from './pages/AdminDashboard/UserManagement';
 import { AuthenticatorControl } from './pages/AdminDashboard/AuthenticatorControl';
 import { AffiliateWithdrawals } from './pages/AdminDashboard/AffiliateWithdrawals';
@@ -29,7 +31,10 @@ import { ZelleCheckout } from './pages/ZelleCheckout';
 import { AffiliatesRegister } from './pages/AffiliatesRegister';
 import { AffiliatesLogin } from './pages/AffiliatesLogin';
 import { AffiliateDashboard } from './pages/AffiliateDashboard';
-import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, DollarSign, Activity } from 'lucide-react';
+import Initial from './pages/Initial';
+import Transfer from './pages/Transfer';
+import Cos from './pages/Cos';
+import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, DollarSign, Activity, MessageSquare } from 'lucide-react';
 
 import { Page } from './types/Page';
 import { Database } from './lib/database.types';
@@ -195,6 +200,7 @@ function App() {
       if (user.role === 'admin') {
         const items = [
           { id: 'admin', label: 'Admin Dashboard', icon: Shield, page: 'admin' as Page },
+          { id: 'contacts', label: 'Contacts', icon: MessageSquare, page: '/admin#contacts' },
           { id: 'action-logs', label: 'Action Logs', icon: Activity, page: '/admin/action-logs' },
           { id: 'user-management', label: 'User Management', icon: Users, page: 'user-management' as Page },
           { id: 'authenticator-control', label: 'Authenticator Control', icon: UserCheck, page: 'authenticator-control' as Page },
@@ -314,12 +320,13 @@ function App() {
   return (
     <I18nProvider>
       <ToastProvider>
+        <Toaster position="top-right" richColors />
         <div className="min-h-screen bg-gray-50">
       {/* Mobile menu */}
       <MobileMenu />
       
       {/* Renderiza Header apenas em rotas públicas */}
-      {(['/', '/translations', '/verify', '/login', '/register', '/affiliates/register', '/affiliates/login'].includes(location.pathname) || 
+      {(['/', '/translations', '/verify', '/login', '/register', '/affiliates/register', '/affiliates/login', '/initial', '/transfer', '/cos'].includes(location.pathname) || 
         (location.pathname.startsWith('/affiliates') && !location.pathname.startsWith('/affiliates/dashboard'))) && (
         <Header 
           user={user} 
@@ -331,6 +338,9 @@ function App() {
       <AuthRedirect>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/initial" element={<Initial />} />
+          <Route path="/transfer" element={<Transfer />} />
+          <Route path="/cos" element={<Cos />} />
           <Route path="/translations" element={<Translations />} />
 
           <Route path="/verify" element={<DocumentVerification />} />
@@ -499,6 +509,8 @@ function App() {
               <ActionLogs />
             </AdminLayout>
           ) : <Navigate to="/login" />} />
+
+
           
           {/* Legacy routes for backward compatibility */}
           <Route path="/upload" element={user ? (

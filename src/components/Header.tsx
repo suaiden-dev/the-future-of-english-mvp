@@ -82,7 +82,38 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
               <span>Translations</span>
             </button>
             
-
+            <button
+              onClick={() => navigate('/initial')}
+              className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === '/initial'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-950' 
+                  : 'text-gray-600 hover:text-tfe-blue-950'
+              }`}
+            >
+              <span>Initial</span>
+            </button>
+            
+            <button
+              onClick={() => navigate('/transfer')}
+              className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === '/transfer'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-950' 
+                  : 'text-gray-600 hover:text-tfe-blue-950'
+              }`}
+            >
+              <span>Transfer</span>
+            </button>
+            
+            <button
+              onClick={() => navigate('/cos')}
+              className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === '/cos'
+                  ? 'bg-tfe-blue-50 text-tfe-blue-950' 
+                  : 'text-gray-600 hover:text-tfe-blue-950'
+              }`}
+            >
+              <span>COS</span>
+            </button>
             
             <button
               onClick={() => navigate('/verify')}

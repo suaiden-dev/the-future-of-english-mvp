@@ -3,7 +3,7 @@ import { User, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
-import { Chatbot } from '../components/Chatbot';
+import { ChatbotHome } from '../components/ChatbotHome';
 
 const Login: React.FC = () => {
   const { signIn } = useAuth();
@@ -206,7 +206,7 @@ const Login: React.FC = () => {
           </button>
         </div>
       </div>
-      <Chatbot />
+      <ChatbotHome />
     </div>
   );
 };

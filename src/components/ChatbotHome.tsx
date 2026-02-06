@@ -10,7 +10,7 @@ interface Message {
 
 const OFFLINE_MESSAGE = "Our team is currently offline, but we'll be back soon!";
 
-export function Chatbot() {
+export function ChatbotHome() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
