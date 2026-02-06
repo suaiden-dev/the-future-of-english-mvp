@@ -14,25 +14,6 @@ const Header = () => {
         {/* Navigation */}
         <nav className="flex items-center justify-center gap-4 md:gap-6 mb-8 flex-wrap">
           <span className="text-sm font-medium tracking-widest uppercase opacity-80">The Future</span>
-          <div className="w-px h-4 bg-white/30" />
-          <Link 
-            to="/cos" 
-            className="text-sm font-medium px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm"
-          >
-            COS
-          </Link>
-          <Link 
-            to="/transfer" 
-            className="text-sm font-medium px-3 py-1 rounded-full hover:bg-white/10 transition-colors"
-          >
-            Transfer
-          </Link>
-          <Link 
-            to="/initial" 
-            className="text-sm font-medium px-3 py-1 rounded-full hover:bg-white/10 transition-colors"
-          >
-            Initial
-          </Link>
         </nav>
 
         {/* Title */}

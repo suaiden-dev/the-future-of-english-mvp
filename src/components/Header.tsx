@@ -18,7 +18,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
   const { t } = useI18n();
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
         <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo - Visible on all screen sizes */}
           <div className="flex items-center min-w-0 flex-shrink-0">
@@ -57,10 +57,10 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
           </div>
 
           {/* Navigation - Hidden on mobile and small tablets */}
-          <nav className="hidden lg:flex items-center space-x-2 xl:space-x-4 flex-1 justify-center">
+          <nav className="hidden lg:flex pl-2 items-center space-x-3 xl:space-x-6 flex-1 justify-center">
             <button
               onClick={() => navigate('/')}
-              className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center space-x-1 pl-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 currentPage === 'mentorship' 
                   ? 'bg-tfe-blue-50 text-tfe-blue-950' 
                   : 'text-gray-600 hover:text-tfe-blue-950'
@@ -72,7 +72,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
             
             <button
               onClick={() => navigate('/translations')}
-              className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 currentPage === 'translations' 
                   ? 'bg-tfe-blue-50 text-tfe-blue-950' 
                   : 'text-gray-600 hover:text-tfe-blue-950'
@@ -84,7 +84,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
             
             <button
               onClick={() => navigate('/initial')}
-              className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center space-x-1 px-1 py-2 rounded-md text-sm font-medium transition-colors ${
                 location.pathname === '/initial'
                   ? 'bg-tfe-blue-50 text-tfe-blue-950' 
                   : 'text-gray-600 hover:text-tfe-blue-950'
@@ -95,7 +95,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
             
             <button
               onClick={() => navigate('/transfer')}
-              className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 location.pathname === '/transfer'
                   ? 'bg-tfe-blue-50 text-tfe-blue-950' 
                   : 'text-gray-600 hover:text-tfe-blue-950'
@@ -106,7 +106,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
             
             <button
               onClick={() => navigate('/cos')}
-              className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 location.pathname === '/cos'
                   ? 'bg-tfe-blue-50 text-tfe-blue-950' 
                   : 'text-gray-600 hover:text-tfe-blue-950'
@@ -117,7 +117,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
             
             <button
               onClick={() => navigate('/verify')}
-              className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 currentPage === 'verify' 
                   ? 'bg-tfe-blue-50 text-tfe-blue-950' 
                   : 'text-gray-600 hover:text-tfe-blue-950'
@@ -129,13 +129,13 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
           </nav>
 
           {/* User Actions - Desktop only */}
-          <div className="hidden lg:flex items-center space-x-2 xl:space-x-4 min-w-0">
+          <div className="hidden lg:flex items-center space-x-4 xl:space-x-8 min-w-0">
             {user ? (
               <div className="flex items-center space-x-2 xl:space-x-4 min-w-0">
                 
                 <button
                   onClick={() => navigate('/dashboard')}
-                  className={`flex items-center space-x-1 px-2 xl:px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex items-center space-x-1 px-3 xl:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPage === 'dashboard-customer' 
                       ? 'bg-tfe-blue-50 text-tfe-blue-950' 
                       : 'text-gray-600 hover:text-tfe-blue-950'
@@ -145,7 +145,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
                   <span>Dashboard</span>
                 </button>
                 
-                                <div className="flex items-center space-x-2 min-w-0">
+                <div className="flex items-center space-x-4 xl:space-x-6 min-w-0">
                   <LanguageSelector />
                   <span className="text-sm text-gray-600 truncate max-w-32 xl:max-w-48">
                     {t('dashboard.welcome')}, {user.user_metadata?.name || user.email}
