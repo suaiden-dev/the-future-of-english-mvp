@@ -9,7 +9,7 @@ import LanguageSelector from './LanguageSelector';
 export interface NavItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }>;
   page: string;
 }
 
@@ -102,7 +102,7 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-tfe-blue-600' : 'text-gray-400'}`} />
+                {Icon && <Icon className={`w-5 h-5 ${isActive ? 'text-tfe-blue-600' : 'text-gray-400'}`} />}
                 <span className="font-medium">{item.label}</span>
               </button>
             );

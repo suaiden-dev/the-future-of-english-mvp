@@ -163,16 +163,20 @@ function App() {
   const getNavItems = () => {
     
     const baseItems = [
-      { id: 'translations', label: 'Translations', icon: FileText, page: 'translations' as Page },
-      { id: 'verify', label: 'Verify Document', icon: Search, page: 'verify' as Page },
+      { id: 'home', label: 'Home', page: '/' as Page },
+      { id: 'translations', label: 'Translations', page: 'translations' as Page },
+      { id: 'initial', label: 'Initial', page: 'initial' as Page },
+      { id: 'transfer', label: 'Transfer', page: 'transfer' as Page },
+      { id: 'cos', label: 'COS', page: 'cos' as Page },
+      { id: 'verify', label: 'Verify Document', page: 'verify' as Page },
     ];
 
     // Se nÃ£o estÃ¡ logado, retorna itens bÃ¡sicos + login/register
     if (!user) {
       const result = [
         ...baseItems,
-        { id: 'login', label: 'Login', icon: LogIn, page: 'login' as Page },
-        { id: 'register', label: 'Register', icon: UserPlus, page: 'register' as Page },
+        { id: 'login', label: 'Login', page: 'login' as Page },
+        { id: 'register', label: 'Register', page: 'register' as Page },
       ];
       return result;
     }
@@ -191,39 +195,39 @@ function App() {
     if (isDashboardArea) {
       if (user.role === 'authenticator') {
         const items = [
-          { id: 'authenticator-dashboard', label: 'Authenticator Dashboard', icon: Shield, page: '/authenticator' },
-          { id: 'documents', label: 'Documents to Authenticate', icon: FileText, page: '/documents' },
+          { id: 'authenticator-dashboard', label: 'Authenticator Dashboard', page: '/authenticator' },
+          { id: 'documents', label: 'Documents to Authenticate', page: '/documents' },
         ];
         return items;
       }
       
       if (user.role === 'admin') {
         const items = [
-          { id: 'admin', label: 'Admin Dashboard', icon: Shield, page: 'admin' as Page },
-          { id: 'contacts', label: 'Contacts', icon: MessageSquare, page: '/admin#contacts' },
-          { id: 'action-logs', label: 'Action Logs', icon: Activity, page: '/admin/action-logs' },
-          { id: 'user-management', label: 'User Management', icon: Users, page: 'user-management' as Page },
-          { id: 'authenticator-control', label: 'Authenticator Control', icon: UserCheck, page: 'authenticator-control' as Page },
+          { id: 'admin', label: 'Admin Dashboard', page: 'admin' as Page },
+          { id: 'contacts', label: 'Contacts', page: '/admin#contacts' },
+          { id: 'action-logs', label: 'Action Logs', page: '/admin/action-logs' },
+          { id: 'user-management', label: 'User Management', page: 'user-management' as Page },
+          { id: 'authenticator-control', label: 'Authenticator Control', page: 'authenticator-control' as Page },
         ];
         return items;
       }
       
       if (user.role === 'finance') {
         const items = [
-          { id: 'finance-dashboard', label: 'Finance Dashboard', icon: Shield, page: '/finance' },
-          { id: 'action-logs', label: 'Action Logs', icon: Activity, page: '/admin/action-logs' },
-          { id: 'profile', label: 'Profile', icon: UserIcon, page: '/finance/profile' },
+          { id: 'finance-dashboard', label: 'Finance Dashboard', page: '/finance' },
+          { id: 'action-logs', label: 'Action Logs', page: '/admin/action-logs' },
+          { id: 'profile', label: 'Profile', page: '/finance/profile' },
         ];
         return items;
       }
       
       // UsuÃ¡rio comum no dashboard
       const userItems = [
-        { id: 'dashboard', label: 'Overview', icon: UserIcon, page: '/dashboard' },
-        { id: 'upload-document', label: 'Get Translation', icon: UploadIcon, page: '/dashboard/upload' },
-        { id: 'my-translations', label: 'My Translations', icon: FileText, page: '/dashboard/progress' },
-        { id: 'my-documents', label: 'My Documents', icon: Folder, page: '/dashboard/documents' },
-        { id: 'profile', label: 'Profile', icon: UserIcon, page: '/dashboard/profile' },
+        { id: 'dashboard', label: 'Overview', page: '/dashboard' },
+        { id: 'upload-document', label: 'Get Translation', page: '/dashboard/upload' },
+        { id: 'my-translations', label: 'My Translations', page: '/dashboard/progress' },
+        { id: 'my-documents', label: 'My Documents', page: '/dashboard/documents' },
+        { id: 'profile', label: 'Profile', page: '/dashboard/profile' },
       ];
       
       return userItems;
@@ -232,7 +236,7 @@ function App() {
     // Se estÃ¡ na Home ou outras pÃ¡ginas pÃºblicas, mostrar itens da Home + ir para Dashboard
     const homeItems = [
       ...baseItems,
-      { id: 'go-to-dashboard', label: 'My Dashboard â†’', icon: UserIcon, page: '/dashboard' },
+      { id: 'go-to-dashboard', label: 'My Dashboard â†’', page: '/dashboard' },
     ];
     
     return homeItems;

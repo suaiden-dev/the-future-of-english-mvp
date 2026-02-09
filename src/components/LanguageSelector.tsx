@@ -28,8 +28,8 @@ const LanguageSelector: React.FC = () => {
         aria-haspopup="true"
       >
         <Globe className="w-4 h-4" />
-        <span className="hidden sm:inline">{currentLang?.flag}</span>
-        <span className="hidden md:inline">{currentLang?.name}</span>
+        <span>{currentLang?.flag}</span>
+        <span>{currentLang?.name}</span>
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 

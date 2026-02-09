@@ -66,7 +66,6 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
                   : 'text-gray-600 hover:text-tfe-blue-950'
               }`}
             >
-              <Home className="w-4 h-4" />
               <span>Home</span>
             </button>
             
@@ -78,7 +77,6 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
                   : 'text-gray-600 hover:text-tfe-blue-950'
               }`}
             >
-              <FileText className="w-4 h-4" />
               <span>Translations</span>
             </button>
             
@@ -115,17 +113,6 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
               <span>COS</span>
             </button>
             
-            <button
-              onClick={() => navigate('/verify')}
-              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                currentPage === 'verify' 
-                  ? 'bg-tfe-blue-50 text-tfe-blue-950' 
-                  : 'text-gray-600 hover:text-tfe-blue-950'
-              }`}
-            >
-              <Search className="w-4 h-4" />
-              <span>Verify</span>
-            </button>
           </nav>
 
           {/* User Actions - Desktop only */}
@@ -141,7 +128,6 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
                       : 'text-gray-600 hover:text-tfe-blue-950'
                   }`}
                 >
-                  <User className="w-4 h-4" />
                   <span>Dashboard</span>
                 </button>
                 
@@ -154,7 +140,6 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
                     onClick={onLogout}
                     className="flex items-center space-x-1 px-2 xl:px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-tfe-red-600 transition-colors"
                   >
-                    <LogOut className="w-4 h-4" />
                     <span>Logout</span>
                   </button>
                 </div>
