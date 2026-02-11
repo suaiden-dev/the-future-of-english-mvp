@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, DollarSign, Globe, Award, X, Plus } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Info, Shield, DollarSign, Globe, Award, X, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { fileStorage } from '../../utils/fileStorage';
@@ -503,66 +503,79 @@ export default function UploadDocument() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden">
+      {/* Decorative background blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#C71B2D]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#163353]/5 rounded-full blur-[120px]" />
+      </div>
+      <div className="max-w-7xl mx-auto px-4 py-10 relative z-10">
         <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">{t('upload.pageTitle')}</h1>
-          <p className="text-gray-600 text-lg">{t('upload.pageDescription')}</p>
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2 tracking-tight">
+            {t('upload.pageTitle')}
+          </h1>
+          <p className="text-gray-600 text-lg font-medium opacity-80">
+            {t('upload.pageDescription')}
+          </p>
         </div>
+
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Upload Form */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-white/80 backdrop-blur-xl rounded-[30px] shadow-lg p-8 border border-gray-200">
               {/* Instructions Section */}
-              <div className="bg-tfe-blue-50 border border-tfe-blue-200 rounded-xl p-6 mb-8">
-                <h2 className="text-2xl font-bold text-tfe-blue-950 mb-3 flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
+              <div className="bg-gradient-to-br from-[#163353]/5 to-[#C71B2D]/5 backdrop-blur-sm border border-[#163353]/10 rounded-2xl p-6 mb-8">
+                <h2 className="text-xl font-black text-[#163353] mb-6 flex items-center gap-2 uppercase tracking-widest">
+                  <FileText className="w-5 h-5 text-[#C71B2D]" />
                   {t('upload.howItWorksTitle')}
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-tfe-blue-800">
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-tfe-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">1</div>
-                    <p className="font-medium">{t('upload.steps.upload.title')}</p>
-                    <p className="text-tfe-blue-700">{t('upload.steps.upload.description')}</p>
-                  </div>
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-tfe-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">2</div>
-                    <p className="font-medium">{t('upload.steps.choose.title')}</p>
-                    <p className="text-tfe-blue-700">{t('upload.steps.choose.description')}</p>
-                  </div>
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-tfe-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">3</div>
-                    <p className="font-medium">{t('upload.steps.receive.title')}</p>
-                    <p className="text-tfe-blue-700">{t('upload.steps.receive.description')}</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[
+                    { step: 1, title: t('upload.steps.upload.title'), desc: t('upload.steps.upload.description') },
+                    { step: 2, title: t('upload.steps.choose.title'), desc: t('upload.steps.choose.description') },
+                    { step: 3, title: t('upload.steps.receive.title'), desc: t('upload.steps.receive.description') }
+                  ].map((item) => (
+                    <div key={item.step} className="flex flex-col items-center text-center group">
+                      <div className="w-10 h-10 bg-[#163353] text-white rounded-xl flex items-center justify-center font-black mb-3 shadow-lg group-hover:scale-110 transition-transform">
+                        {item.step}
+                      </div>
+                      <p className="font-bold text-gray-900 mb-1">{item.title}</p>
+                      <p className="text-sm text-gray-600">{item.desc}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {/* Upload Area */}
                 <section>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-2xl font-bold text-gray-800">{t('upload.form.selectDocument')}</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-black text-gray-900 uppercase tracking-widest">{t('upload.form.selectDocument')}</h2>
                     {documents.length > 0 && (
                       <button
                         onClick={() => inputRef.current?.click()}
-                        className="flex items-center gap-2 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg hover:bg-tfe-blue-700 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#163353]/10 text-[#163353] rounded-xl font-bold hover:bg-[#163353]/20 transition-all border border-[#163353]/10 text-sm"
                       >
                         <Plus className="w-4 h-4" />
-                        Adicionar Mais Documentos
+                        Adicionar Mais
                       </button>
                     )}
                   </div>
                   <div
-                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer flex flex-col items-center justify-center ${dragActive ? 'border-tfe-blue-500 bg-tfe-blue-50' : 'border-gray-300 hover:border-tfe-blue-400'}`}
+                    className={`relative group border-2 border-dashed rounded-[24px] p-10 text-center transition-all cursor-pointer flex flex-col items-center justify-center overflow-hidden ${
+                      dragActive 
+                        ? 'border-[#C71B2D] bg-[#C71B2D]/5 scale-[0.99]' 
+                        : 'border-gray-200 bg-gray-50/50 hover:border-[#163353]/40 hover:bg-white/80'
+                    }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     onClick={() => inputRef.current?.click()}
-                    style={{ minHeight: 160 }}
-                    aria-label="Upload document area"
+                    style={{ minHeight: 200 }}
                   >
+                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                    
                     <input
                       type="file"
                       ref={inputRef}
@@ -570,206 +583,228 @@ export default function UploadDocument() {
                       accept=".pdf,.jpg,.jpeg,.png"
                       multiple
                       className="hidden"
-                      id="file-upload"
-                      aria-label="Upload document file input"
-                      title="Select documents to upload"
                     />
-                    <div className="flex flex-col items-center gap-2">
-                      <Upload className="w-12 h-12 text-gray-400 mb-2" />
-                      <p className="text-base text-gray-600 font-medium">
-                        {documents.length === 0
-                          ? t('upload.form.uploadArea.clickToUpload')
-                          : 'Arraste e solte mais arquivos ou clique para adicionar'}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {t('upload.form.uploadArea.supportedFormats')} - Você pode adicionar múltiplos documentos
-                      </p>
+                    
+                    <div className="relative z-10 flex flex-col items-center gap-4">
+                      <div className={`p-4 rounded-2xl transition-colors ${dragActive ? 'bg-[#C71B2D]/10 text-[#C71B2D]' : 'bg-[#163353]/5 text-[#163353] group-hover:bg-[#163353]/10'}`}>
+                        <Upload className="w-10 h-10" />
+                      </div>
+                      <div>
+                        <p className="text-lg text-gray-900 font-black">
+                          {documents.length === 0
+                            ? t('upload.form.uploadArea.clickToUpload')
+                            : 'Solte para adicionar mais arquivos'}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
+                          {t('upload.form.uploadArea.supportedFormats')}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </section>
 
                 {/* Documents List */}
                 {documents.length > 0 && (
-                  <section className="space-y-4">
-                    <h2 className="text-xl font-bold text-gray-800">Documentos Adicionados ({documents.length})</h2>
-                    {documents.map((doc) => (
-                      <div key={doc.id} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3 flex-1">
-                            <FileText className="w-8 h-8 text-tfe-blue-500" />
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900">{doc.file.name}</p>
-                              <p className="text-sm text-gray-500">{(doc.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <section className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-gray-200" />
+                      <h2 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
+                        Documentos Adicionados ({documents.length})
+                      </h2>
+                      <div className="h-px flex-1 bg-gray-200" />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {documents.map((doc) => (
+                        <div key={doc.id} className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 hover:border-[#C71B2D]/30 transition-all group">
+                          <div className="flex items-start justify-between mb-6">
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="w-12 h-12 bg-[#163353]/10 rounded-xl flex items-center justify-center text-[#163353] group-hover:bg-[#C71B2D]/10 group-hover:text-[#C71B2D] transition-colors">
+                                <FileText className="w-6 h-6" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-black text-gray-900 leading-tight">{doc.file.name}</p>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">
+                                  {(doc.file.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <button
-                            onClick={() => removeDocument(doc.id)}
-                            className="p-2 text-tfe-red-500 hover:bg-tfe-red-50 rounded-lg transition-colors"
-                            title="Remover documento"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-
-                        {doc.fileUrl && doc.file.type.startsWith('image/') && (
-                          <div className="mb-4">
-                            <img src={doc.fileUrl} alt="Preview" className="max-h-32 rounded shadow" />
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Pages */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              {t('upload.form.numberOfPages')}
-                            </label>
-                            <input
-                              type="number"
-                              min="1"
-                              max="50"
-                              value={doc.pages}
-                              onChange={e => updateDocument(doc.id, { pages: Math.max(1, parseInt(e.target.value) || 1) })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                              disabled
-                            />
-                          </div>
-
-                          {/* Translation Type */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              {t('upload.form.translationType')}
-                            </label>
-                            <select
-                              value={doc.tipoTrad}
-                              onChange={e => updateDocument(doc.id, { tipoTrad: e.target.value as 'Certified' | 'Notarized' })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                            <button
+                              onClick={() => removeDocument(doc.id)}
+                              className="p-2 text-gray-400 hover:text-[#C71B2D] hover:bg-[#C71B2D]/5 rounded-xl transition-all"
+                              title="Remover documento"
                             >
-                              {translationTypes.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                              ))}
-                            </select>
+                              <X className="w-5 h-5" />
+                            </button>
                           </div>
 
-                          {/* Is Bank Statement */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              {t('upload.form.isBankStatement')}
-                            </label>
-                            <select
-                              value={doc.isExtrato ? 'yes' : 'no'}
-                              onChange={e => updateDocument(doc.id, { isExtrato: e.target.value === 'yes' })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                            >
-                              <option value="no">{t('upload.form.selectOptions.no')}</option>
-                              <option value="yes">{t('upload.form.selectOptions.yes')}</option>
-                            </select>
-                          </div>
-
-                          {/* Original Language */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              {t('upload.form.originalLanguage')}
-                            </label>
-                            <select
-                              value={doc.idiomaRaiz}
-                              onChange={e => updateDocument(doc.id, { idiomaRaiz: e.target.value })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                            >
-                              {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
-                                <option key={index} value={lang}>{lang}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Target Language */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              {t('upload.form.targetLanguage')}
-                            </label>
-                            <select
-                              value={doc.idiomaDestino}
-                              onChange={e => updateDocument(doc.id, { idiomaDestino: e.target.value })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
-                            >
-                              {targetLanguages.map(lang => (
-                                <option key={lang} value={lang}>{lang}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Currency Fields - Only show when isExtrato is true */}
-                        {doc.isExtrato && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {/* Pages */}
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                4.1. Source Currency (Original Document)
+                              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">
+                                {t('upload.form.numberOfPages')}
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="50"
+                                  value={doc.pages}
+                                  onChange={e => updateDocument(doc.id, { pages: Math.max(1, parseInt(e.target.value) || 1) })}
+                                  className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-[#C71B2D] focus:border-transparent transition-all outline-none disabled:opacity-70"
+                                  disabled
+                                />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Translation Type */}
+                            <div>
+                              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">
+                                {t('upload.form.translationType')}
                               </label>
                               <select
-                                value={doc.sourceCurrency}
-                                onChange={e => updateDocument(doc.id, { sourceCurrency: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                                value={doc.tipoTrad}
+                                onChange={e => updateDocument(doc.id, { tipoTrad: e.target.value as 'Certified' | 'Notarized' })}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-[#C71B2D] focus:border-transparent transition-all outline-none cursor-pointer appearance-none"
                               >
-                                {currencies.map(currency => (
-                                  <option key={currency} value={currency}>{currency}</option>
+                                {translationTypes.map(opt => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}
                               </select>
                             </div>
 
+                            {/* Is Bank Statement */}
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                4.2. Target Currency (Translation To)
+                              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">
+                                {t('upload.form.isBankStatement')}
                               </label>
                               <select
-                                value={doc.targetCurrency}
-                                onChange={e => updateDocument(doc.id, { targetCurrency: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-base"
+                                value={doc.isExtrato ? 'yes' : 'no'}
+                                onChange={e => updateDocument(doc.id, { isExtrato: e.target.value === 'yes' })}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-[#C71B2D] focus:border-transparent transition-all outline-none cursor-pointer appearance-none"
                               >
-                                {currencies.map(currency => (
-                                  <option key={currency} value={currency}>{currency}</option>
+                                <option value="no">{t('upload.form.selectOptions.no')}</option>
+                                <option value="yes">{t('upload.form.selectOptions.yes')}</option>
+                              </select>
+                            </div>
+
+                            {/* Original Language */}
+                            <div>
+                              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">
+                                {t('upload.form.originalLanguage')}
+                              </label>
+                              <select
+                                value={doc.idiomaRaiz}
+                                onChange={e => updateDocument(doc.id, { idiomaRaiz: e.target.value })}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-[#C71B2D] focus:border-transparent transition-all outline-none cursor-pointer appearance-none"
+                              >
+                                {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
+                                  <option key={index} value={lang}>{lang}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Target Language */}
+                            <div>
+                              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">
+                                {t('upload.form.targetLanguage')}
+                              </label>
+                              <select
+                                value={doc.idiomaDestino}
+                                onChange={e => updateDocument(doc.id, { idiomaDestino: e.target.value })}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-[#C71B2D] focus:border-transparent transition-all outline-none cursor-pointer appearance-none"
+                              >
+                                {targetLanguages.map(lang => (
+                                  <option key={lang} value={lang}>{lang}</option>
                                 ))}
                               </select>
                             </div>
                           </div>
-                        )}
 
-                        {/* Document Price */}
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Valor deste documento:</span>
-                            <span className="text-lg font-bold text-tfe-blue-950">
-                              ${calcularValor(doc.pages, doc.isExtrato, doc.tipoTrad)}.00
-                            </span>
+                          {doc.isExtrato && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-gray-100">
+                              <div>
+                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">
+                                  4.1. Source Currency (Original Document)
+                                </label>
+                                <select
+                                  value={doc.sourceCurrency}
+                                  onChange={e => updateDocument(doc.id, { sourceCurrency: e.target.value })}
+                                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-[#C71B2D] focus:border-transparent transition-all outline-none cursor-pointer appearance-none"
+                                >
+                                  {currencies.map(currency => (
+                                    <option key={currency} value={currency}>{currency}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">
+                                  4.2. Target Currency (Translation To)
+                                </label>
+                                <select
+                                  value={doc.targetCurrency}
+                                  onChange={e => updateDocument(doc.id, { targetCurrency: e.target.value })}
+                                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-[#C71B2D] focus:border-transparent transition-all outline-none cursor-pointer appearance-none"
+                                >
+                                  {currencies.map(currency => (
+                                    <option key={currency} value={currency}>{currency}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="mt-6 pt-4 border-t border-gray-100">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Subtotal</span>
+                              <span className="text-2xl font-black text-[#163353] tracking-tight">
+                                ${calcularValor(doc.pages, doc.isExtrato, doc.tipoTrad)}.00
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </section>
                 )}
 
-                {/* Error/Success Messages */}
                 {error && (
-                  <div className="flex items-center bg-tfe-red-50 border border-tfe-red-200 rounded-lg p-3 text-tfe-red-700">
-                    <AlertCircle className="w-5 h-5 mr-2" />
-                    <span>{error}</span>
+                  <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-2xl p-4 text-red-700 animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm font-bold">{error}</span>
                   </div>
                 )}
                 {success && (
-                  <div className="flex items-center bg-green-50 border border-green-200 rounded-lg p-3 text-green-700">
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    <span>{success}</span>
+                  <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-2xl p-4 text-green-700 animate-in fade-in slide-in-from-top-1">
+                    <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm font-bold">{success}</span>
                   </div>
                 )}
 
-                {/* Upload Button */}
                 {documents.length > 0 && (
-                  <div className="pt-4">
+                  <div className="pt-4 hidden lg:block">
                     <button
                       onClick={handleUpload}
-                      disabled={documents.length === 0 || isUploading}
-                      className="w-full bg-gradient-to-r from-tfe-blue-950 to-tfe-red-950 text-white py-4 rounded-xl font-bold shadow-lg hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-all"
+                      disabled={isUploading}
+                      className="group relative w-full bg-[#163353] hover:bg-[#0A1A2F] text-white py-5 rounded-[20px] font-black text-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl overflow-hidden shadow-[#163353]/20"
                     >
-                      {isUploading ? t('common.loading') : `${t('upload.summary.processPayment')} $${totalValue}.00`}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+                      <div className="relative flex items-center justify-center gap-3">
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                            <span>{t('common.loading')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <DollarSign className="w-6 h-6" />
+                            <span>{t('upload.summary.processPayment')} ${totalValue}.00</span>
+                          </>
+                        )}
+                      </div>
                     </button>
                   </div>
                 )}
@@ -777,167 +812,69 @@ export default function UploadDocument() {
             </div>
           </div>
 
-          {/* Right: Information Card */}
           <div className="lg:col-span-1">
-            <div className="sticky top-8 space-y-6">
-              {/* Summary Card */}
-              <div className="bg-tfe-blue-50 rounded-2xl p-6 border border-tfe-blue-100">
-                <h3 className="text-2xl font-bold text-tfe-blue-950 mb-3 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5" />
+            <div className="sticky top-10 space-y-6">
+              <div className="bg-[#163353] rounded-[30px] p-8 text-white shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700" />
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#C71B2D]/20 rounded-full blur-2xl -ml-10 -mb-10 group-hover:scale-150 transition-transform duration-700" />
+                
+                <h3 className="text-xl font-black mb-8 flex items-center gap-3 uppercase tracking-widest relative z-10">
+                  <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
                   {t('upload.summary.title')}
                 </h3>
+                
                 {documents.length > 0 ? (
-                  <>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-base text-gray-700">Total ({documents.length} {documents.length === 1 ? 'documento' : 'documentos'}):</span>
-                      <span className="text-2xl font-bold text-tfe-blue-950">${totalValue}.00</span>
-                    </div>
-                    <div className="space-y-2 mb-3">
-                      {documents.map((doc, index) => (
-                        <div key={doc.id} className="text-xs text-tfe-blue-950/80 bg-tfe-blue-100 rounded p-2">
-                          <p className="font-medium">{doc.file.name}</p>
-                          <p>
-                            {translationTypes.find(t => t.value === doc.tipoTrad)?.label} ${doc.tipoTrad === 'Notarized' ? '20' : '15'}{doc.isExtrato ? ' + $10' : ''} {t('upload.summary.pricing.perPage')} × {doc.pages} {doc.pages !== 1 ? t('upload.summary.pages') : t('upload.summary.page')} = ${calcularValor(doc.pages, doc.isExtrato, doc.tipoTrad)}.00
-                          </p>
-                          <p className="text-tfe-blue-950/70 flex items-center gap-1 mt-1">
-                            <Globe className="w-3 h-3" />
-                            {doc.idiomaRaiz} → {doc.idiomaDestino}
-                          </p>
+                  <div className="relative z-10 space-y-6">
+                    <div className="space-y-3 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
+                      {documents.map((doc) => (
+                        <div key={doc.id} className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 hover:border-white/20 transition-all">
+                          <p className="font-bold text-sm truncate mb-2">{doc.file.name}</p>
+                          <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-white/60">
+                            <span>{doc.pages} {doc.pages === 1 ? 'Page' : 'Pages'}</span>
+                            <span className="text-white">${calcularValor(doc.pages, doc.isExtrato, doc.tipoTrad)}.00</span>
+                          </div>
                         </div>
                       ))}
                     </div>
-                  </>
+                    <div className="pt-6 border-t border-white/10 space-y-4">
+                      <div className="flex justify-between items-end">
+                        <span className="text-xs font-black uppercase tracking-widest text-white/60">Total Amount</span>
+                        <span className="text-4xl font-black tracking-tight">${totalValue}.00</span>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-600">Adicione documentos para ver o resumo</p>
+                  <div className="relative z-10 text-center py-10 opacity-60">
+                    <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    <p className="text-sm font-bold uppercase tracking-widest">Nenhum documento selecionado</p>
                   </div>
                 )}
-                <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
-                  <li>USCIS accepted translations</li>
-                  <li>Official certification & authentication</li>
-                  <li>Digital verification system</li>
-                  <li>24/7 customer support</li>
-                </ul>
               </div>
 
-              {/* Information Card */}
-              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Info className="w-5 h-5 text-tfe-blue-600" />
-                  {t('upload.serviceInfo.title')}
-                </h3>
+              <div className="lg:hidden">
+                <button
+                  onClick={handleUpload}
+                  disabled={isUploading || documents.length === 0}
+                  className="w-full bg-[#163353] text-white py-5 rounded-[20px] font-black text-lg transition-all active:scale-95 shadow-xl disabled:opacity-50"
+                >
+                  {isUploading ? t('common.loading') : `Finalizar Pedido • $${totalValue}.00`}
+                </button>
+              </div>
 
-                <div className="space-y-6">
-                  {/* Translation Types */}
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <Award className="w-4 h-4 text-tfe-blue-600" />
-                      {t('upload.serviceInfo.translationTypes.title')}
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.translationTypes.certified.title')}</span>
-                          <span className="text-sm font-bold text-tfe-blue-600">{t('upload.serviceInfo.translationTypes.certified.price')}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {t('upload.serviceInfo.translationTypes.certified.description')}
-                        </p>
-                        <ul className="text-xs text-gray-500 space-y-1">
-                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.0', 'Official certification stamp')}</li>
-                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.1', 'USCIS accepted')}</li>
-                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.2', 'Digital verification code')}</li>
-                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.3', '24-48 hour turnaround')}</li>
-                        </ul>
-                      </div>
-
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.translationTypes.notarized.title')}</span>
-                          <span className="text-sm font-bold text-tfe-blue-600">{t('upload.serviceInfo.translationTypes.notarized.price')}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {t('upload.serviceInfo.translationTypes.notarized.description')}
-                        </p>
-                        <ul className="text-xs text-gray-500 space-y-1">
-                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.0', 'Notary public certification')}</li>
-                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.1', 'Legal document authentication')}</li>
-                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.2', 'Court-accepted format')}</li>
-                          <li>• {t('upload.serviceInfo.translationTypes.notarized.features.3', 'Enhanced verification')}</li>
-                        </ul>
-                      </div>
-                    </div>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { icon: Shield, label: 'USCIS Accepted' },
+                  { icon: Globe, label: 'Fast Delivery' }
+                ].map((badge, i) => (
+                  <div key={i} className="bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-gray-200 flex flex-col items-center text-center">
+                    <badge.icon className="w-5 h-5 text-[#163353] mb-2" />
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-tight">
+                      {badge.label}
+                    </span>
                   </div>
-
-                  {/* Document Types */}
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-tfe-blue-600" />
-                      {t('upload.serviceInfo.documentTypes.title')}
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.documentTypes.regular.title')}</span>
-                          <span className="text-sm text-gray-600">{t('upload.serviceInfo.documentTypes.regular.price')}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {t('upload.serviceInfo.documentTypes.regular.description')}
-                        </p>
-                      </div>
-
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-800">{t('upload.serviceInfo.documentTypes.bankStatements.title')}</span>
-                          <span className="text-sm font-bold text-orange-600">{t('upload.serviceInfo.documentTypes.bankStatements.price')}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {t('upload.serviceInfo.documentTypes.bankStatements.description')}
-                        </p>
-                        <ul className="text-xs text-gray-500 space-y-1">
-                          <li>• {t('upload.serviceInfo.documentTypes.bankStatements.features.0', 'Enhanced verification process')}</li>
-                          <li>• {t('upload.serviceInfo.documentTypes.bankStatements.features.1', 'Financial document formatting')}</li>
-                          <li>• {t('upload.serviceInfo.documentTypes.bankStatements.features.2', 'Additional security measures')}</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Languages */}
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-tfe-blue-600" />
-                      {t('upload.serviceInfo.supportedLanguages.title')}
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      {(t('upload.serviceInfo.supportedLanguages.languages', { returnObjects: true }) as unknown as string[]).map((lang: string, index: number) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                          <span className="text-gray-700">{lang}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {t('upload.serviceInfo.supportedLanguages.note')}
-                    </p>
-                  </div>
-
-                  {/* Features */}
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-tfe-blue-600" />
-                      {t('upload.serviceInfo.serviceFeatures.title')}
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      {(t('upload.serviceInfo.serviceFeatures.features', { returnObjects: true }) as unknown as string[]).map((feature: string, index: number) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          <span className="text-gray-700">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>

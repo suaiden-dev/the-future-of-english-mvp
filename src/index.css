@@ -164,3 +164,35 @@ All colors MUST be HSL.
     background-clip: text;
   }
 }
+
+/* Premium Customer Dashboard Styling */
+@layer components {
+  /* Premium dark background for dashboard pages */
+  .dashboard-premium-bg {
+    background: linear-gradient(135deg, #0A0A0F 0%, #1A1A24 100%);
+    min-height: 100vh;
+  }
+
+  /* Smooth transitions for all interactive elements */
+  button, a {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Custom scrollbar for premium feel */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(199, 27, 45, 0.3);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(199, 27, 45, 0.5);
+  }
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Download, Eye, Clock, CheckCircle, AlertCircle, Loader2, Grid, List, X, ZoomIn, ZoomOut, RotateCw, XCircle } from 'lucide-react';
+import { FileText, Download, Eye, Loader2, Grid, List, X, ZoomIn, ZoomOut, RotateCw, XCircle, Plus } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserTranslatedDocuments } from '../../hooks/useDocuments';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
@@ -115,114 +115,9 @@ export default function DocumentProgress() {
     setViewingFilename('');
   };
 
-  const handleZoomIn = () => setImageZoom(prev => Math.min(prev + 0.25, 3));
-  const handleZoomOut = () => setImageZoom(prev => Math.max(prev - 0.25, 0.25));
-  const handleRotate = () => setImageRotation(prev => (prev + 90) % 360);
-
-  const getStatusIcon = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'completed':
-      case 'finished':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'processing':
-      case 'in_progress':
-        return <Loader2 className="w-5 h-5 text-tfe-blue-500 animate-spin" />;
-      case 'pending':
-      case 'waiting':
-        return <Clock className="w-5 h-5 text-yellow-500" />;
-      case 'error':
-      case 'failed':
-        return <AlertCircle className="w-5 h-5 text-tfe-red-500" />;
-      default:
-        return <Clock className="w-5 h-5 text-gray-400" />;
-    }
-  };
-
-  const getStatusColor = (doc: any) => {
-    const status = doc.status?.toLowerCase();
-
-    switch (status) {
-      case 'completed':
-      case 'finished':
-        return 'bg-green-100 text-green-800';
-      case 'processing':
-      case 'in_progress':
-        return 'bg-tfe-blue-100 text-tfe-blue-800';
-      case 'pending':
-      case 'waiting':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'error':
-      case 'failed':
-        return 'bg-tfe-red-100 text-tfe-red-800';
-      case 'rejected':
-        return 'bg-orange-100 text-orange-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const getStatusText = (doc: any) => {
-    if (doc.source === 'translated_documents') {
-      switch (doc.status?.toLowerCase()) {
-        case 'completed':
-        case 'finished':
-          return 'Completed';
-        case 'rejected':
-          return 'Rejected';
-        case 'processing':
-        case 'in_progress':
-          return 'Processing';
-        case 'pending':
-        case 'waiting':
-          return 'Pending';
-        case 'error':
-        case 'failed':
-          return 'Error';
-        default:
-          return 'Pending';
-      }
-    }
-
-    if (doc.source === 'documents_to_be_verified') {
-      switch (doc.status?.toLowerCase()) {
-        case 'completed':
-          return 'Completed';
-        case 'processing':
-        case 'in_progress':
-          return 'Processing';
-        case 'pending':
-        case 'waiting':
-          return 'Pending';
-        case 'rejected':
-          return 'Rejected';
-        case 'error':
-        case 'failed':
-          return 'Error';
-        default:
-          return 'Pending';
-      }
-    }
-
-    if (doc.source === 'documents') {
-      switch (doc.status?.toLowerCase()) {
-        case 'completed':
-        case 'finished':
-          return 'Completed';
-        case 'processing':
-        case 'in_progress':
-          return 'Processing';
-        case 'pending':
-        case 'waiting':
-          return 'Pending';
-        case 'error':
-        case 'failed':
-          return 'Error';
-        default:
-          return 'Pending';
-      }
-    }
-
-    switch (doc.status?.toLowerCase()) {
+    const status = doc.status?.toLowerCase();
+    switch (status) {
       case 'completed':
       case 'finished':
         return 'Completed';
@@ -232,354 +127,315 @@ export default function DocumentProgress() {
       case 'pending':
       case 'waiting':
         return 'Pending';
+      case 'rejected':
+        return 'Rejected';
       case 'error':
       case 'failed':
         return 'Error';
-      case 'rejected':
-        return 'Rejected';
       default:
         return 'Pending';
     }
   };
 
-  const DocumentCard = ({ doc }: { doc: any }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-3 sm:mb-4">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-tfe-blue-500" />
-          <div>
-            <h3 className="font-semibold text-gray-900 truncate max-w-32 sm:max-w-48 text-sm sm:text-base" title={doc.original_filename || doc.filename}>
-              {doc.original_filename || doc.filename}
-            </h3>
-            <p className="text-xs sm:text-sm text-gray-500">
-              {doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-US') : 'Date not available'}
-            </p>
-          </div>
-        </div>
-        {getStatusIcon(doc.status || 'pending')}
-      </div>
+  const handleZoomIn = () => setImageZoom(prev => Math.min(prev + 0.25, 3));
+  const handleZoomOut = () => setImageZoom(prev => Math.max(prev - 0.25, 0.25));
+  const handleRotate = () => setImageRotation(prev => (prev + 90) % 360);
 
-      <div className="mb-3 sm:mb-4">
-        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(doc)}`}>
-          {getStatusText(doc)}
-        </span>
-      </div>
-
-      <div className="space-y-1 sm:space-y-2 mb-3 sm:mb-4 text-xs sm:text-sm text-gray-600">
-        <div className="flex justify-between">
-          <span>Language:</span>
-          <span className="font-medium truncate ml-2">{doc.source_language || 'N/A'}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Pages:</span>
-          <span className="font-medium">{doc.pages || 'N/A'}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Price:</span>
-          <span className="font-medium">${doc.total_cost || 'N/A'}</span>
-        </div>
-      </div>
-
-      {doc.translated_file_url && (
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button
-            className="flex-1 inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-tfe-blue-600 text-white rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors text-xs sm:text-sm"
-            onClick={async (e) => {
-              e.preventDefault();
-              await handleDownload(doc.translated_file_url, doc.filename || 'translated_document');
-            }}
-            title="Download file"
-          >
-            <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Download</span>
-          </button>
-          <button
-            onClick={() => handleViewFile(doc.translated_file_url, doc.filename || 'document')}
-            className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-xs sm:text-sm"
-            title="View file"
-          >
-            <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">View</span>
-          </button>
-        </div>
-      )}
-
-      {!doc.translated_file_url && (
-        <div className="text-center py-3 sm:py-4">
-          <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 mx-auto mb-1 sm:mb-2" />
-          <p className="text-xs sm:text-sm text-gray-500">Document in processing</p>
-        </div>
-      )}
-    </div>
-  );
-
-  const DocumentRow = ({ doc }: { doc: any }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-          <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-500 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate text-sm sm:text-base" title={doc.original_filename || doc.filename}>
-              {doc.original_filename || doc.filename}
-            </h3>
-            <p className="text-xs sm:text-sm text-gray-500">
-              {doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-US') : 'Date not available'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <div className="flex justify-center sm:justify-start">
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(doc)}`}>
-              {getStatusText(doc)}
-            </span>
-          </div>
-
-          <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-right">
-            <div className="grid grid-cols-3 gap-2 sm:block sm:space-y-1">
-              <div className="truncate" title={doc.source_language || 'N/A'}>
-                <span className="sm:hidden text-gray-400">Lang:</span> {doc.source_language || 'N/A'}
-              </div>
-              <div className="truncate">
-                <span className="sm:hidden text-gray-400">Pages:</span> {doc.pages || 'N/A'}
-              </div>
-              <div className="truncate font-medium">
-                <span className="sm:hidden text-gray-400">Price:</span> ${doc.total_cost || 'N/A'}
-              </div>
-            </div>
-          </div>
-
-          {doc.translated_file_url && (
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                className="inline-flex items-center justify-center gap-1 px-3 py-2 sm:py-1.5 bg-tfe-blue-600 text-white rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors text-xs"
-                onClick={async (e) => {
-                  e.preventDefault();
-                  await handleDownload(doc.translated_file_url, doc.filename || 'translated_document');
-                }}
-                title="Download file"
-              >
-                <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Download</span>
-              </button>
-              <button
-                onClick={() => handleViewFile(doc.translated_file_url, doc.filename || 'document')}
-                className="inline-flex items-center justify-center gap-1 px-3 py-2 sm:py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-xs"
-                title="View file"
-              >
-                <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">View</span>
-              </button>
-            </div>
-          )}
-
-          {!doc.translated_file_url && (
-            <div className="text-center">
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 mx-auto mb-1" />
-              <p className="text-xs text-gray-500">Processing</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 
   return (
-    <>
-      <div className="min-h-screen bg-gray-50 py-6 sm:py-10 px-3 sm:px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">My Translations</h1>
-            <p className="text-sm sm:text-base text-gray-600">Track the status of your document translations</p>
-          </div>
-
-          {loadingTranslated ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-tfe-blue-500 animate-spin mr-2 sm:mr-3" />
-              <span className="text-sm sm:text-base text-gray-600">Loading documents...</span>
-            </div>
-          ) : translatedDocs && translatedDocs.length > 0 ? (
-            <>
-              {/* View Mode Toggle */}
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0 mb-4 sm:mb-6">
-                <div className="flex items-center gap-2 bg-white rounded-lg p-1 shadow-sm border border-gray-200 w-fit">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-md transition-colors ${viewMode === 'grid'
-                        ? 'bg-tfe-blue-100 text-tfe-blue-600'
-                        : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    title="Grid view"
-                  >
-                    <Grid className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-md transition-colors ${viewMode === 'list'
-                        ? 'bg-tfe-blue-100 text-tfe-blue-600'
-                        : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    title="List view"
-                  >
-                    <List className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                </div>
-                <div className="text-xs sm:text-sm text-gray-500">
-                  {translatedDocs.length} document{translatedDocs.length !== 1 ? 's' : ''}
-                </div>
-              </div>
-
-              {/* Documents Display */}
-              {viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {translatedDocs.map(doc => (
-                    <DocumentCard key={doc.id} doc={doc} />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3 sm:space-y-4">
-                  {translatedDocs.map(doc => (
-                    <DocumentRow key={doc.id} doc={doc} />
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-12">
-              <FileText className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3 sm:mb-4" />
-              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1 sm:mb-2">No documents found</h3>
-              <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">You don't have any translated documents yet. Make your first upload in the Translations page.</p>
-              <button
-                onClick={() => window.location.href = '/dashboard/upload'}
-                className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-tfe-blue-600 text-white rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors text-sm sm:text-base"
-              >
-                <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                Go to Translations
-              </button>
-            </div>
-          )}
-
-          <DocumentDetailsModal document={selectedDoc} onClose={() => setSelectedDoc(null)} />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden">
+      {/* Decorative background blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#C71B2D]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#163353]/5 rounded-full blur-[120px]" />
       </div>
 
-      {/* Modal de Visualização do Documento */}
-      {showViewer && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-xl w-[95vw] h-[95vh] max-w-6xl flex flex-col overflow-hidden shadow-2xl">
-            {/* Header do Viewer */}
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-100 border-b">
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-gray-900 truncate max-w-[300px]">
-                  {viewingFilename || 'Document'}
-                </span>
-                {viewerType === 'pdf' && (
-                  <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">PDF</span>
-                )}
-                {viewerType === 'image' && (
-                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">Image</span>
-                )}
+      <div className="max-w-7xl mx-auto px-4 py-10 relative z-10">
+        <div className="mb-8">
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2 tracking-tight">
+            MY TRANSLATIONS
+          </h1>
+          <p className="text-gray-600 font-medium opacity-80 uppercase tracking-[0.2em] text-xs">
+            Track and manage your document ecosystem
+          </p>
+        </div>
+
+        {loadingTranslated ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white/50 backdrop-blur-xl rounded-[30px] border border-gray-200 shadow-xl">
+            <Loader2 className="w-12 h-12 text-[#C71B2D] animate-spin mb-4" />
+            <span className="text-gray-600 font-bold uppercase tracking-widest text-sm">Synchronizing Data...</span>
+          </div>
+        ) : translatedDocs && translatedDocs.length > 0 ? (
+          <>
+            {/* View Mode Toggle */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+              <div className="flex items-center gap-1 bg-white/80 backdrop-blur-md rounded-2xl p-1.5 shadow-sm border border-gray-200 w-fit">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2.5 rounded-xl transition-all ${viewMode === 'grid'
+                      ? 'bg-[#163353] text-white shadow-lg shadow-[#163353]/20'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                    }`}
+                  title="Grid view"
+                >
+                  <Grid className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2.5 rounded-xl transition-all ${viewMode === 'list'
+                      ? 'bg-[#163353] text-white shadow-lg shadow-[#163353]/20'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                    }`}
+                  title="List view"
+                >
+                  <List className="w-5 h-5" />
+                </button>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="px-4 py-2 bg-[#163353]/5 border border-[#163353]/10 rounded-full">
+                <span className="text-xs font-black text-[#163353] uppercase tracking-widest">
+                  {translatedDocs.length} Documents Cataloged
+                </span>
+              </div>
+            </div>
+
+            {/* Documents Display */}
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {translatedDocs.map(doc => (
+                  <div key={doc.id} className="relative group bg-white/80 backdrop-blur-xl rounded-[30px] p-8 border border-gray-200 hover:border-[#C71B2D]/40 transition-all hover:shadow-2xl hover:-translate-y-1">
+                    <div className="absolute top-0 right-0 p-6 pointer-events-none opacity-5">
+                      <FileText className="w-20 h-20" />
+                    </div>
+                    
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-[#163353]/10 rounded-[20px] flex items-center justify-center text-[#163353] group-hover:bg-[#C71B2D]/10 group-hover:text-[#C71B2D] transition-colors">
+                          <FileText className="w-7 h-7" />
+                        </div>
+                        <div>
+                          <h3 className="font-black text-gray-900 truncate max-w-[120px] tracking-tight group-hover:text-[#C71B2D] transition-colors" title={doc.original_filename || doc.filename}>
+                            {doc.original_filename || doc.filename}
+                          </h3>
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            {doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-US') : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                        doc.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        doc.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {getStatusText(doc)}
+                      </span>
+                    </div>
+
+                    <div className="space-y-4 mb-8 bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-black text-gray-400 uppercase tracking-widest">Language</span>
+                        <span className="font-bold text-gray-900">{doc.source_language || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-black text-gray-400 uppercase tracking-widest">Pages</span>
+                        <span className="font-bold text-gray-900">{doc.pages || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-black text-gray-400 uppercase tracking-widest">Price</span>
+                        <span className="font-black text-[#163353] text-lg">${doc.total_cost || 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    {doc.translated_file_url ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => handleDownload(doc.translated_file_url, doc.filename || 'translated_document')}
+                          className="relative flex items-center justify-center gap-2 py-3 bg-[#163353] text-white rounded-[15px] font-black text-[10px] uppercase tracking-widest hover:bg-[#0A1A2F] transition-all overflow-hidden group/btn"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover/btn:translate-x-[200%] transition-transform duration-700" />
+                          <Download className="w-3" />
+                          Download
+                        </button>
+                        <button
+                          onClick={() => handleViewFile(doc.translated_file_url, doc.filename || 'document')}
+                          className="flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 text-gray-900 rounded-[15px] font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all hover:border-[#163353]/30"
+                        >
+                          <Eye className="w-3" />
+                          Preview
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-3 py-4 bg-gray-50 rounded-[15px] border border-dashed border-gray-200">
+                        <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">In Processing</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {translatedDocs.map(doc => (
+                  <div key={doc.id} className="bg-white/80 backdrop-blur-xl rounded-[24px] p-6 border border-gray-200 hover:border-[#C71B2D]/40 transition-all flex flex-col md:flex-row items-center gap-6 group">
+                    <div className="w-12 h-12 bg-[#163353]/10 rounded-2xl flex items-center justify-center text-[#163353] group-hover:bg-[#C71B2D]/10 group-hover:text-[#C71B2D] transition-colors shrink-0">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-black text-gray-900 text-lg tracking-tight truncate group-hover:text-[#C71B2D] transition-colors mb-1">
+                        {doc.original_filename || doc.filename}
+                      </h3>
+                      <div className="flex flex-wrap gap-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        <span>L: {doc.source_language || 'N/A'}</span>
+                        <span>P: {doc.pages || 'N/A'}</span>
+                        <span>T: {doc.tipo_traducao || 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center md:items-end shrink-0">
+                      <span className="text-xl font-black text-[#163353] mb-2">${doc.total_cost || 'N/A'}</span>
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                        doc.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        doc.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {getStatusText(doc)}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 shrink-0">
+                      {doc.translated_file_url ? (
+                        <>
+                          <button
+                            onClick={() => handleDownload(doc.translated_file_url, doc.filename || 'translated_document')}
+                            className="p-3 bg-[#163353] text-white rounded-xl hover:bg-[#0A1A2F] transition-all"
+                            title="Download"
+                          >
+                            <Download className="w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleViewFile(doc.translated_file_url, doc.filename || 'document')}
+                            className="p-3 bg-white border border-gray-200 text-gray-900 rounded-xl hover:bg-gray-50 transition-all"
+                            title="Preview"
+                          >
+                            <Eye className="w-5" />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="p-3 bg-gray-50 text-gray-400 rounded-xl border border-gray-200">
+                          <Loader2 className="w-5 animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="bg-white/80 backdrop-blur-xl rounded-[30px] p-20 text-center border border-gray-200 shadow-xl overflow-hidden relative">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#163353]/5 rounded-full blur-[150px] pointer-events-none" />
+            <FileText className="w-20 h-20 text-[#163353]/20 mx-auto mb-8 animate-pulse" />
+            <h3 className="text-3xl font-black text-gray-900 mb-4 tracking-tight uppercase">No Documents Found</h3>
+            <p className="text-gray-500 mb-10 max-w-md mx-auto font-medium leading-relaxed">
+              Elevate your document ecosystem. Start your first translation journey today.
+            </p>
+            <button
+              onClick={() => window.location.href = '/dashboard/upload'}
+              className="group relative inline-flex items-center gap-4 px-10 py-5 bg-[#C71B2D] text-white rounded-[20px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 hover:shadow-2xl hover:shadow-[#C71B2D]/30 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] duration-1000" />
+              <Plus className="w-6 h-6" />
+              New Translation
+            </button>
+          </div>
+        )}
+
+        <DocumentDetailsModal document={selectedDoc} onClose={() => setSelectedDoc(null)} />
+      </div>
+
+      {/* Modern High-Performance Viewer */}
+      {showViewer && (
+        <div className="fixed inset-0 bg-[#0A1A2F]/95 backdrop-blur-2xl flex items-center justify-center z-[60] p-4 sm:p-10 animate-in fade-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-[40px] w-full h-full max-w-7xl flex flex-col overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/10">
+            {/* Viewer Header */}
+            <div className="flex items-center justify-between px-8 py-6 bg-[#163353] text-white border-b border-white/10">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-black tracking-tight truncate max-w-[200px] sm:max-w-md uppercase text-sm">
+                    {viewingFilename || 'Document Archive'}
+                  </h4>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-[10px] font-black text-white/50 bg-white/10 px-3 py-1 rounded-full uppercase tracking-widest">
+                      {viewerType}
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
                 {viewerType === 'image' && viewerUrl && (
-                  <>
-                    <button
-                      onClick={handleZoomOut}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                      title="Zoom Out"
-                    >
-                      <ZoomOut className="w-5 h-5 text-gray-600" />
-                    </button>
-                    <span className="text-sm text-gray-600 min-w-[50px] text-center">{Math.round(imageZoom * 100)}%</span>
-                    <button
-                      onClick={handleZoomIn}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="w-5 h-5 text-gray-600" />
-                    </button>
-                    <button
-                      onClick={handleRotate}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                      title="Rotate"
-                    >
-                      <RotateCw className="w-5 h-5 text-gray-600" />
-                    </button>
-                    <div className="w-px h-6 bg-gray-300 mx-2" />
-                  </>
+                  <div className="hidden sm:flex items-center gap-2 bg-white/10 p-2 rounded-2xl backdrop-blur-md">
+                    <button onClick={handleZoomOut} className="p-2 hover:bg-white/10 rounded-xl transition-all"><ZoomOut className="w-5 h-5" /></button>
+                    <span className="text-xs font-black min-w-[50px] text-center">{Math.round(imageZoom * 100)}%</span>
+                    <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 rounded-xl transition-all"><ZoomIn className="w-5 h-5" /></button>
+                    <div className="w-px h-6 bg-white/10 mx-1" />
+                    <button onClick={handleRotate} className="p-2 hover:bg-white/10 rounded-xl transition-all"><RotateCw className="w-5 h-5" /></button>
+                  </div>
                 )}
                 <button
                   onClick={closeViewer}
-                  className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-                  title="Close"
+                  className="p-4 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-[#C71B2D]/20"
                 >
-                  <X className="w-5 h-5 text-gray-600 hover:text-red-600" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
 
-            {/* Conteúdo do Viewer */}
-            <div className="flex-1 overflow-auto bg-gray-800 flex items-center justify-center">
+            {/* Content Area */}
+            <div className="flex-1 overflow-auto bg-[#F8FAFC] flex items-center justify-center p-8">
               {loadingViewer && (
-                <div className="flex flex-col items-center gap-4">
-                  <Loader2 className="w-12 h-12 text-white animate-spin" />
-                  <p className="text-white text-lg">Loading document...</p>
+                <div className="flex flex-col items-center gap-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-[#C71B2D]/20 blur-3xl rounded-full animate-pulse" />
+                    <Loader2 className="w-16 h-16 text-[#C71B2D] animate-spin relative" />
+                  </div>
+                  <p className="text-[#163353] font-black uppercase tracking-[0.3em] text-xs">Decrypting Document...</p>
                 </div>
               )}
 
               {viewerError && (
-                <div className="flex flex-col items-center gap-4 text-center p-8">
-                  <XCircle className="w-16 h-16 text-red-400" />
-                  <p className="text-white text-lg">{viewerError}</p>
-                  <button
-                    onClick={closeViewer}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    Close
-                  </button>
+                <div className="text-center bg-white p-12 rounded-[40px] border border-gray-200 shadow-2xl max-w-md">
+                  <XCircle className="w-20 h-20 text-[#C71B2D] mx-auto mb-6" />
+                  <h5 className="text-2xl font-black text-gray-900 mb-4 uppercase">Access Denied</h5>
+                  <p className="text-gray-500 font-medium mb-8 leading-relaxed">{viewerError}</p>
+                  <button onClick={closeViewer} className="w-full py-4 bg-[#163353] text-white rounded-2xl font-black uppercase tracking-widest">Acknowledge</button>
                 </div>
               )}
 
               {!loadingViewer && !viewerError && viewerUrl && viewerType === 'pdf' && (
-                <iframe
-                  src={viewerUrl}
-                  className="w-full h-full border-0"
-                  title="PDF Viewer"
-                />
+                <iframe src={viewerUrl} className="w-full h-full rounded-2xl border border-gray-200 shadow-2xl" title="PDF Archive" />
               )}
 
               {!loadingViewer && !viewerError && viewerUrl && viewerType === 'image' && (
-                <div className="w-full h-full overflow-auto flex items-center justify-center p-4">
+                <div className="w-full h-full overflow-auto flex items-center justify-center">
                   <img
                     src={viewerUrl}
-                    alt="Document"
-                    className="max-w-none transition-transform duration-200"
-                    style={{
-                      transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
-                      transformOrigin: 'center center'
-                    }}
+                    alt="Archive"
+                    className="max-w-none transition-transform duration-300 shadow-2xl rounded-sm"
+                    style={{ transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`, transformOrigin: 'center center' }}
                   />
-                </div>
-              )}
-
-              {!loadingViewer && !viewerError && viewerUrl && viewerType === 'unknown' && (
-                <div className="flex flex-col items-center gap-4 text-center p-8">
-                  <FileText className="w-16 h-16 text-gray-400" />
-                  <p className="text-white text-lg">File format not supported for inline viewing.</p>
-                  <p className="text-gray-400">Use the download button to download the file.</p>
-                  <button
-                    onClick={closeViewer}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Close
-                  </button>
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

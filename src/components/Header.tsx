@@ -1,4 +1,4 @@
-import { User, LogOut, Home, FileText, Search, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import LanguageSelector from './LanguageSelector';
@@ -26,14 +26,11 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
               onClick={() => navigate('/')}
               className="flex items-center space-x-1.5 sm:space-x-2 text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors"
             >
-              <div className="flex items-center gap-1 sm:gap-1.5">
-                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-xs sm:text-sm">TFE</span>
-                </div>
-                <h3 className="text-sm sm:text-base font-bold text-tfe-blue-950 hidden sm:block">
-                  The Future of English
-                </h3>
-              </div>
+                <img 
+                  src="/logo_tfoe.png" 
+                  alt="TFOE Logo" 
+                  className="h-8 sm:h-10 w-auto object-contain" 
+                />
             </button>
           </div>
 

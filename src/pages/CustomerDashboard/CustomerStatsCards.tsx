@@ -76,29 +76,30 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
 
   if (totalDocuments === 0) {
     return (
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 mb-8 text-center">
-        <FileText className="w-16 h-16 text-tfe-blue-300 mx-auto mb-4" />
-        <h3 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+      <div className="relative bg-white/80 backdrop-blur-xl rounded-[30px] p-8 mb-8 text-center border border-gray-200 shadow-lg overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-[#163353]/5 rounded-full blur-[100px] pointer-events-none" />
+        <FileText className="w-16 h-16 text-[#C71B2D] mx-auto mb-4" />
+        <h3 className="text-3xl sm:text-4xl font-black text-gray-900 mb-2">
           {t('dashboard.statistics.welcome.title')}
         </h3>
         <p className="text-gray-600 mb-4 text-lg leading-relaxed">
           {t('dashboard.statistics.welcome.description')}
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="bg-white p-4 rounded-lg">
-            <div className="text-3xl font-bold text-tfe-blue-950">$20</div>
+          <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
+            <div className="text-3xl font-black text-[#C71B2D]">$20</div>
             <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.perPage')}</div>
           </div>
-          <div className="bg-white p-4 rounded-lg">
-            <div className="text-3xl font-bold text-green-900">24-48h</div>
+          <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
+            <div className="text-3xl font-black text-green-600">24-48h</div>
             <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.turnaround')}</div>
           </div>
-          <div className="bg-white p-4 rounded-lg">
-            <div className="text-3xl font-bold text-purple-900">USCIS</div>
+          <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
+            <div className="text-3xl font-black text-purple-600">USCIS</div>
             <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.accepted')}</div>
           </div>
-          <div className="bg-white p-4 rounded-lg">
-            <div className="text-3xl font-bold text-tfe-red-950">Certified</div>
+          <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
+            <div className="text-3xl font-black text-[#163353]">Certified</div>
             <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.translation')}</div>
           </div>
         </div>
@@ -109,7 +110,7 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
   return (
     <div className="mb-8">
       <div className="mb-6">
-        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{t('dashboard.statistics.title')}</h2>
+        <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-2">{t('dashboard.statistics.title')}</h2>
         <p className="text-gray-600 text-lg">{t('dashboard.statistics.description')}</p>
       </div>
       
@@ -117,17 +118,17 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center`}>
-                  <Icon className={`w-6 h-6 ${stat.iconColor}`} />
+            <div key={index} className="relative rounded-[24px] p-6 bg-white/80 backdrop-blur-sm border border-gray-200 hover:border-[#C71B2D]/40 hover:shadow-lg transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-[#163353]/10 border border-[#163353]/20 group-hover:bg-[#163353]/15 transition-colors">
+                  <Icon className="w-6 h-6 text-[#C71B2D]" />
                 </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-base font-medium text-gray-600">{stat.title}</p>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{stat.title}</p>
+                  <p className="text-3xl font-black text-gray-900">{stat.value}</p>
                 </div>
               </div>
-              <p className="text-sm text-gray-500">{stat.description}</p>
+              <p className="text-sm text-gray-600 mt-3">{stat.description}</p>
             </div>
           );
         })}

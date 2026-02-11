@@ -1,10 +1,6 @@
-import React from 'react';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, ChevronDown, ChevronRight } from 'lucide-react';
 import type { CustomUser } from '../hooks/useAuth';
-import { FileText as FileTextIcon } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Upload } from 'lucide-react';
-import LanguageSelector from './LanguageSelector';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export interface NavItem {
   id: string;
@@ -17,7 +13,7 @@ interface SidebarProps {
   navItems: NavItem[];
   user: CustomUser | null;
   onLogout: () => void;
-  showLogo?: boolean; // Nova prop para controlar se o logo deve ser exibido
+  showLogo?: boolean;
 }
 
 export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarProps) {
@@ -40,54 +36,29 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
   };
 
   return (
-    <div className="w-64 bg-white shadow-sm border-r border-gray-200 h-screen overflow-y-auto">
-      <div className="p-6">
-        <div className="mb-6">
-          {/* Logo - apenas se showLogo for true */}
-          {showLogo && (
-            <div className="flex justify-center mb-4">
-              <button
-                onClick={() => navigate('/')}
-                className="focus:outline-none group"
-                aria-label="Go to Home"
-              >
-                <div className="text-center">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-tfe-red-600 to-tfe-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-sm">TFE</span>
-                    </div>
-                    <h3 className="text-xl font-bold text-tfe-blue-950">
-                      The Future of English
-                    </h3>
-                  </div>
-                </div>
-              </button>
-            </div>
-          )}
-          
-          {user && (
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-sm font-medium text-gray-900">{user.user_metadata?.name || 'Usuário'}</p>
-              <p className="text-xs text-gray-600">{user.email || ''}</p>
-              <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${
-                user.role === 'admin'
-                  ? 'bg-tfe-red-100 text-tfe-red-800'
-                  : user.role === 'authenticator'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-tfe-blue-100 text-tfe-blue-800'
-              }`}>
-                {user.role === 'admin'
-                  ? 'Administrator'
-                  : user.role === 'authenticator'
-                  ? 'Authenticator'
-                  : 'User'}
-              </span>
-            </div>
-          )}
-        </div>
-        
+    <div className="w-72 bg-white border-r border-slate-100 h-screen flex flex-col sticky top-0 overflow-hidden">
+      {/* Top Section / Logo */}
+      <div className="p-8 pb-4">
+        {showLogo && (
+          <div className="mb-8 flex justify-center">
+            <button
+              onClick={() => navigate('/')}
+              className="focus:outline-none transition-transform hover:scale-105 active:scale-95"
+              aria-label="Go to Home"
+            >
+              <img 
+                src="/logo_tfoe.png" 
+                alt="TFOE Logo" 
+                className="h-24 w-auto object-contain" 
+              />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation section */}
+      <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
         <nav className="space-y-2">
-          {/* Renderizar itens de navegação dinâmicos */}
           {navItems && navItems.length > 0 && navItems.map((item) => {
             const Icon = item.icon;
             const isActive = isActivePage(item.page);
@@ -96,41 +67,60 @@ export function Sidebar({ navItems, user, onLogout, showLogo = true }: SidebarPr
               <button
                 key={item.id}
                 onClick={() => handleNavigation(item.page)}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                className={`w-full group flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-300 relative hover:scale-[1.02] active:scale-[0.98] ${
                   isActive
-                    ? 'bg-tfe-blue-50 text-tfe-blue-950 border border-tfe-blue-200'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-slate-50 text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:bg-slate-50/50 hover:text-slate-800'
                 }`}
               >
-                {Icon && <Icon className={`w-5 h-5 ${isActive ? 'text-tfe-blue-600' : 'text-gray-400'}`} />}
-                <span className="font-medium">{item.label}</span>
+                {/* Active Indicator Strip */}
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#C71B2D] rounded-r-md shadow-[0_0_10px_rgba(199,27,45,0.3)] animate-in slide-in-from-left-1 duration-300" />
+                )}
+
+                <div className="flex items-center gap-4">
+                  {Icon && (
+                    <div className={`transition-all duration-300 group-hover:scale-110 ${isActive ? 'text-[#163353]' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                  )}
+                  <span className={`text-[15px] tracking-tight transition-all duration-300 ${isActive ? 'font-bold' : 'font-medium group-hover:pl-0.5'}`}>
+                    {item.label}
+                  </span>
+                </div>
+
+                {!isActive ? (
+                   <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-300" />
+                ) : (
+                   <ChevronDown className="w-4 h-4 text-slate-400" />
+                )}
               </button>
             );
           })}
-
-
-
-          {/* Seletor de idioma */}
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="px-3 py-2">
-              <LanguageSelector />
-            </div>
-          </div>
-
-          {/* Seção de logout */}
-          {user && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <button
-                onClick={onLogout}
-                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors text-tfe-red-600 hover:bg-tfe-red-50 hover:text-tfe-red-700"
-              >
-                <LogOut className="w-5 h-5 text-tfe-red-500" />
-                <span className="font-medium">Logout</span>
-              </button>
-            </div>
-          )}
         </nav>
       </div>
+
+      {/* User Section (Footer style as in premium dashboards) */}
+      {user && (
+        <div className="p-4 mt-auto border-t border-slate-100 bg-white">
+          <div className="flex items-center gap-3 p-3 bg-slate-50/50 rounded-2xl border border-slate-50 mb-3">
+             <div className="w-10 h-10 bg-[#163353] rounded-xl flex items-center justify-center text-white shrink-0 shadow-md shadow-[#163353]/10">
+                <User className="w-5 h-5" />
+             </div>
+             <div className="flex-1 min-w-0 pr-2">
+                <p className="text-[12px] font-bold text-slate-900 truncate tracking-tight">{user.user_metadata?.name || 'Guest User'}</p>
+                <p className="text-[10px] text-slate-400 truncate tracking-wide uppercase">{user.role || 'User'}</p>
+             </div>
+          </div>
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-[18px] transition-all duration-300 text-slate-500 font-bold uppercase tracking-widest text-[10px] hover:bg-[#C71B2D]/5 hover:text-[#C71B2D] active:scale-95"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Terminate Session</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

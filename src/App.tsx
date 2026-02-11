@@ -9,6 +9,7 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { AdminLayout } from './components/AdminLayout';
 import { NotificationBell } from './components/NotificationBell';
+import LanguageSelector from './components/LanguageSelector';
 import { Mentorship as Home } from './pages/Home';
 import { Translations } from './pages/Translations';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -34,7 +35,7 @@ import { AffiliateDashboard } from './pages/AffiliateDashboard';
 import Initial from './pages/Initial';
 import Transfer from './pages/Transfer';
 import Cos from './pages/Cos';
-import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, DollarSign, Activity, MessageSquare } from 'lucide-react';
+import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, DollarSign, Activity, MessageSquare, ShieldCheck } from 'lucide-react';
 
 import { Page } from './types/Page';
 import { Database } from './lib/database.types';
@@ -58,6 +59,7 @@ export type { Document, Folder };
 
 function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
   
   // Auth hook
   const { user, loading: authLoading, signOut } = useAuth();
@@ -78,6 +80,17 @@ function App() {
     signOut();
     navigate('/login');
   };
+
+  const getDashboardHeaderInfo = () => {
+    const p = location.pathname;
+    if (p.includes('/dashboard/profile')) return { title: 'User Profile', subtitle: 'Manage your personal information and preferences' };
+    if (p.includes('/dashboard/documents')) return { title: 'My Documents', subtitle: 'Access and manage all your uploaded documents' };
+    if (p.includes('/dashboard/progress')) return { title: 'Document Progress', subtitle: 'Track the status of your translation requests' };
+    if (p.includes('/dashboard/upload')) return { title: 'Upload Document', subtitle: 'Submit new documents for translation' };
+    return { title: 'Customer Dashboard', subtitle: 'Welcome back! Here is your document overview.' };
+  };
+
+  const dashboardHeader = getDashboardHeaderInfo();
 
   const handleDocumentUpload = async (documentData: Omit<DocumentInsert, 'user_id'>) => {
     try {
@@ -132,7 +145,6 @@ function App() {
     console.log('View document:', document);
   };
 
-  const location = useLocation();
 
   // Bloquear loading apenas para pÃ¡ginas protegidas
   const protectedPages: Page[] = ['dashboard-customer', 'admin', 'upload'];
@@ -204,7 +216,6 @@ function App() {
       if (user.role === 'admin') {
         const items = [
           { id: 'admin', label: 'Admin Dashboard', page: 'admin' as Page },
-          { id: 'contacts', label: 'Contacts', page: '/admin#contacts' },
           { id: 'action-logs', label: 'Action Logs', page: '/admin/action-logs' },
           { id: 'user-management', label: 'User Management', page: 'user-management' as Page },
           { id: 'authenticator-control', label: 'Authenticator Control', page: 'authenticator-control' as Page },
@@ -363,60 +374,70 @@ function App() {
           <Route path="/dashboard/*" element={user && user.role === 'user' ? (
             <div className="flex flex-col lg:flex-row">
               {/* Mobile header */}
-              <div className="lg:hidden sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center gap-2">
-                      <img 
-                        src="/logo.png" 
-                        alt="The Future of English" 
-                        className="w-8 h-8 flex-shrink-0 object-contain"
-                      />
-                      <h3 className="text-xl font-bold">
-                        <span className="text-tfe-blue-950">THE FUTURE</span>
-                        <span className="text-tfe-red-950"> OF ENGLISH</span>
-                      </h3>
+              <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-[#C71B2D] uppercase tracking-widest mb-0.5">{dashboardHeader.title}</span>
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src="/logo_tfoe.png" 
+                            alt="TFOE Logo" 
+                            className="h-6 w-auto flex-shrink-0 object-contain"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <LanguageSelector />
+                      <NotificationBell />
+                      <button
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className="p-2 text-gray-400 hover:text-gray-600"
+                        aria-label="Open menu"
+                        title="Open menu"
+                      >
+                        <Menu className="w-6 h-6" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <NotificationBell />
-                    <button
-                      onClick={() => setIsMobileMenuOpen(true)}
-                      className="p-2 text-gray-400 hover:text-gray-600"
-                      aria-label="Open menu"
-                      title="Open menu"
-                    >
-                      <Menu className="w-6 h-6" />
-                    </button>
-                  </div>
-                </div>
               </div>
               
               {/* Desktop sidebar */}
-              <div className="hidden lg:block">
+              <div className="hidden lg:block sticky top-0 h-screen self-start">
                 <Sidebar navItems={getNavItems()} user={user} onLogout={handleLogout} />
               </div>
               
               {/* Main content */}
               <main className="flex-1 lg:ml-0">
                 {/* Desktop header que complementa a sidebar */}
-                <div className="hidden lg:block bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
+                <div className="max-lg:hidden flex bg-white border-b border-slate-200 px-8 py-5 w-full">
+                  <div className="w-full flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <NotificationBell />
-                      <button
-                        onClick={() => navigate('/dashboard/profile')}
-                        className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
-                        title="Go to Profile"
-                      >
-                        <User className="w-5 h-5" />
-                        <span className="text-sm font-medium">{user?.user_metadata?.name || 'User'}</span>
-                      </button>
+                    <div className="flex items-center space-x-6">
+                      <div className="flex items-center">
+                        <LanguageSelector />
+                      </div>
+                      <div className="h-8 w-px bg-slate-100" />
+                      <div className="flex items-center gap-4">
+                        <NotificationBell />
+                        <button
+                          onClick={() => navigate('/dashboard/profile')}
+                          className="flex items-center space-x-3 p-1.5 pr-4 bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-2xl transition-all border border-slate-100 shadow-sm group"
+                          title="Go to Profile"
+                        >
+                          <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+                            <User className="w-4 h-4 text-[#163353]" />
+                          </div>
+                          <span className="text-sm font-bold truncate max-w-[150px]">{user?.user_metadata?.name || 'User'}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+                
                 
                 <Routes>
                   <Route path="/" element={<CustomerDashboard user={user} documents={documents} folders={folders} onDocumentUpload={handleDocumentUpload} onFolderCreate={handleFolderCreate} onFolderUpdate={handleFolderUpdate} onFolderDelete={handleFolderDelete} onViewDocument={handleViewDocument} />} />

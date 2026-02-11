@@ -171,34 +171,35 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
     let text = '';
     switch (currentStatus) {
       case 'pending':
-        color = 'bg-yellow-100 text-yellow-800';
+        color = 'bg-amber-500/20 text-amber-400';
         text = t('dashboard.recentActivity.status.pending');
         break;
       case 'processing':
-        color = 'bg-blue-100 text-blue-800';
+        color = 'bg-[#163353]/30 text-blue-300';
         text = t('dashboard.recentActivity.status.processing');
         break;
       case 'completed':
       case 'approved':
-        color = 'bg-green-100 text-green-800';
+        color = 'bg-emerald-500/20 text-emerald-400';
         text = t('dashboard.recentActivity.status.completed');
         break;
       case 'rejected':
-        color = 'bg-red-100 text-red-800';
+        color = 'bg-red-500/20 text-red-400';
         text = t('dashboard.recentActivity.status.rejected');
         break;
       default:
-        color = 'bg-gray-100 text-gray-600';
+        color = 'bg-slate-700/30 text-slate-400';
         text = currentStatus || t('dashboard.recentActivity.status.unknown');
     }
-    return <span className={`px-2 py-1 rounded-full text-xs font-semibold ${color}`}>{text}</span>;
+    return <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${color}`}>{text}</span>;
   };
+
 
   if (documents.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-        <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard.recentActivity.noActivity.title')}</h3>
+      <div className="bg-white/80 backdrop-blur-xl rounded-[30px] shadow-sm border border-gray-200 shadow-lg p-8 text-center">
+        <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-2xl font-black text-gray-900 mb-2">{t('dashboard.recentActivity.noActivity.title')}</h3>
         <p className="text-gray-600 text-lg">
           {t('dashboard.recentActivity.noActivity.description')}
         </p>
@@ -207,11 +208,11 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6">
-      <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('dashboard.recentActivity.title')}</h3>
+    <div className="bg-white/80 backdrop-blur-xl rounded-[30px] shadow-sm border border-gray-200 shadow-lg p-6">
+      <h3 className="text-2xl font-black text-gray-900 mb-4">{t('dashboard.recentActivity.title')}</h3>
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C71B2D]"></div>
           <span className="ml-2 text-gray-600">{t('dashboard.recentActivity.loading')}</span>
         </div>
       ) : (
@@ -219,12 +220,14 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
           {recentDocuments.map((doc) => {
             const displayFilename = doc.original_filename || doc.filename;
             return (
-              <div key={doc.id} className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-2 shadow-sm">
+              <div key={doc.id} className="bg-gray-50/80 backdrop-blur-sm border border-gray-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-2 hover:border-[#C71B2D]/40 hover:shadow-md transition-all group">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <FileText className="w-6 h-6 text-blue-500 flex-shrink-0" />
+                  <div className="bg-[#163353]/10 p-2 rounded-lg border border-[#163353]/20 group-hover:bg-[#163353]/15 transition-colors flex-shrink-0">
+                    <FileText className="w-6 h-6 text-[#C71B2D]" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-blue-900 truncate" title={displayFilename}>{displayFilename}</div>
-                    <div className="text-xs text-blue-800 flex gap-2 items-center mt-0.5">
+                    <div className="font-bold text-gray-900 truncate group-hover:text-gray-700" title={displayFilename}>{displayFilename}</div>
+                    <div className="text-xs text-gray-600 flex gap-2 items-center mt-0.5">
                       {getStatusBadge(doc)}
                       <span className="text-gray-500">{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : ''}</span>
                     </div>
@@ -235,13 +238,13 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
                     <>
                       <button
                         onClick={() => handleDownload(doc.file_url!, doc.filename)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-xs"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#C71B2D] text-white rounded-lg font-bold hover:bg-[#A01624] transition-colors text-xs uppercase tracking-wider hover:shadow-[0_4px_20px_rgba(199,27,45,0.3)]"
                       >
                         <Download className="w-4 h-4" /> {t('dashboard.recentActivity.actions.download')}
                       </button>
                       <button
                         onClick={() => handleViewDocument(doc)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-lg font-medium hover:bg-blue-50 transition-colors text-xs"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 backdrop-blur-sm border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors text-xs uppercase tracking-wider"
                       >
                         {t('dashboard.recentActivity.actions.view')}
                       </button>

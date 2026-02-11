@@ -103,7 +103,14 @@ export function CustomerDashboard({
   };
 
   return (
-    <div className="relative">
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Decorative background blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#C71B2D]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#163353]/5 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#C71B2D]/3 rounded-full blur-[150px]" />
+      </div>
+
       {/* Toast/banner de novo documento traduzido */}
       {showToast && newCompletedDoc && (
         <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-50 border border-green-200 rounded-xl shadow-lg flex items-center px-6 py-4 gap-4 animate-fade-in-up min-w-[320px] max-w-[90vw]">
@@ -130,7 +137,7 @@ export function CustomerDashboard({
           </button>
         </div>
       )}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
         {/* Dashboard principal - sempre renderiza o overview */}
         <WelcomeSection user={user} onUploadClick={handleUploadClick} />
         {/* Alerta de documentos pendentes de reupload */}

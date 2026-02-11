@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Folder as FolderIcon, FileText, Plus, MoreVertical, ArrowLeft, Grid, List, Download, Eye, Edit2, Trash2, X, ZoomIn, ZoomOut, RotateCw, XCircle, Loader2 } from 'lucide-react';
+import { Folder as FolderIcon, FileText, Plus, MoreVertical, ArrowLeft, Grid, List, Download, Eye, Edit2, Trash2, X, ZoomIn, ZoomOut, RotateCw, XCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useFolders } from '../../hooks/useFolders';
 import { useTranslatedDocuments } from '../../hooks/useDocuments';
@@ -369,130 +369,153 @@ export default function MyDocumentsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto mt-4 sm:mt-10 bg-white rounded-xl shadow p-4 sm:p-8 min-h-[70vh]">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-4">
-        <div className="flex items-center gap-2 min-w-0">
-          {currentFolderId && (
-            <button onClick={handleGoBack} className="p-2 rounded hover:bg-gray-100" title="Go back">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          )}
-          <nav className="flex items-center gap-1 text-base sm:text-lg font-medium min-w-0 overflow-x-auto whitespace-nowrap">
-            {collapsedBreadcrumb.map((crumb, idx) => (
-              <React.Fragment key={crumb.id ?? `crumb-${idx}`}>
-                {crumb.isEllipsis ? (
-                  <div
-                    className="px-1 sm:px-2 py-1 rounded text-gray-500 cursor-default"
-                    title={crumb.tooltip}
-                    style={{ display: 'inline-block', maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}
-                  >
-                    ...
-                  </div>
-                ) : (
-                  <div
-                    className={`px-1 sm:px-2 py-1 rounded transition-colors duration-150 ${dragOverBreadcrumb === (crumb.id ?? 'root') ? 'bg-tfe-blue-100 text-tfe-blue-800 ring-2 ring-tfe-blue-400' : 'text-gray-900'} ${idx === collapsedBreadcrumb.length - 1 ? 'font-bold' : 'cursor-pointer hover:bg-gray-100'}`}
-                    style={{ display: 'inline-block', maxWidth: collapsedBreadcrumb.length > 4 ? 100 : 'none', overflow: collapsedBreadcrumb.length > 4 ? 'hidden' : 'visible', textOverflow: collapsedBreadcrumb.length > 4 ? 'ellipsis' : 'clip' }}
-                    onClick={() => {
-                      if (crumb.id !== currentFolderId) setCurrentFolderId(crumb.id);
-                    }}
-                    onDragOver={e => {
-                      if (draggedFileId) {
-                        e.preventDefault();
-                        setDragOverBreadcrumb(crumb.id ?? 'root');
-                      }
-                    }}
-                    onDragLeave={e => {
-                      if (draggedFileId) setDragOverBreadcrumb(null);
-                    }}
-                    onDrop={e => {
-                      if (draggedFileId) {
-                        e.preventDefault();
-                        setDragOverBreadcrumb(null);
-                        handleMoveFileToFolder(draggedFileId, crumb.id);
-                        setDraggedFileId(null);
-                      }
-                    }}
-                    title={dragOverBreadcrumb === (crumb.id ?? 'root') && draggedFileId ? 'Move here' : crumb.name}
-                  >
-                    {crumb.name}
-                  </div>
-                )}
-                {idx < collapsedBreadcrumb.length - 1 && <span className="mx-1 text-gray-400" aria-label="separator">&gt;</span>}
-              </React.Fragment>
-            ))}
-          </nav>
-        </div>
-        <div className="flex gap-2">
-          <button
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"
-            onClick={() => setShowNewFolder(true)}
-          >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden sm:inline">New Folder</span>
-            <span className="sm:hidden">Folder</span>
-          </button>
-        </div>
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Decorative background blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#C71B2D]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#163353]/5 rounded-full blur-[120px]" />
       </div>
 
-      {/* Instructions and Features */}
-      <div className="bg-tfe-blue-50 border border-tfe-blue-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-        <h3 className="text-xs sm:text-sm font-semibold text-tfe-blue-950 mb-2">📁 My Documents - Features & Instructions</h3>
-        <div className="text-xs sm:text-sm text-tfe-blue-800 space-y-1">
-          <p><strong>• Organize:</strong> Create folders to organize your translated documents</p>
-          <p><strong>• Drag & Drop:</strong> Drag files between folders or to the root level</p>
-          <p><strong>• Manage:</strong> Hover over folders to see options (rename/delete)</p>
-          <p><strong>• View:</strong> Click on documents to view details and download</p>
-          <p><strong>• Navigate:</strong> Use breadcrumbs to move between folders</p>
-          <p><strong>• Search:</strong> Use the search bar to find specific documents</p>
+      <div className="max-w-7xl mx-auto px-4 py-10 relative z-10">
+        {/* Page Title */}
+        <div className="mb-8">
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2 tracking-tight">
+            MY DOCUMENTS
+          </h1>
+          <p className="text-gray-600 font-medium opacity-80 uppercase tracking-[0.2em] text-xs">
+            Organize and manage your translated files
+          </p>
         </div>
-      </div>
+
+        {/* Main Content Card */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-[30px] shadow-lg p-6 sm:p-8 border border-gray-200 min-h-[70vh]">
+          {/* Breadcrumb Navigation */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <div className="flex items-center gap-2 min-w-0">
+              {currentFolderId && (
+                <button onClick={handleGoBack} className="p-2 rounded-xl hover:bg-gray-100 transition-colors" title="Go back">
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
+              )}
+              <nav className="flex items-center gap-1 text-base sm:text-lg font-medium min-w-0 overflow-x-auto whitespace-nowrap">
+                {collapsedBreadcrumb.map((crumb, idx) => (
+                  <React.Fragment key={crumb.id ?? `crumb-${idx}`}>
+                    {crumb.isEllipsis ? (
+                      <div
+                        className="px-1 sm:px-2 py-1 rounded text-gray-500 cursor-default"
+                        title={crumb.tooltip}
+                        style={{ display: 'inline-block', maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      >
+                        ...
+                      </div>
+                    ) : (
+                      <div
+                        className={`px-2 sm:px-3 py-1.5 rounded-xl transition-all duration-150 ${dragOverBreadcrumb === (crumb.id ?? 'root') ? 'bg-[#C71B2D]/10 text-[#C71B2D] ring-2 ring-[#C71B2D]/30' : 'text-gray-700'} ${idx === collapsedBreadcrumb.length - 1 ? 'font-bold bg-gray-100' : 'cursor-pointer hover:bg-gray-100'}`}
+                        style={{ display: 'inline-block', maxWidth: collapsedBreadcrumb.length > 4 ? 100 : 'none', overflow: collapsedBreadcrumb.length > 4 ? 'hidden' : 'visible', textOverflow: collapsedBreadcrumb.length > 4 ? 'ellipsis' : 'clip' }}
+                        onClick={() => {
+                          if (crumb.id !== currentFolderId) setCurrentFolderId(crumb.id);
+                        }}
+                        onDragOver={e => {
+                          if (draggedFileId) {
+                            e.preventDefault();
+                            setDragOverBreadcrumb(crumb.id ?? 'root');
+                          }
+                        }}
+                        onDragLeave={e => {
+                          if (draggedFileId) setDragOverBreadcrumb(null);
+                        }}
+                        onDrop={e => {
+                          if (draggedFileId) {
+                            e.preventDefault();
+                            setDragOverBreadcrumb(null);
+                            handleMoveFileToFolder(draggedFileId, crumb.id);
+                            setDraggedFileId(null);
+                          }
+                        }}
+                        title={dragOverBreadcrumb === (crumb.id ?? 'root') && draggedFileId ? 'Move here' : crumb.name}
+                      >
+                        {crumb.name}
+                      </div>
+                    )}
+                    {idx < collapsedBreadcrumb.length - 1 && <span className="mx-1 text-gray-400" aria-label="separator">&gt;</span>}
+                  </React.Fragment>
+                ))}
+              </nav>
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-2xl transition-all hover:scale-105 hover:shadow-lg font-bold text-sm sm:text-base"
+                onClick={() => setShowNewFolder(true)}
+              >
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">New Folder</span>
+                <span className="sm:hidden">Folder</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Instructions and Features */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-100 rounded-2xl p-4 sm:p-5 mb-6">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-blue-900 mb-3 flex items-center gap-2">
+              <FolderIcon className="w-4 h-4" />
+              My Documents - Features & Instructions
+            </h3>
+            <div className="text-xs sm:text-sm text-blue-800 space-y-2">
+              <p><strong>• Organize:</strong> Create folders to organize your translated documents</p>
+              <p><strong>• Drag & Drop:</strong> Drag files between folders or to the root level</p>
+              <p><strong>• Manage:</strong> Hover over folders to see options (rename/delete)</p>
+              <p><strong>• View:</strong> Click on documents to view details and download</p>
+              <p><strong>• Navigate:</strong> Use breadcrumbs to move between folders</p>
+              <p><strong>• Search:</strong> Use the search bar to find specific documents</p>
+            </div>
+          </div>
 
       {/* View Mode Toggle */}
-      <div className="flex items-center justify-between mb-4 sm:mb-6">
-        <div className="flex bg-gray-100 rounded-lg p-1">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex bg-gray-100 rounded-2xl p-1.5 shadow-sm">
           <button
-            className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${viewMode === 'grid'
-              ? 'bg-white text-tfe-blue-600 shadow-sm'
-              : 'text-gray-600 hover:text-gray-800'
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${viewMode === 'grid'
+              ? 'bg-white text-[#C71B2D] shadow-md'
+              : 'text-gray-600 hover:text-gray-900'
               }`}
             onClick={() => setViewMode('grid')}
           >
-            <Grid className="w-3 h-3 sm:w-4 sm:h-4" />
+            <Grid className="w-4 h-4" />
             <span className="hidden sm:inline">Grid</span>
           </button>
           <button
-            className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${viewMode === 'list'
-              ? 'bg-white text-tfe-blue-600 shadow-sm'
-              : 'text-gray-600 hover:text-gray-800'
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${viewMode === 'list'
+              ? 'bg-white text-[#C71B2D] shadow-md'
+              : 'text-gray-600 hover:text-gray-900'
               }`}
             onClick={() => setViewMode('list')}
           >
-            <List className="w-3 h-3 sm:w-4 sm:h-4" />
+            <List className="w-4 h-4" />
             <span className="hidden sm:inline">List</span>
           </button>
         </div>
       </div>
 
       {showNewFolder && (
-        <form onSubmit={handleCreateFolder} className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+        <form onSubmit={handleCreateFolder} className="mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-gray-50 p-4 rounded-2xl border-2 border-gray-200">
           <input
             type="text"
-            className="border px-3 py-2 rounded-md focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 flex-1"
-            placeholder="Folder name"
+            className="border-2 border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-[#C71B2D]/20 focus:border-[#C71B2D] flex-1 font-medium transition-all"
+            placeholder="Enter folder name..."
             value={newFolderName}
             onChange={e => setNewFolderName(e.target.value)}
             autoFocus
           />
           <div className="flex gap-2 w-full sm:w-auto">
-            <button type="submit" className="flex-1 sm:flex-none bg-tfe-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors text-sm">Create</button>
-            <button type="button" className="flex-1 sm:flex-none text-gray-500 px-3 py-2 text-sm" onClick={() => setShowNewFolder(false)}>Cancel</button>
+            <button type="submit" className="flex-1 sm:flex-none bg-[#C71B2D] hover:bg-[#A01624] text-white px-5 py-3 rounded-xl font-bold hover:scale-105 transition-all shadow-md text-sm">Create</button>
+            <button type="button" className="flex-1 sm:flex-none text-gray-600 hover:text-gray-900 px-4 py-3 text-sm font-medium hover:bg-gray-200 rounded-xl transition-all" onClick={() => setShowNewFolder(false)}>Cancel</button>
           </div>
         </form>
       )}
 
       {/* Grid View */}
       {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6"
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 sm:gap-8"
           onDragOver={e => {
             e.preventDefault();
             if (!dragOverFolderId && draggedFileId) {
@@ -512,13 +535,19 @@ export default function MyDocumentsPage() {
               setDraggedFileId(null);
             }
           }}
-          style={{ minHeight: 120, background: dragOverRoot && draggedFileId ? '#e0f2fe' : '#fff', transition: 'background 0.2s' }}
+          style={{ minHeight: 120, background: dragOverRoot && draggedFileId ? 'rgba(199,27,45,0.05)' : 'transparent', transition: 'background 0.3s ease', borderRadius: '24px' }}
         >
-          {foldersLoading && <span>Loading folders...</span>}
+          {foldersLoading && (
+            <div className="col-span-full flex items-center justify-center py-12">
+              <RefreshCw className="w-8 h-8 animate-spin text-[#C71B2D]/30" />
+            </div>
+          )}
+          
+          {/* Folders */}
           {currentFolders.map((item) => (
             <div
               key={item.id}
-              className={`group relative bg-gray-50 rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center shadow hover:shadow-md transition cursor-pointer border border-gray-100 hover:border-tfe-blue-400 ${dragOverFolderId === item.id ? 'ring-2 ring-tfe-blue-400' : ''}`}
+              className={`group relative bg-white rounded-[24px] p-6 flex flex-col items-center justify-center shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 hover:border-[#FACC15]/50 hover:scale-[1.05] active:scale-[0.98] ${dragOverFolderId === item.id ? 'ring-4 ring-[#FACC15]/30 border-[#FACC15]' : ''}`}
               onClick={() => setCurrentFolderId(item.id)}
               title={`Open folder ${item.name}`}
               onDragOver={e => {
@@ -531,24 +560,24 @@ export default function MyDocumentsPage() {
               }}
               onDrop={e => {
                 e.preventDefault();
-                console.log('[DRAG-DROP] Drop na pasta:', item.id, 'arquivo:', draggedFileId);
                 setDragOverFolderId(null);
                 if (openFolderTimeout.current) clearTimeout(openFolderTimeout.current);
                 if (draggedFileId) {
-                  console.log('[DRAG-DROP] Executando movimentação...');
                   handleMoveFileToFolder(draggedFileId, item.id);
                   setDraggedFileId(null);
-                } else {
-                  console.log('[DRAG-DROP] Nenhum arquivo sendo arrastado');
                 }
               }}
             >
-              <FolderIcon className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-500 mb-2 group-hover:scale-110 transition-transform" />
-              <span className="text-gray-800 font-medium text-center truncate w-full text-sm sm:text-base">{item.name}</span>
-              <div className="absolute top-2 right-2">
+              <div className="w-16 h-16 bg-[#FACC15]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-[#FACC15]/20 group-hover:scale-110 transition-all duration-300 shadow-inner">
+                <FolderIcon className="w-8 h-8 text-[#EAB308]" />
+              </div>
+              <span className="text-gray-900 font-bold text-center truncate w-full text-sm sm:text-base tracking-tight">{item.name}</span>
+              <p className="text-[10px] uppercase font-black tracking-widest text-gray-400 mt-1">Folder</p>
+              
+              <div className="absolute top-3 right-3">
                 <div className="relative dropdown-container">
                   <button
-                    className="p-1 text-gray-400 hover:text-gray-600 rounded transition-opacity opacity-0 group-hover:opacity-100"
+                    className="p-1.5 text-gray-300 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                     aria-label="More options"
                     title="More options"
                     onClick={(e) => {
@@ -559,17 +588,16 @@ export default function MyDocumentsPage() {
                     <MoreVertical className="w-4 h-4" />
                   </button>
                   {openDropdownId === item.id && (
-                    <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
-
+                    <div className="absolute right-0 top-8 bg-white/90 backdrop-blur-md border border-gray-100 rounded-2xl shadow-2xl py-2 z-20 min-w-[140px] animate-in fade-in zoom-in duration-200">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenDropdownId(null);
                           handleOpenRenameFolder(item);
                         }}
-                        className="w-full px-3 py-1 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                        className="w-full px-4 py-2 text-left text-sm font-bold text-gray-700 hover:bg-gray-50 hover:text-[#C71B2D] flex items-center space-x-3 transition-colors"
                       >
-                        <Edit2 className="w-3 h-3" />
+                        <Edit2 className="w-4 h-4" />
                         <span>Rename</span>
                       </button>
                       <button
@@ -578,9 +606,9 @@ export default function MyDocumentsPage() {
                           setOpenDropdownId(null);
                           handleOpenDeleteFolder(item);
                         }}
-                        className="w-full px-3 py-1 text-left text-sm text-tfe-red-600 hover:bg-tfe-red-50 flex items-center space-x-2"
+                        className="w-full px-4 py-2 text-left text-sm font-bold text-[#C71B2D] hover:bg-red-50 flex items-center space-x-3 transition-colors"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-4 h-4" />
                         <span>Delete</span>
                       </button>
                     </div>
@@ -589,45 +617,59 @@ export default function MyDocumentsPage() {
               </div>
             </div>
           ))}
+
+          {/* Skeletons for Loading Documents */}
           {docsLoading && (
-            <div className="col-span-1 sm:col-span-2 md:col-span-4 flex gap-4">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="bg-gray-100 rounded-xl p-4 flex-1 min-h-[90px] animate-pulse" />
+            <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 sm:gap-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white rounded-[24px] p-8 flex flex-col items-center justify-center min-h-[160px] animate-pulse border border-gray-100">
+                  <div className="w-16 h-16 bg-gray-50 rounded-2xl mb-4" />
+                  <div className="h-4 w-24 bg-gray-50 rounded mb-2" />
+                  <div className="h-3 w-12 bg-gray-50 rounded" />
+                </div>
               ))}
             </div>
           )}
+
+          {/* Documents */}
           {currentDocuments.map((item) => (
             <div
               key={item.id}
-              className={`group relative rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center shadow cursor-pointer border transition-all duration-500 ${movingFileId === item.id
-                ? 'bg-green-50 border-green-200 shadow-lg scale-105 transform'
-                : 'bg-gray-50 border-gray-100 hover:shadow-md hover:border-tfe-blue-400'
-                }`}
+              className={`group relative bg-white rounded-[24px] p-6 flex flex-col items-center justify-center shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer border border-gray-100 hover:border-[#163353]/30 hover:scale-[1.05] active:scale-[0.98] ${
+                movingFileId === item.id
+                  ? 'bg-green-50 border-green-200 shadow-2xl scale-110 !border-green-400 rotate-1 ring-4 ring-green-100 z-10'
+                  : ''
+              }`}
               onClick={() => setSelectedFile(item)}
               title={`Open file ${item.filename}`}
               draggable={true}
-              onDragStart={() => {
-                setDraggedFileId(item.id);
-              }}
-              onDragEnd={() => {
-                setDraggedFileId(null);
-              }}
+              onDragStart={() => setDraggedFileId(item.id)}
+              onDragEnd={() => setDraggedFileId(null)}
               style={{
-                opacity: movingFileId === item.id ? 0.8 : 1,
-                transition: 'all 0.5s ease-in-out',
-                transform: movingFileId === item.id ? 'scale(1.05) translateY(-2px)' : 'scale(1) translateY(0)'
+                opacity: movingFileId === item.id ? 1 : 1,
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
-              <FileText className={`w-8 h-8 sm:w-10 sm:h-10 mb-2 transition-all duration-500 ${movingFileId === item.id
-                ? 'text-green-500 scale-110'
-                : 'text-tfe-blue-500 group-hover:scale-110'
-                }`} />
-              <span className={`font-medium text-center truncate w-full text-sm sm:text-base transition-colors duration-500 ${movingFileId === item.id
-                ? 'text-green-700'
-                : 'text-gray-800'
-                }`}>
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-all duration-500 shadow-inner ${
+                movingFileId === item.id
+                  ? 'bg-green-100 text-green-600'
+                  : 'bg-[#163353]/5 text-[#163353] group-hover:bg-[#163353]/10 group-hover:scale-110'
+              }`}>
+                <FileText className="w-8 h-8" />
+              </div>
+              <span className={`font-bold text-center truncate w-full text-sm transition-colors duration-500 tracking-tight ${
+                movingFileId === item.id ? 'text-green-700' : 'text-gray-900'
+              }`}>
                 {item.original_filename || item.filename}
               </span>
+              <p className="text-[10px] uppercase font-black tracking-widest text-gray-400 mt-1">Document</p>
+
+              {/* Status Indicator inside card */}
+              <div className="mt-3 flex gap-1">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full opacity-30" />
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full opacity-10" />
+              </div>
             </div>
           ))}
         </div>
@@ -635,7 +677,7 @@ export default function MyDocumentsPage() {
 
       {/* List View */}
       {viewMode === 'list' && (
-        <div className="space-y-2"
+        <div className="space-y-3"
           onDragOver={e => {
             e.preventDefault();
             if (!dragOverFolderId && draggedFileId) {
@@ -655,24 +697,22 @@ export default function MyDocumentsPage() {
               setDraggedFileId(null);
             }
           }}
-          style={{ background: dragOverRoot && draggedFileId ? '#e0f2fe' : 'transparent', transition: 'background 0.2s', borderRadius: '8px', padding: dragOverRoot && draggedFileId ? '16px' : '0' }}
+          style={{ background: dragOverRoot && draggedFileId ? 'rgba(199,27,45,0.05)' : 'transparent', transition: 'background 0.3s ease', borderRadius: '24px', padding: dragOverRoot && draggedFileId ? '16px' : '0' }}
         >
           {/* Folders */}
           {currentFolders.map((item) => (
             <div
               key={item.id}
-              className={`group relative bg-gray-50 rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 shadow hover:shadow-md transition cursor-pointer border border-gray-100 hover:border-tfe-blue-400 ${dragOverFolderId === item.id ? 'ring-2 ring-tfe-blue-400' : ''}`}
+              className={`group relative bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-gray-100 hover:border-[#FACC15]/30 hover:translate-x-1 ${dragOverFolderId === item.id ? 'ring-4 ring-[#FACC15]/20 border-[#FACC15]' : ''}`}
               onClick={() => setCurrentFolderId(item.id)}
               title={`Open folder ${item.name}`}
               onDragOver={e => {
                 e.preventDefault();
-                console.log('[DRAG-DROP] Drag over pasta:', item.id);
                 setDragOverFolderId(item.id);
-                // Inicia um timer para abrir a pasta após 400ms
                 if (openFolderTimeout.current) clearTimeout(openFolderTimeout.current);
                 openFolderTimeout.current = setTimeout(() => {
                   setCurrentFolderId(item.id);
-                }, 400);
+                }, 600);
               }}
               onDragLeave={() => {
                 setDragOverFolderId(null);
@@ -688,15 +728,17 @@ export default function MyDocumentsPage() {
                 }
               }}
             >
-              <FolderIcon className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="text-gray-800 font-medium truncate block text-sm sm:text-base">{item.name}</span>
-                <span className="text-xs sm:text-sm text-gray-500">Folder</span>
+              <div className="w-12 h-12 bg-[#FACC15]/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <FolderIcon className="w-6 h-6 text-[#EAB308]" />
               </div>
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex-1 min-w-0">
+                <span className="text-gray-900 font-bold truncate block text-sm sm:text-base tracking-tight">{item.name}</span>
+                <span className="text-[10px] uppercase font-black tracking-widest text-gray-400">Folder</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="relative dropdown-container">
                   <button
-                    className="text-gray-400 hover:text-gray-700 p-1 rounded-full"
+                    className="p-2 text-gray-300 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                     title="More options"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -706,17 +748,16 @@ export default function MyDocumentsPage() {
                     <MoreVertical className="w-4 h-4" />
                   </button>
                   {openDropdownId === item.id && (
-                    <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
-
+                    <div className="absolute right-0 top-10 bg-white/90 backdrop-blur-md border border-gray-100 rounded-2xl shadow-2xl py-2 z-20 min-w-[140px] animate-in fade-in zoom-in duration-200">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenDropdownId(null);
                           handleOpenRenameFolder(item);
                         }}
-                        className="w-full px-3 py-1 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                        className="w-full px-4 py-2 text-left text-sm font-bold text-gray-700 hover:bg-gray-50 hover:text-[#C71B2D] flex items-center space-x-3 transition-colors"
                       >
-                        <Edit2 className="w-3 h-3" />
+                        <Edit2 className="w-4 h-4" />
                         <span>Rename</span>
                       </button>
                       <button
@@ -725,9 +766,9 @@ export default function MyDocumentsPage() {
                           setOpenDropdownId(null);
                           handleOpenDeleteFolder(item);
                         }}
-                        className="w-full px-3 py-1 text-left text-sm text-tfe-red-600 hover:bg-tfe-red-50 flex items-center space-x-2"
+                        className="w-full px-4 py-2 text-left text-sm font-bold text-[#C71B2D] hover:bg-red-50 flex items-center space-x-3 transition-colors"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-4 h-4" />
                         <span>Delete</span>
                       </button>
                     </div>
@@ -741,53 +782,49 @@ export default function MyDocumentsPage() {
           {currentDocuments.map((item) => (
             <div
               key={item.id}
-              className={`group relative rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 shadow cursor-pointer border transition-all duration-500 ${movingFileId === item.id
+              className={`group relative bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-gray-100 hover:border-[#163353]/20 hover:translate-x-1 ${movingFileId === item.id
                 ? 'bg-green-50 border-green-200 shadow-lg'
-                : 'bg-gray-50 border-gray-100 hover:shadow-md hover:border-tfe-blue-400'
+                : ''
                 }`}
               onClick={() => setSelectedFile(item)}
               title={`Open file ${item.filename}`}
               draggable={true}
-              onDragStart={() => {
-                setDraggedFileId(item.id);
-              }}
-              onDragEnd={() => {
-                setDraggedFileId(null);
-              }}
+              onDragStart={() => setDraggedFileId(item.id)}
+              onDragEnd={() => setDraggedFileId(null)}
               style={{
                 opacity: movingFileId === item.id ? 0.9 : 1,
-                transition: 'all 0.5s ease-in-out',
-                transform: movingFileId === item.id ? 'translateX(4px)' : 'translateX(0)'
               }}
             >
-              <FileText className={`w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0 transition-all duration-500 ${movingFileId === item.id
-                ? 'text-green-500 scale-110'
-                : 'text-tfe-blue-500'
-                }`} />
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                movingFileId === item.id
+                  ? 'bg-green-100 text-green-600'
+                  : 'bg-[#163353]/5 text-[#163353] group-hover:scale-110'
+              }`}>
+                <FileText className="w-6 h-6" />
+              </div>
               <div className="flex-1 min-w-0">
-                <span className={`font-medium truncate block text-sm sm:text-base transition-colors duration-500 ${movingFileId === item.id
-                  ? 'text-green-700'
-                  : 'text-gray-800'
-                  }`}>
+                <span className={`font-bold truncate block text-sm sm:text-base tracking-tight transition-colors duration-300 ${
+                  movingFileId === item.id ? 'text-green-700' : 'text-gray-900'
+                }`}>
                   {item.original_filename || item.filename}
                 </span>
-                <span className="text-xs sm:text-sm text-gray-500">
-                  {item.created_at ? formatDate(item.created_at) : 'Unknown date'}
+                <span className="text-[10px] uppercase font-black tracking-widest text-gray-400">
+                  {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Document'}
                 </span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
                 <button
-                  className="text-gray-400 hover:text-tfe-blue-600 p-2 rounded-full transition-colors"
+                  className="p-2 text-gray-400 hover:text-[#163353] hover:bg-gray-50 rounded-xl transition-all"
                   title="View document"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleViewFile(item.translated_file_url, item.filename || 'document');
                   }}
                 >
-                  <Eye className="w-4 h-4" />
+                  <Eye className="w-5 h-5" />
                 </button>
                 <button
-                  className="text-gray-400 hover:text-green-600 p-2 rounded-full transition-colors"
+                  className="p-2 text-gray-400 hover:text-green-600 hover:bg-gray-50 rounded-xl transition-all"
                   title="Download document"
                   onClick={async (e) => {
                     e.stopPropagation();
@@ -809,11 +846,49 @@ export default function MyDocumentsPage() {
                     }
                   }}
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-5 h-5" />
                 </button>
-                <button className="text-gray-400 hover:text-gray-700 p-2 rounded-full" title="More options">
-                  <MoreVertical className="w-4 h-4" />
-                </button>
+                <div className="relative dropdown-container">
+                  <button
+                    className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                    title="More options"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenDropdownId(openDropdownId === item.id ? null : item.id);
+                    }}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {openDropdownId === item.id && (
+                    <div className="absolute right-0 top-10 bg-white/90 backdrop-blur-md border border-gray-100 rounded-2xl shadow-2xl py-2 z-20 min-w-[140px] animate-in fade-in zoom-in duration-200">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          setIsRenaming(true);
+                          setNewFileName(item.filename);
+                          setSelectedFile(item); // Set selectedFile for the modal
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm font-bold text-gray-700 hover:bg-gray-50 hover:text-[#C71B2D] flex items-center space-x-3 transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        <span>Rename</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          setShowDeleteConfirm(true);
+                          setSelectedFile(item); // Set selectedFile for the modal
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm font-bold text-[#C71B2D] hover:bg-red-50 flex items-center space-x-3 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -843,121 +918,135 @@ export default function MyDocumentsPage() {
           )}
         </div>
       )}
+    </div>
+  </div>
 
-      {/* Preview/Details Modal */}
-      {selectedFile && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 w-full max-w-md sm:min-w-[400px] relative animate-fade-in max-h-[90vh] overflow-y-auto">
+      {/* File Details Modal */}
+      {selectedFile && !showViewer && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4" onClick={() => setSelectedFile(null)}>
+          <div 
+            className="bg-white/90 backdrop-blur-xl rounded-[32px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] p-8 w-full max-w-md relative animate-in fade-in zoom-in duration-300"
+            onClick={e => e.stopPropagation()}
+          >
             <button
-              className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 text-xl font-bold"
+              className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"
               onClick={() => setSelectedFile(null)}
               aria-label="Close modal"
             >
-              ×
+              <X className="w-5 h-5" />
             </button>
-            <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-gray-900">File Details</h3>
-            <div className="space-y-3 mb-4 sm:mb-6">
-              <div>
-                <span className="font-medium text-gray-700 text-sm sm:text-base">Name:</span>
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 bg-[#163353]/5 rounded-3xl flex items-center justify-center mb-6 shadow-inner">
+                <FileText className="w-10 h-10 text-[#163353]" />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-2 leading-tight">
+                {isRenaming ? 'Rename Document' : 'Document Details'}
+              </h3>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#C71B2D] mb-6">
+                Manage your file
+              </p>
+              
+              <div className="w-full space-y-4 mb-8">
                 {isRenaming ? (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
+                  <div className="text-left">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">NEW FILENAME</label>
                     <input
                       type="text"
+                      className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-[#163353]/10 focus:border-[#163353] focus:bg-white transition-all font-bold text-gray-900"
                       value={newFileName}
                       onChange={(e) => setNewFileName(e.target.value)}
-                      className="flex-1 border border-gray-300 rounded-md px-3 py-1 focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
-                      placeholder="Enter new file name"
                       autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleRenameFile();
-                        } else if (e.key === 'Escape') {
-                          handleCancelRename();
-                        }
-                      }}
                     />
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      <button
-                        onClick={handleRenameFile}
-                        className="flex-1 sm:flex-none px-3 py-1 bg-tfe-blue-600 text-white rounded-md text-sm hover:bg-tfe-blue-700 transition-colors"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={handleCancelRename}
-                        className="flex-1 sm:flex-none px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
                   </div>
                 ) : (
-                  <span className="ml-2 text-gray-900 text-sm sm:text-base">{selectedFile.filename}</span>
+                  <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">FILENAME</span>
+                    </div>
+                    <p className="font-bold text-gray-900 break-all">{selectedFile.filename}</p>
+                    <div className="mt-4 pt-4 border-t border-gray-200/50">
+                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        <span>CREATED AT</span>
+                      </div>
+                      <p className="font-bold text-gray-700">{selectedFile.created_at ? new Date(selectedFile.created_at).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div>
-                <span className="font-medium text-gray-700 text-sm sm:text-base">Type:</span>
-                <span className="ml-2 text-gray-900 text-sm sm:text-base">
-                  {selectedFile.filename?.split('.').pop()?.toUpperCase() || 'Unknown'}
-                </span>
+
+              <div className="w-full grid grid-cols-2 gap-4">
+                {isRenaming ? (
+                  <>
+                    <button
+                      className="px-6 py-4 bg-[#163353] hover:bg-[#0F233A] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] shadow-lg shadow-[#163353]/20"
+                      onClick={handleRenameFile}
+                    >
+                      Save Change
+                    </button>
+                    <button
+                      className="px-6 py-4 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
+                      onClick={() => setIsRenaming(false)}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="px-6 py-4 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] shadow-lg shadow-[#C71B2D]/20 flex items-center justify-center gap-2"
+                      onClick={async () => {
+                        try {
+                          const secureUrl = await convertPublicToSecure(selectedFile.translated_file_url);
+                          const response = await fetch(secureUrl);
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = selectedFile.filename;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          window.URL.revokeObjectURL(url);
+                        } catch (error) {
+                          console.error('Error downloading file:', error);
+                        }
+                      }}
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </button>
+                    <button
+                      className="px-6 py-4 bg-[#163353] hover:bg-[#0F233A] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] shadow-lg shadow-[#163353]/20 flex items-center justify-center gap-2"
+                      onClick={() => handleViewFile(selectedFile.translated_file_url, selectedFile.filename)}
+                    >
+                      <Eye className="w-4 h-4" />
+                      View
+                    </button>
+                  </>
+                )}
               </div>
-              <div>
-                <span className="font-medium text-gray-700 text-sm sm:text-base">Created:</span>
-                <span className="ml-2 text-gray-900 text-sm sm:text-base">
-                  {selectedFile.created_at ? formatDate(selectedFile.created_at) : 'Unknown date'}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button
-                className="flex-1 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors flex items-center justify-center gap-2 text-sm"
-                onClick={() => handleViewFile(selectedFile.translated_file_url, selectedFile.filename || 'document')}
-              >
-                <Eye className="w-4 h-4" />
-                View
-              </button>
-              <button
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm"
-                onClick={async () => {
-                  try {
-                    const secureUrl = await convertPublicToSecure(selectedFile.translated_file_url);
-                    const response = await fetch(secureUrl);
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = selectedFile.filename;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
-                  } catch (error) {
-                    console.error('Error downloading file:', error);
-                    alert('Error downloading file. Please try again.');
-                  }
-                }}
-              >
-                <Download className="w-4 h-4" />
-                Download
-              </button>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3">
-              <button
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
-                onClick={() => {
-                  setIsRenaming(true);
-                  setNewFileName(selectedFile.filename);
-                }}
-                disabled={isRenaming}
-              >
-                Rename
-              </button>
-              <button
-                className="flex-1 px-4 py-2 bg-tfe-red-100 text-tfe-red-600 rounded-lg font-medium hover:bg-tfe-red-200 transition-colors text-sm"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                Delete
-              </button>
+              
+              {!isRenaming && (
+                <div className="w-full mt-4 flex gap-4">
+                  <button
+                    className="flex-1 px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2"
+                    onClick={() => {
+                      setIsRenaming(true);
+                      setNewFileName(selectedFile.filename);
+                    }}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    Rename
+                  </button>
+                  <button
+                    className="flex-1 px-4 py-3 bg-red-50 hover:bg-red-100 text-[#C71B2D] rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -965,28 +1054,31 @@ export default function MyDocumentsPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && selectedFile && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-md sm:min-w-[400px] relative animate-fade-in">
-            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900">Confirm Delete</h3>
-            <p className="text-gray-700 mb-4 sm:mb-6 text-sm sm:text-base">
-              Are you sure you want to delete <strong>"{selectedFile.filename}"</strong>?
-              This action will remove the file from your documents list, but the file will remain in our system.
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[60] p-4">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-[32px] shadow-2xl p-8 w-full max-w-md relative animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6 shadow-inner mx-auto">
+              <Trash2 className="w-8 h-8 text-[#C71B2D]" />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-2 leading-tight text-center">Are you sure?</h3>
+            <p className="text-gray-500 mb-8 text-center font-medium">
+              You're about to delete <span className="text-gray-900 font-bold">"{selectedFile.filename}"</span>. 
+              This will remove it from your document list.
             </p>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex gap-4">
               <button
-                className="flex-1 px-4 py-2 bg-tfe-red-600 text-white rounded-lg font-medium hover:bg-tfe-red-700 transition-colors text-sm"
+                className="flex-1 px-8 py-5 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] shadow-lg shadow-[#C71B2D]/20"
                 onClick={() => {
                   handleDeleteFile();
                   setShowDeleteConfirm(false);
                 }}
               >
-                Delete
+                Yes, Delete
               </button>
               <button
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
+                className="flex-1 px-8 py-5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
                 onClick={() => setShowDeleteConfirm(false)}
               >
-                Cancel
+                No, Keep
               </button>
             </div>
           </div>
@@ -995,35 +1087,36 @@ export default function MyDocumentsPage() {
 
       {/* Rename Folder Modal */}
       {showRenameFolderModal && selectedFolder && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-md sm:min-w-[400px] relative animate-fade-in">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-[32px] shadow-2xl p-8 w-full max-w-md relative animate-in fade-in zoom-in duration-300">
             <button
-              className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 text-xl font-bold"
+              className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"
               onClick={() => {
                 setShowRenameFolderModal(false);
                 setSelectedFolder(null);
                 setEditingFolderName('');
               }}
-              aria-label="Close modal"
             >
-              ×
+              <X className="w-5 h-5" />
             </button>
-            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900">Rename Folder</h3>
-            <div className="mb-4 sm:mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Folder Name
-              </label>
+            <div className="w-16 h-16 bg-[#FACC15]/10 rounded-2xl flex items-center justify-center mb-6 shadow-inner mx-auto">
+              <FolderIcon className="w-8 h-8 text-[#EAB308]" />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-2 leading-tight text-center">Rename Folder</h3>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#EAB308] mb-6 text-center">Change folder name</p>
+            
+            <div className="mb-8">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">FOLDER NAME</label>
               <input
                 type="text"
                 value={editingFolderName}
                 onChange={(e) => setEditingFolderName(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-tfe-blue-500 focus:border-tfe-blue-500 text-sm"
+                className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-[#FACC15]/10 focus:border-[#EAB308] transition-all font-bold text-gray-900"
                 placeholder="Enter new folder name"
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleRenameFolder();
-                  } else if (e.key === 'Escape') {
+                  if (e.key === 'Enter') handleRenameFolder();
+                  if (e.key === 'Escape') {
                     setShowRenameFolderModal(false);
                     setSelectedFolder(null);
                     setEditingFolderName('');
@@ -1031,10 +1124,10 @@ export default function MyDocumentsPage() {
                 }}
               />
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex gap-4">
               <button
                 onClick={handleRenameFolder}
-                className="flex-1 px-4 py-2 bg-tfe-blue-600 text-white rounded-lg font-medium hover:bg-tfe-blue-700 transition-colors text-sm"
+                className="flex-1 px-8 py-5 bg-[#EAB308] hover:bg-[#CA8A04] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] shadow-lg shadow-[#EAB308]/20"
               >
                 Rename
               </button>
@@ -1044,7 +1137,7 @@ export default function MyDocumentsPage() {
                   setSelectedFolder(null);
                   setEditingFolderName('');
                 }}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
+                className="flex-1 px-8 py-5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
               >
                 Cancel
               </button>
@@ -1055,26 +1148,20 @@ export default function MyDocumentsPage() {
 
       {/* Delete Folder Modal */}
       {showDeleteFolderModal && selectedFolder && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-md sm:min-w-[400px] relative animate-fade-in">
-            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900">Confirm Delete</h3>
-            <p className="text-gray-700 mb-4 sm:mb-6 text-sm sm:text-base">
-              Are you sure you want to delete the folder <strong>"{selectedFolder.name}"</strong>?
-              This action cannot be undone and will remove the folder and all its contents.
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[60] p-4">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-[32px] shadow-2xl p-8 w-full max-w-md relative animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6 shadow-inner mx-auto">
+              <Trash2 className="w-8 h-8 text-[#C71B2D]" />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-2 leading-tight text-center">Delete Folder?</h3>
+            <p className="text-gray-500 mb-8 text-center font-medium">
+              You're deleting <span className="text-gray-900 font-bold">"{selectedFolder.name}"</span>. 
+              This will remove the folder and <span className="text-[#C71B2D] font-bold">all documents inside it</span>.
             </p>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex gap-4">
               <button
                 onClick={() => {
                   handleDeleteFolder();
-                  setShowDeleteFolderModal(false);
-                  setSelectedFolder(null);
-                }}
-                className="flex-1 px-4 py-2 bg-tfe-red-600 text-white rounded-lg font-medium hover:bg-tfe-red-700 transition-colors text-sm"
-              >
-                Delete
-              </button>
-              <button
-                onClick={() => {
                   setShowDeleteFolderModal(false);
                   setSelectedFolder(null);
                 }}
@@ -1094,78 +1181,90 @@ export default function MyDocumentsPage() {
 
       {/* Modal de Visualização de Documento */}
       {showViewer && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-xl w-[95vw] h-[95vh] max-w-6xl flex flex-col overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[70] p-4">
+          <div className="bg-white rounded-[32px] w-full h-full max-w-6xl flex flex-col overflow-hidden shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in duration-500">
             {/* Header do Viewer */}
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-100 border-b">
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-gray-900 truncate max-w-[300px]">
-                  {viewingFilename || 'Document'}
-                </span>
-                {viewerType === 'pdf' && (
-                  <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">PDF</span>
-                )}
-                {viewerType === 'image' && (
-                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">Image</span>
-                )}
+            <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-10 h-10 bg-[#163353]/5 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-[#163353]" />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-black text-gray-900 truncate block text-sm tracking-tight">
+                    {viewingFilename || 'Document Viewer'}
+                  </span>
+                  <div className="flex gap-2">
+                    {viewerType === 'pdf' && (
+                      <span className="text-[9px] font-black uppercase tracking-widest text-red-500">PDF Document</span>
+                    )}
+                    {viewerType === 'image' && (
+                      <span className="text-[9px] font-black uppercase tracking-widest text-green-500">Image Document</span>
+                    )}
+                  </div>
+                </div>
               </div>
+              
               <div className="flex items-center gap-2">
                 {viewerType === 'image' && viewerUrl && (
-                  <>
+                  <div className="hidden sm:flex items-center bg-gray-50 rounded-2xl p-1 gap-1 border border-gray-100 mr-2">
                     <button
                       onClick={handleZoomOut}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all"
                       title="Zoom Out"
                     >
-                      <ZoomOut className="w-5 h-5 text-gray-600" />
+                      <ZoomOut className="w-4 h-4 text-gray-600" />
                     </button>
-                    <span className="text-sm text-gray-600 min-w-[50px] text-center">{Math.round(imageZoom * 100)}%</span>
+                    <span className="text-[10px] font-black text-gray-400 min-w-[40px] text-center">{Math.round(imageZoom * 100)}%</span>
                     <button
                       onClick={handleZoomIn}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all"
                       title="Zoom In"
                     >
-                      <ZoomIn className="w-5 h-5 text-gray-600" />
+                      <ZoomIn className="w-4 h-4 text-gray-600" />
                     </button>
+                    <div className="w-px h-4 bg-gray-200 mx-1" />
                     <button
                       onClick={handleRotate}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all"
                       title="Rotate"
                     >
-                      <RotateCw className="w-5 h-5 text-gray-600" />
+                      <RotateCw className="w-4 h-4 text-gray-600" />
                     </button>
-                    <div className="w-px h-6 bg-gray-300 mx-2" />
-                  </>
+                  </div>
                 )}
                 <button
                   onClick={closeViewer}
-                  className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-                  title="Close"
+                  className="p-3 bg-red-50 hover:bg-red-100 text-[#C71B2D] rounded-2xl transition-all flex items-center justify-center"
+                  title="Close Viewer"
                 >
-                  <X className="w-5 h-5 text-gray-600 hover:text-red-600" />
+                  <X className="w-5 h-5 font-black" />
                 </button>
               </div>
             </div>
 
             {/* Conteúdo do Viewer */}
-            <div className="flex-1 overflow-auto bg-gray-800 flex items-center justify-center">
+            <div className="flex-1 overflow-auto bg-gray-900/5 flex items-center justify-center p-4 sm:p-8 relative">
               {loadingViewer && (
-                <div className="flex flex-col items-center gap-4">
-                  <Loader2 className="w-12 h-12 text-white animate-spin" />
-                  <p className="text-white text-lg">Loading document...</p>
+                <div className="flex flex-col items-center gap-6 animate-pulse">
+                  <div className="w-16 h-16 border-4 border-[#C71B2D]/20 border-t-[#C71B2D] rounded-full animate-spin" />
+                  <p className="text-[#163353] font-black uppercase tracking-widest text-[10px]">Preparing Document...</p>
                 </div>
               )}
 
               {viewerError && (
-                <div className="flex flex-col items-center gap-4 text-center p-8">
-                  <XCircle className="w-16 h-16 text-red-400" />
-                  <p className="text-white text-lg">{viewerError}</p>
+                <div className="flex flex-col items-center gap-6 text-center max-w-sm">
+                  <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center shadow-inner">
+                    <XCircle className="w-10 h-10 text-red-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black text-gray-900 mb-2">Oops! Something went wrong</h4>
+                    <p className="text-gray-500 text-sm font-medium">{viewerError}</p>
+                  </div>
                   <button
                     onClick={closeViewer}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    className="w-full px-8 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all"
                   >
-                    Close
+                    Close Viewer
                   </button>
                 </div>
               )}
@@ -1173,17 +1272,17 @@ export default function MyDocumentsPage() {
               {!loadingViewer && !viewerError && viewerUrl && viewerType === 'pdf' && (
                 <iframe
                   src={viewerUrl}
-                  className="w-full h-full border-0"
+                  className="w-full h-full border-0 rounded-2xl shadow-2xl bg-white"
                   title="PDF Viewer"
                 />
               )}
 
               {!loadingViewer && !viewerError && viewerUrl && viewerType === 'image' && (
-                <div className="w-full h-full overflow-auto flex items-center justify-center p-4">
+                <div className="w-full h-full overflow-auto flex items-center justify-center bg-gray-100 rounded-2xl shadow-inner border border-gray-200">
                   <img
                     src={viewerUrl}
                     alt="Document"
-                    className="max-w-none transition-transform duration-200"
+                    className="max-w-none transition-transform duration-300 ease-out shadow-2xl rounded-sm"
                     style={{
                       transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
                       transformOrigin: 'center center'
@@ -1193,15 +1292,20 @@ export default function MyDocumentsPage() {
               )}
 
               {!loadingViewer && !viewerError && viewerUrl && viewerType === 'unknown' && (
-                <div className="flex flex-col items-center gap-4 text-center p-8">
-                  <FileText className="w-16 h-16 text-gray-400" />
-                  <p className="text-white text-lg">File format not supported for inline viewing.</p>
-                  <p className="text-gray-400">Use the download button to download the file.</p>
+                <div className="flex flex-col items-center gap-6 text-center max-w-sm">
+                  <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center shadow-inner">
+                    <FileText className="w-10 h-10 text-gray-300" />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black text-gray-900 mb-2">Unsupported Format</h4>
+                    <p className="text-gray-500 text-sm font-medium mb-1">We can't preview this file type inline yet.</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Please download it to view</p>
+                  </div>
                   <button
                     onClick={closeViewer}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full px-8 py-4 bg-[#163353] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-[#0F233A] transition-all"
                   >
-                    Close
+                    Go Back
                   </button>
                 </div>
               )}
@@ -1211,4 +1315,4 @@ export default function MyDocumentsPage() {
       )}
     </div>
   );
-} 
+}
