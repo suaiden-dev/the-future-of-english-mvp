@@ -1,8 +1,9 @@
 ﻿import React from 'react';
-import { Menu, User } from 'lucide-react';
+import { Menu, User, ShieldCheck } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import type { CustomUser } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import LanguageSelector from './LanguageSelector';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -33,16 +34,16 @@ export function AdminLayout({
       </div>
       
       {/* Main content area - com margem para a sidebar fixa */}
-      <div className="flex-1 lg:ml-64 min-h-screen">
+      <div className="flex-1 lg:ml-72 min-h-screen">
         {/* Mobile header */}
-        <div className="lg:hidden sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 px-4 py-3">
+        <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="flex items-center gap-2">
                 <img 
-                  src="/logo.png" 
-                  alt="The Future of English" 
-                  className="w-8 h-8 flex-shrink-0 object-contain"
+                  src="/logo_tfoe.png" 
+                  alt="TFOE Logo" 
+                  className="h-10 w-auto flex-shrink-0 object-contain"
                 />
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">{title}</h3>
@@ -66,26 +67,45 @@ export function AdminLayout({
         </div>
         
         {/* Desktop header - fixo */}
-        <div className="hidden lg:block fixed top-0 right-0 left-64 bg-white shadow-sm border-b border-gray-200 px-6 py-4 z-30">
+        <div className="hidden lg:block bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 px-8 py-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              {/* Header left side - empty for now */}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center shadow-sm">
+                 <ShieldCheck className="w-6 h-6 text-[#163353]" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 leading-tight">
+                  {title}
+                </h1>
+                {subtitle && (
+                  <p className="text-sm text-slate-500 font-medium">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigate('/finance/profile')}
-                className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
-                title="Go to Profile"
-              >
-                <User className="w-5 h-5" />
-                <span className="text-sm font-medium">{user?.user_metadata?.name || 'User'}</span>
-              </button>
+            <div className="flex items-center space-x-5">
+              <div className="pr-2 border-r border-slate-100">
+                <LanguageSelector />
+              </div>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigate('/finance/profile')}
+                  className="flex items-center space-x-3 p-2 pr-4 bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-2xl transition-all border border-slate-100 shadow-sm group"
+                  title="Go to Profile"
+                >
+                  <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+                    <User className="w-4 h-4 text-[#163353]" />
+                  </div>
+                  <span className="text-sm font-bold truncate max-w-[150px]">{user?.user_metadata?.name || 'User'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
         
         {/* Content area - com padding-top para o header fixo */}
-        <div className="pt-16 lg:pt-20 min-h-full">
+        <div className="min-h-full">
           {children}
         </div>
       </div>

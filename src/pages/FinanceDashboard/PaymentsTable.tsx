@@ -231,6 +231,12 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
       // ✅ Armazenar profiles para cálculo do Total Value
       setAllProfilesData(profilesData || []);
 
+      // Criar mapa de perfis para lookup rápido (fallback de nomes)
+      const profilesLookup = new Map();
+      (profilesData || []).forEach(profile => {
+        profilesLookup.set(profile.id, profile);
+      });
+
       console.log('🔍 Debug - Payments data loaded:', paymentsData?.length || 0);
       console.log('🔍 Debug - Profiles data loaded:', profilesData?.length || 0);
       console.log('🔍 Debug - Sample payments:', paymentsData?.slice(0, 3));
@@ -319,7 +325,15 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
           }
 
           // Buscar pagamento na tabela payments para usuários regulares (por document_id, não user_id)
-          const paymentInfo = paymentsData?.find(payment => payment.document_id === doc.id);
+          // Tentar encontrar todos os pagamentos relacionados e priorizar o status 'completed'
+          const relatedPayments = paymentsData?.filter(payment =>
+            payment.document_id === doc.id ||
+            (payment.document_id && payment.document_id.includes(doc.id)) ||
+            (payment.receipt_url && payment.receipt_url.includes(doc.id))
+          ) || [];
+
+          // Priorizar pagamento completed, senão pegar o mais recente
+          let paymentInfo = relatedPayments.find(p => p.status === 'completed') || relatedPayments[0];
           
           // FINANCE DASHBOARD: Mostrar APENAS pagamentos completed (igual ao Total Revenue)
           // Não mostrar documentos sem pagamento ou com pagamento pending
@@ -355,22 +369,40 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
             console.log('🔍 [STATUS DEBUG] Document:', doc.filename, 'Status:', finalStatus, 'Has verifiedDoc:', !!verifiedDoc);
           }
 
+          // Resolver perfil do usuário (considerar fallback para allProfilesData)
+          // Algumas vezes o join profiles!documents_user_id_fkey pode não retornar dados se houver inconsistência no FK
+          let resolvedProfile = doc.profiles;
+          
+          // Se o join falhou mas temos o user_id, buscar no lookup de perfis
+          if (!resolvedProfile && doc.user_id && profilesLookup.has(doc.user_id)) {
+            resolvedProfile = profilesLookup.get(doc.user_id);
+            console.log(`ℹ️ [FINANCE] Fallback de perfil usado para doc ${doc.id} (user_id: ${doc.user_id})`);
+          }
+
+          // Tratar caso onde profiles retorna como array (comum em joins do PostgREST)
+          if (Array.isArray(resolvedProfile)) {
+            resolvedProfile = resolvedProfile[0] || null;
+          }
+
           regularPayments.push({
             id: paymentInfo.id, // Sempre tem paymentInfo aqui (verificado acima)
             user_id: doc.user_id,
             document_id: doc.id,
             stripe_session_id: paymentInfo.stripe_session_id || null,
             amount: paymentInfo.amount, // Usar sempre o amount da tabela payments
+            base_amount: paymentInfo.base_amount || null,
+            gross_amount: paymentInfo.gross_amount || null,
+            fee_amount: paymentInfo.fee_amount || null,
             currency: paymentInfo.currency || 'usd',
             status: paymentInfo.status, // Sempre 'completed' aqui (verificado acima)
             payment_method: paymentInfo.payment_method || 'card', // Usar da tabela payments
             payment_date: paymentInfo.payment_date || doc.created_at,
             created_at: paymentInfo.created_at || doc.created_at,
             
-            // Dados do usuário
-            user_email: doc.profiles?.email || null,
-            user_name: doc.profiles?.name || null,
-            user_role: doc.profiles?.role || null,
+            // Dados do usuário (mais robustos)
+            user_email: resolvedProfile?.email || doc.profiles?.email || null,
+            user_name: resolvedProfile?.name || doc.profiles?.name || (resolvedProfile?.email ? resolvedProfile.email.split('@')[0] : 'Unknown'),
+            user_role: resolvedProfile?.role || doc.profiles?.role || 'user',
             
             // Dados do documento
             document_filename: doc.filename,
@@ -387,7 +419,7 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
             target_language: verifiedDoc?.target_language || doc.tipo_trad,
             
             // Campos obrigatórios da interface
-            profiles: doc.profiles,
+            profiles: resolvedProfile as any,
             documents: {
               filename: doc.filename,
               status: doc.status,
@@ -672,23 +704,21 @@ export function PaymentsTable({ initialDateRange }: PaymentsTableProps) {
     }
   }, []); // Empty dependency array because supabase and useState setters are stable
 
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'refunded':
-        return 'bg-gray-200 text-gray-800'; // Changed from gray-100 for more contrast
-      case 'processing': // For document status
-        return 'bg-blue-100 text-blue-800';
-      case 'deleted': // For document status
-        return 'bg-red-200 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const getStatusColor = (status: string | null | undefined) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
+    // Normalizar para minúsculo
+    const s = status.toLowerCase();
+    
+    if (s === 'completed' || s === 'paid' || s === 'aprovado') return 'bg-green-100 text-green-800';
+    if (s === 'pending' || s === 'pendente') return 'bg-yellow-100 text-yellow-800';
+    if (s === 'processing' || s === 'processando') return 'bg-blue-100 text-blue-800';
+    if (s === 'failed' || s === 'failed' || s === 'rejeitado') return 'bg-red-100 text-red-800';
+    if (s === 'refunded' || s === 'reembolsado') return 'bg-purple-100 text-purple-800';
+    if (s.includes('manual') || s.includes('revisão') || s === 'pending_verification') return 'bg-orange-100 text-orange-800';
+    if (s === 'deleted') return 'bg-red-200 text-red-800';
+    
+    return 'bg-gray-100 text-gray-800';
   };
 
   const downloadPaymentsReport = useCallback(() => {

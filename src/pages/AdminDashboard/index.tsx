@@ -14,9 +14,10 @@ import { ContactsTab } from './ContactsTab';
 
 interface AdminDashboardProps {
   documents: Document[];
+  onStatusUpdate: (documentId: string, status: 'pending' | 'processing' | 'completed') => Promise<void>;
 }
 
-export function AdminDashboard({ documents }: AdminDashboardProps) {
+export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'contacts' | 'zelle-receipts' | 'affiliate-withdrawals' | 'draft-cleanup' | 'test-tools'>('overview');
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -74,10 +75,6 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-3 sm:p-4 lg:p-6 w-full max-w-none">
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-sm sm:text-base lg:text-lg text-gray-600 mt-1 sm:mt-2">Manage translation projects and monitor business metrics</p>
-        </div>
 
         {/* Tab Navigation */}
         <div className="mb-4 sm:mb-6">
@@ -127,6 +124,7 @@ export function AdminDashboard({ documents }: AdminDashboardProps) {
               <DocumentsTable 
                 documents={documents}
                 onViewDocument={handleViewDocument}
+                onStatusUpdate={onStatusUpdate}
                 dateRange={dateRange}
                 onDateRangeChange={setDateRange}
               />

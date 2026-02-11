@@ -7,47 +7,24 @@ import {
   Clock, 
   CheckCircle, 
   DollarSign, 
-  ShieldCheck, 
   TrendingUp, 
-  RefreshCw,
-  XCircle,
   BarChart3,
-  Upload
+  Upload,
+  XCircle
 } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 
-interface OverviewStats {
-  totalDocuments: number;
-  pendingDocuments: number;
-  approvedDocuments: number;
-  rejectedDocuments: number;
-  totalValue: number;
-  totalPages: number;
-  myAuthentications: number;
-  myAuthenticationsThisMonth: number;
-  myTranslations: number;
-  myTranslationsThisMonth: number;
-  averageProcessingTime: number;
-  topLanguages: Array<{ language: string; count: number }>;
-  recentActivity: Array<{
-    id: string;
-    filename: string;
-    action: string;
-    date: string;
-    user_name: string;
-  }>;
-}
 
 interface AuthenticatorOverviewProps {
   onNavigate?: (page: 'authenticate' | 'translated' | 'upload') => void;
 }
 
-export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverviewProps) {
+export default function AuthenticatorOverview() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const { stats, loading, error, refreshStats, lastUpdated } = useOverview();
-  const { documents: missingFileDocuments, count: missingFileCount } = useDocumentsWithMissingFiles();
+  const { stats, loading, error } = useOverview();
+  const { count: missingFileCount } = useDocumentsWithMissingFiles();
 
   if (loading) {
     return (
@@ -73,41 +50,6 @@ export default function AuthenticatorOverview({ onNavigate }: AuthenticatorOverv
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-4 sm:gap-6">
-            <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12 text-gray-600" />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-                {currentUser?.role === 'admin' ? 'Admin Overview' : 'Authenticator Overview'}
-              </h1>
-              <p className="text-sm sm:text-base text-gray-600">
-                {currentUser?.role === 'admin' 
-                  ? 'Welcome back! Here\'s your complete system overview.' 
-                  : 'Welcome back! Here\'s your personal authentication dashboard.'
-                }
-                {lastUpdated && (
-                  <span className="block text-xs text-gray-500 mt-1">
-                    Last updated: {lastUpdated.toLocaleTimeString()}
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={refreshStats}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-              title="Refresh data"
-            >
-              {loading ? (
-                <LoadingSpinner size="sm" color="blue" />
-              ) : (
-                <RefreshCw className="w-5 h-5" />
-              )}
-            </button>
-          </div>
-        </div>
 
         {/* Main Stats Cards */}
         <div className={`grid grid-cols-1 sm:grid-cols-2 ${

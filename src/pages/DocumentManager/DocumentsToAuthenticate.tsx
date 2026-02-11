@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { CheckCircle, XCircle, Clock, FileText, User, Calendar, FileImage, Phone, Eye } from 'lucide-react';
+import { sendTranslationCompletionNotification } from '../../lib/emails';
 
 interface Document {
   id: string;
@@ -149,6 +150,25 @@ export default function DocumentsToAuthenticate({ user }: Props) {
       if (insertError) {
         console.error('[DocumentsToAuthenticate] Erro ao inserir em translated_documents:', insertError);
         // Não interrompemos o processo, mas logamos o erro
+      }
+
+      // Notificar o usuário (SMTP Direto)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', doc.user_id)
+          .single();
+        
+        if (profile?.email) {
+          await sendTranslationCompletionNotification(profile.email, {
+            userName: profile.name || 'Cliente',
+            filename: doc.filename
+          });
+          console.log('[DocumentsToAuthenticate] Notificação enviada via SMTP');
+        }
+      } catch (notifyError) {
+        console.error('[DocumentsToAuthenticate] Erro ao enviar notificação:', notifyError);
       }
 
       // Atualizar o documento original na tabela documents para completed

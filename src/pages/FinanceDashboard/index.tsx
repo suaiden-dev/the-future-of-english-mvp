@@ -57,10 +57,6 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-3 sm:p-4 lg:p-6 w-full max-w-none overflow-x-hidden">
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Finance Dashboard</h1>
-          <p className="text-sm sm:text-base lg:text-lg text-gray-600 mt-1 sm:mt-2">Monitor payments, track translations, and generate business reports</p>
-        </div>
 
         {/* Tabs - Mobile Responsive */}
         <div className="mb-4 sm:mb-6">

@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { FileText, Check, Clock, ShieldCheck, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone } from 'lucide-react';
 import { getValidFileUrl } from '../../utils/fileUtils';
 import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
+import { sendTranslationCompletionNotification } from '../../lib/emails';
 import { Logger } from '../../lib/loggingHelpers';
 import { ActionTypes } from '../../types/actionTypes';
 import { DocumentViewerModal } from '../../components/DocumentViewerModal';
@@ -381,12 +382,20 @@ export default function AuthenticatorDashboard() {
       console.error('[AuthenticatorDashboard] Erro ao inserir em translated_documents:', insertError);
     }
 
-    // Notificar que a tradução foi completada
+    // Notificar que a tradução foi completada via SMTP Direto
     try {
-      await notifyTranslationCompleted(doc.user_id, doc.filename, doc.id);
+      if (document.user_email) {
+        await sendTranslationCompletionNotification(document.user_email, {
+          userName: document.user_name || 'Cliente',
+          filename: document.filename
+        });
+        console.log('[AuthenticatorDashboard] Notificação de tradução enviada via SMTP');
+      } else {
+        console.warn('[AuthenticatorDashboard] Email do usuário não encontrado, tentando webhook fallback');
+        await notifyTranslationCompleted(doc.user_id, doc.filename, doc.id);
+      }
     } catch (error) {
       console.error('[AuthenticatorDashboard] Erro ao enviar notificação de tradução completada:', error);
-      // Não interrompemos o processo mesmo se a notificação falhar
     }
 
     // Atualizar estatísticas

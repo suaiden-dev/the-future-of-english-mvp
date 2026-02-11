@@ -5,10 +5,11 @@ import TranslatedDocuments from './TranslatedDocuments';
 import AuthenticatorOverview from './AuthenticatorOverview';
 import AuthenticatorUpload from './AuthenticatorUpload';
 import AuthenticatorFailedUploads from './AuthenticatorFailedUploads';
-import { FileText, CheckCircle, LogOut, Menu, X, User, Upload, Home as HomeIcon, AlertTriangle } from 'lucide-react';
+import { FileText, CheckCircle, LogOut, Menu, X, User, Upload, Home as HomeIcon, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OverviewProvider } from '../../contexts/OverviewContext';
+import LanguageSelector from '../../components/LanguageSelector';
 
 export default function AuthenticatorLayout() {
   const { user, signOut } = useAuth();
@@ -28,6 +29,18 @@ export default function AuthenticatorLayout() {
   };
 
   const currentPage = getCurrentPage();
+
+  const getHeaderInfo = () => {
+    switch(currentPage) {
+      case 'authenticate': return { title: 'Authenticate Documents', subtitle: 'Verify and process pending document requests' };
+      case 'translated': return { title: 'Translated Documents', subtitle: 'View and manage all successfully translated documents' };
+      case 'upload': return { title: 'Upload Document', subtitle: 'Manually upload documents to the system' };
+      case 'failed-uploads': return { title: 'Failed Uploads', subtitle: 'Review and fix documents with processing errors' };
+      default: return { title: user?.role === 'admin' ? 'Admin Overview' : 'Authenticator Overview', subtitle: 'Welcome back! Here\'s the complete system overview.' };
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
 
   if (!user || (user.role !== 'authenticator' && user.role !== 'admin')) {
     return <div>Access denied. Only authenticators can view this page.</div>;
@@ -67,14 +80,10 @@ export default function AuthenticatorLayout() {
           <div className="flex items-center space-x-3">
             <div className="flex items-center gap-2">
               <img 
-                src="/logo.png" 
-                alt="The Future of English" 
-                className="w-8 h-8 flex-shrink-0 object-contain"
+                src="/logo_tfoe.png" 
+                alt="TFOE Logo" 
+                className="h-10 w-auto flex-shrink-0 object-contain"
               />
-              <h3 className="text-xl font-bold">
-                <span className="text-tfe-blue-950">THE FUTURE</span>
-                <span className="text-tfe-red-950"> OF ENGLISH</span>
-              </h3>
             </div>
           </div>
           <button
@@ -188,20 +197,14 @@ export default function AuthenticatorLayout() {
       <MobileMenu />
 
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
+      <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0">
         <div className="flex flex-col flex-grow bg-white shadow-sm border-r border-gray-200">
-          <div className="flex items-center justify-center p-6 border-b border-gray-200">
-            <div className="flex items-center gap-2">
-              <img 
-                src="/logo.png" 
-                alt="The Future of English" 
-                className="w-8 h-8 flex-shrink-0 object-contain"
-              />
-              <h3 className="text-xl font-bold">
-                <span className="text-tfe-blue-950">THE FUTURE</span>
-                <span className="text-tfe-red-950"> OF ENGLISH</span>
-              </h3>
-            </div>
+          <div className="flex items-center justify-center p-8 border-b border-gray-100">
+            <img 
+              src="/logo_tfoe.png" 
+              alt="TFOE Logo" 
+              className="h-12 w-auto object-contain"
+            />
           </div>
 
           <div className="flex-1 flex flex-col overflow-y-auto">
@@ -301,9 +304,9 @@ export default function AuthenticatorLayout() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-64">
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
         {/* Mobile Header */}
-        <div className="lg:hidden sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 p-4">
+        <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <button
@@ -315,14 +318,10 @@ export default function AuthenticatorLayout() {
               </button>
               <div className="flex items-center gap-2">
                 <img 
-                  src="/logo.png" 
-                  alt="The Future of English" 
-                  className="w-10 h-10 flex-shrink-0 object-contain"
+                  src="/logo_tfoe.png" 
+                  alt="TFOE Logo" 
+                  className="h-10 w-auto object-contain"
                 />
-                <h3 className="text-xl font-bold">
-                  <span className="text-tfe-blue-950">THE FUTURE</span>
-                  <span className="text-tfe-red-950"> OF ENGLISH</span>
-                </h3>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -346,27 +345,45 @@ export default function AuthenticatorLayout() {
         {/* Page Content */}
         <div className="flex-1 overflow-auto">
           {/* Desktop header que complementa a sidebar */}
-          <div className="hidden lg:block bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <div className="hidden lg:block bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center shadow-sm">
+                   <ShieldCheck className="w-6 h-6 text-[#163353]" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900 leading-tight">
+                    {headerInfo.title}
+                  </h1>
+                  <p className="text-sm text-slate-500 font-medium">
+                    {headerInfo.subtitle}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center space-x-4">
-                <NotificationBell />
-                <button
-                  onClick={() => navigate('/authenticator')}
-                  className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
-                  title="Go to Overview"
-                >
-                  <User className="w-5 h-5" />
-                  <span className="text-sm font-medium">{user?.user_metadata?.name || 'Authenticator'}</span>
-                </button>
+              <div className="flex items-center space-x-5">
+                <div className="pr-2 border-r border-slate-100">
+                  <LanguageSelector />
+                </div>
+                <div className="flex items-center gap-4">
+                  <NotificationBell />
+                  <button
+                    onClick={() => navigate('/authenticator')}
+                    className="flex items-center space-x-3 p-2 pr-4 bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-2xl transition-all border border-slate-100 shadow-sm group"
+                    title="Go to Overview"
+                  >
+                    <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+                      <User className="w-4 h-4 text-[#163353]" />
+                    </div>
+                    <span className="text-sm font-bold truncate max-w-[150px]">{user?.user_metadata?.name || 'Authenticator'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
           
           <OverviewProvider>
             <Routes>
-              <Route path="/" element={<AuthenticatorOverview onNavigate={handleNavigation} />} />
+              <Route path="/" element={<AuthenticatorOverview />} />
               <Route path="/authenticate" element={<AuthenticatorDashboard />} />
               <Route path="/translated" element={<TranslatedDocuments />} />
               <Route path="/upload" element={<AuthenticatorUpload />} />

@@ -218,7 +218,8 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
       // Buscar dados de pagamentos para obter payment_method e status
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .select('id, document_id, payment_method, status, amount, base_amount, gross_amount, fee_amount, currency, user_id, created_at, receipt_url');
+        .select('id, document_id, payment_method, status, amount, base_amount, gross_amount, fee_amount, currency, user_id, created_at, receipt_url')
+        .order('created_at', { ascending: false });
 
       if (paymentsError) {
         console.error('Error loading payments data:', paymentsError);
@@ -277,11 +278,15 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
         }
 
         // Dados de pagamento - usar ID do documento principal
-        const paymentInfo = paymentsData?.find(payment =>
+        // Tentar encontrar todos os pagamentos relacionados e priorizar o status 'completed'
+        const relatedPayments = paymentsData?.filter(payment =>
           payment.document_id === doc.id ||
           (payment.document_id && payment.document_id.split(',').includes(doc.id)) ||
           (payment.receipt_url && payment.receipt_url.includes(doc.id))
-        );
+        ) || [];
+
+        // Priorizar pagamento completed, senão pegar o mais recente
+        const paymentInfo = relatedPayments.find(p => p.status === 'completed') || relatedPayments[0];
 
         // Perfil do usuário
         const userProfile = profilesData?.find(profile => profile.id === doc.user_id);
@@ -498,26 +503,38 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
 
   // Define a cor de fundo e texto com base no status de pagamento
   const getPaymentStatusColor = (paymentStatus: string | null | undefined) => {
-    switch (paymentStatus) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'pending_verification': return 'bg-orange-100 text-orange-800';
-      case 'failed': return 'bg-red-100 text-red-800';
-      case 'refunded': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    if (!paymentStatus) return 'bg-gray-100 text-gray-800';
+    
+    // Normalizar para minúsculo para facilitar comparação
+    const status = paymentStatus.toLowerCase();
+    
+    if (status === 'completed' || status === 'paid') return 'bg-green-100 text-green-800';
+    if (status === 'pending') return 'bg-yellow-100 text-yellow-800';
+    if (status === 'pending_verification' || status.includes('manual') || status.includes('revisão')) return 'bg-orange-100 text-orange-800';
+    if (status === 'failed' || status === 'declined') return 'bg-red-100 text-red-800';
+    if (status === 'refunded') return 'bg-purple-100 text-purple-800';
+    
+    return 'bg-gray-100 text-gray-800';
   };
 
   // Formata o texto do status de pagamento
   const getPaymentStatusText = (paymentStatus: string | null | undefined) => {
-    switch (paymentStatus) {
-      case 'completed': return 'Paid';
-      case 'pending': return 'Pending';
-      case 'pending_verification': return 'Pending Verification';
-      case 'failed': return 'Failed';
-      case 'refunded': return 'Refunded';
-      default: return 'Unknown';
-    }
+    if (!paymentStatus) return 'N/A';
+    
+    // Normalizar para minúsculo
+    const status = paymentStatus.toLowerCase();
+    
+    if (status === 'completed' || status === 'paid') return 'Paid';
+    if (status === 'pending') return 'Pending';
+    if (status === 'pending_verification' || status.includes('manual') || status.includes('revisão')) return 'Review Needed';
+    if (status === 'failed' || status === 'declined') return 'Failed';
+    if (status === 'refunded') return 'Refunded';
+    
+    // Se for um status em português não mapeado acima, retornar de forma amigável
+    if (status === 'comprovante requer revisão manual') return 'Review Needed';
+    
+    // Fallback: capitalized status
+    return paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1);
   };
 
   // Define a cor de fundo e texto com base no status do documento

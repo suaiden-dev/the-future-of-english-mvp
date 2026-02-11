@@ -14,6 +14,8 @@ import {
 import { supabase } from '../lib/supabase';
 import PostgreSQLService from '../lib/postgresql-edge';
 import { notifyAuthenticatorsPendingDocuments } from '../utils/webhookNotifications';
+import { Logger } from '../lib/loggingHelpers';
+import { ActionTypes } from '../types/actionTypes';
 
 interface ZellePayment {
   id: string;
@@ -69,6 +71,8 @@ export function ZelleReceiptsAdmin() {
   }>({ isOpen: false, payment: null });
   const [confirmationCode, setConfirmationCode] = useState<string>('');
   const [savingConfirmationCode, setSavingConfirmationCode] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
+
 
   useEffect(() => {
     loadPayments();
@@ -93,29 +97,53 @@ export function ZelleReceiptsAdmin() {
     try {
       setLoading(true);
       setError(null);
+      console.log('DEBUG: Fetching all Zelle payments to calculate counts...');
 
-      let query = supabase
+      // Buscar TODOS os pagamentos Zelle para poder mostrar os contadores corretamente
+      // Usando joins robustos com fallback
+      const query = supabase
         .from('payments')
         .select(`
           *,
-          profiles:user_id (name, email),
-          documents:document_id (filename, status, client_name)
+          profiles:profiles!payments_user_id_fkey (name, email),
+          documents:documents!payments_document_id_fkey (filename, status, client_name)
         `)
         .eq('payment_method', 'zelle')
         .order('created_at', { ascending: false });
 
-      if (filter !== 'all') {
-        query = query.eq('status', filter);
-      }
-
       const { data, error: fetchError } = await query;
 
-      if (fetchError) throw fetchError;
+      let allData = data;
 
-      // Buscar dados dos verificadores
-      const paymentsWithVerifiers = await Promise.all(
-        data.map(async (payment) => {
-          if (payment.zelle_verified_by) {
+      if (fetchError) {
+        console.warn('⚠️ Complex query failed, falling back to simple query:', fetchError);
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('payment_method', 'zelle')
+          .order('created_at', { ascending: false });
+
+        if (simpleError) throw simpleError;
+        
+        // Enriquecer dados manualmente
+        allData = await Promise.all((simpleData || []).map(async (payment) => {
+          const { data: profile } = await supabase.from('profiles').select('name, email').eq('id', payment.user_id).single();
+          let docInfo = null;
+          if (payment.document_id) {
+            const firstId = payment.document_id.split(',')[0].trim();
+            const { data: doc } = await supabase.from('documents').select('filename, status, client_name').eq('id', firstId).single();
+            docInfo = doc;
+          }
+          return { ...payment, profiles: profile, documents: docInfo };
+        }));
+      }
+
+      console.log(`✅ Loaded ${allData?.length || 0} Zelle payments total`);
+
+      // Buscar dados de verificação complementares para os que têm zelle_verified_by
+      const enrichedWithVerifiers = await Promise.all(
+        (allData || []).map(async (payment) => {
+          if (payment.zelle_verified_by && !payment.verifier) {
             const { data: verifier } = await supabase
               .from('profiles')
               .select('name, email')
@@ -128,9 +156,9 @@ export function ZelleReceiptsAdmin() {
         })
       );
 
-      setPayments(paymentsWithVerifiers);
+      setPayments(enrichedWithVerifiers as ZellePayment[]);
     } catch (err: any) {
-      console.error('Error loading Zelle payments:', err);
+      console.error('❌ Error loading Zelle payments:', err);
       setError(err.message || 'Failed to load payments');
     } finally {
       setLoading(false);
@@ -658,16 +686,26 @@ export function ZelleReceiptsAdmin() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
+    const statusConfig: Record<string, any> = {
       pending_verification: { 
         color: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
         icon: Clock,
         text: 'Pending Verification'
       },
+      'aguardando aprovação de pagamento': { 
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
+        icon: Clock,
+        text: 'Awaiting Approval'
+      },
       pending_manual_review: { 
         color: 'bg-orange-100 text-orange-800 border-orange-200', 
         icon: AlertCircle,
-        text: 'Manual Review Required'
+        text: 'Manual Review'
+      },
+      'comprovante requer revisão manual': { 
+        color: 'bg-orange-100 text-orange-800 border-orange-200', 
+        icon: AlertCircle,
+        text: 'Review Required'
       },
       completed: { 
         color: 'bg-green-100 text-green-800 border-green-200', 
@@ -686,7 +724,7 @@ export function ZelleReceiptsAdmin() {
       }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const config = statusConfig[status] || statusConfig.pending;
     const IconComponent = config.icon;
 
     return (
@@ -712,6 +750,17 @@ export function ZelleReceiptsAdmin() {
     );
   }
 
+  const filteredPayments = payments.filter((payment: ZellePayment) => {
+    if (filter === 'all') return true;
+    if (filter === 'pending_verification') {
+      return payment.status === 'pending_verification' || payment.status === 'aguardando aprovação de pagamento';
+    }
+    if (filter === 'pending_manual_review') {
+      return payment.status === 'pending_manual_review' || payment.status === 'comprovante requer revisão manual';
+    }
+    return payment.status === filter;
+  });
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -723,8 +772,8 @@ export function ZelleReceiptsAdmin() {
       {/* Filter */}
       <div className="mb-6 flex space-x-2">
         {[
-          { key: 'pending_verification', label: 'Pending Verification', count: payments.filter(p => p.status === 'pending_verification').length },
-          { key: 'pending_manual_review', label: 'Manual Review', count: payments.filter(p => p.status === 'pending_manual_review').length },
+          { key: 'pending_verification', label: 'Pending Verification', count: payments.filter(p => p.status === 'pending_verification' || p.status === 'aguardando aprovação de pagamento').length },
+          { key: 'pending_manual_review', label: 'Manual Review', count: payments.filter(p => p.status === 'pending_manual_review' || p.status === 'comprovante requer revisão manual').length },
           { key: 'completed', label: 'Verified', count: payments.filter(p => p.status === 'completed').length },
           { key: 'failed', label: 'Rejected', count: payments.filter(p => p.status === 'failed').length },
           { key: 'all', label: 'All', count: payments.length }
@@ -753,14 +802,14 @@ export function ZelleReceiptsAdmin() {
 
       {/* Payments List */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        {payments.length === 0 ? (
+        {filteredPayments.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p>No Zelle payments found for the selected filter.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {payments.map((payment) => (
+            {filteredPayments.map((payment) => (
               <div key={payment.id} className="p-6 hover:bg-gray-50">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -778,9 +827,9 @@ export function ZelleReceiptsAdmin() {
 
                     {/* Document & Payment Info */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
+                      <div className="flex items-center space-x-2 overflow-hidden">
+                        <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-sm text-gray-600 truncate" title={payment.documents?.filename}>
                           {payment.documents?.filename || 'Unknown File'}
                         </span>
                       </div>
@@ -867,12 +916,42 @@ export function ZelleReceiptsAdmin() {
         )}
       </div>
 
+
+      {/* Zoomed Image Overlay */}
+      {isZoomed && selectedReceipt && (
+        <div 
+          className="fixed inset-0 z-[60] bg-black bg-opacity-95 overflow-auto cursor-zoom-out"
+          onClick={() => setIsZoomed(false)}
+        >
+          <div className="min-h-screen w-full flex items-center justify-center p-4">
+            <img
+              src={selectedReceipt.receipt_url}
+              alt="Payment Receipt Zoomed"
+              className="max-w-none shadow-2xl"
+              style={{ minWidth: '50vw' }} // Ensure it's large enough to see
+              onClick={(e) => e.stopPropagation()} // Allow clicking image without closing? No, user wants to inspect. 
+              // Actually, user wants zoom. Let's make it simple: Click anywhere to close is fine, 
+              // but if the image is huge, scrolling is needed.
+            />
+          </div>
+          <button 
+            className="fixed top-6 right-6 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-3 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsZoomed(false);
+            }}
+          >
+            <XCircle className="w-8 h-8" />
+          </button>
+        </div>
+      )}
+
       {/* Receipt Modal */}
       {selectedReceipt && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden flex flex-col w-full">
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center shrink-0">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Payment Receipt</h3>
                 <p className="text-sm text-gray-600 mt-1">
@@ -880,15 +959,6 @@ export function ZelleReceiptsAdmin() {
                 </p>
               </div>
               <div className="flex items-center space-x-2">
-                <a
-                  href={selectedReceipt.receipt_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <ExternalLink className="w-4 h-4 mr-1" />
-                  Open in New Tab
-                </a>
                 <button
                   onClick={() => setSelectedReceipt(null)}
                   className="text-gray-400 hover:text-gray-600"
@@ -899,19 +969,19 @@ export function ZelleReceiptsAdmin() {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 max-h-[70vh] overflow-auto">
-              <div className="text-center">
+            <div className="p-6 overflow-auto flex-1 bg-gray-50 flex items-center justify-center">
+              <div className="relative group cursor-zoom-in" onClick={() => setIsZoomed(true)}>
                 <img
                   src={selectedReceipt.receipt_url}
                   alt="Payment Receipt"
-                  className="max-w-full max-h-full mx-auto rounded-lg shadow-lg"
+                  className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
                     const parent = target.parentElement;
                     if (parent) {
                       parent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center p-8 text-gray-500">
+                        <div class="flex flex-col items-center justify-center p-8 text-gray-500 cursor-default">
                           <FileText class="w-12 h-12 mb-4" />
                           <p>Unable to display receipt image</p>
                           <a href="${selectedReceipt.receipt_url}" target="_blank" class="text-blue-600 hover:underline mt-2">
@@ -919,15 +989,22 @@ export function ZelleReceiptsAdmin() {
                           </a>
                         </div>
                       `;
+                      parent.removeAttribute('onClick');
+                      parent.classList.remove('cursor-zoom-in');
                     }
                   }}
                 />
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
+                  <span className="opacity-0 group-hover:opacity-100 bg-black bg-opacity-75 text-white text-sm px-3 py-1 rounded-full transition-opacity">
+                    Click to zoom
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Modal Actions */}
             {selectedReceipt.status === 'pending_verification' && (
-              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3 shrink-0 bg-white">
                 <button
                   onClick={() => openRejectionModal(selectedReceipt)}
                   disabled={processingPaymentId === selectedReceipt.id || sendingToTranslation === selectedReceipt.id}
