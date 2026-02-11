@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
+import { sendContactNotification } from "@/lib/emails";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,14 +42,41 @@ const ContactForm = () => {
   const onSubmit = async (data: ContactFormData) => {
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("contacts").insert({
-        name: data.name,
-        email: data.email,
-        phone: data.phone || null,
-        message: data.message,
-      });
+      // Salvar no banco e enviar email em paralelo
+      const [dbResult, emailResult] = await Promise.allSettled([
+        supabase.from("contacts").insert({
+          name: data.name,
+          email: data.email,
+          phone: data.phone || null,
+          message: data.message,
+        }),
+        sendContactNotification({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          message: data.message,
+          source: window.location.pathname.includes('/initial') ? 'Initial F1' : 
+                  window.location.pathname.includes('/transfer') ? 'Transfer' :
+                  window.location.pathname.includes('/cos') ? 'Change of Status' : 
+                  'Website',
+        })
+      ]);
 
-      if (error) throw error;
+      // Verificar resultado do banco
+      if (dbResult.status === 'rejected' || (dbResult.status === 'fulfilled' && dbResult.value.error)) {
+        const error = dbResult.status === 'rejected' ? dbResult.reason : dbResult.value.error;
+        console.error("Error saving to database:", error);
+        throw new Error("Erro ao salvar no banco de dados");
+      }
+
+      // Log do resultado do email (não bloqueia o sucesso)
+      if (emailResult.status === 'rejected') {
+        console.error("Error sending email notification:", emailResult.reason);
+      } else if (emailResult.status === 'fulfilled' && !emailResult.value.success) {
+        console.error("Email notification failed:", emailResult.value.error);
+      } else {
+        console.log("Email notification sent successfully");
+      }
 
       toast.success("Mensagem enviada com sucesso! Entraremos em contato em breve.");
       form.reset();
