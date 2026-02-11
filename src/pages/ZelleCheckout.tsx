@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Copy, CheckCircle, DollarSign, Mail, Phone, AlertCircle, Clock, ArrowLeft, Upload, X } from 'lucide-react';
 import { useDocumentCleanup } from '../hooks/useDocumentCleanup';
 import { supabase } from '../lib/supabase';
+import { getN8nProxyUrl } from '../utils/storageProxy';
 
 export function ZelleCheckout() {
   const [searchParams] = useSearchParams();
@@ -192,7 +193,7 @@ export function ZelleCheckout() {
       // Enviar como array se houver múltiplos, senão como string única
       const webhookPayload: any = {
         user_id: userId,
-        image_url: receiptUrl,
+        image_url: getN8nProxyUrl(receiptUrl),
         value: amount,
         currency: "USD",
         fee_type: "traducao_doc",
@@ -475,9 +476,37 @@ export function ZelleCheckout() {
         isValid = false;
       }
 
-      // O registro do pagamento Zelle será criado pelo n8n após processamento do webhook
-      // Não inserimos diretamente na tabela payments aqui
-      console.log('DEBUG: Registro de pagamento será criado pelo n8n após processamento do webhook');
+      // Inserir registro de pagamento Zelle imediatamente
+      console.log('DEBUG: Criando registro de pagamento Zelle no banco de dados...');
+      
+      // Extrair o primeiro ID se houver múltiplos (separados por vírgula)
+      const firstId = documentId ? documentId.split(',')[0].trim() : null;
+      // Validar se é um UUID válido para não quebrar o banco
+      const isValidUuid = firstId ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(firstId) : false;
+
+      const { data: paymentRecord, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          user_id: userId,
+          document_id: isValidUuid ? firstId : null,
+          amount: parseFloat(amount || '0'),
+          currency: 'USD',
+          payment_method: 'zelle',
+          status: isValid ? 'pending_verification' : 'comprovante requer revisão manual',
+          receipt_url: receiptUrl,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (paymentError) {
+        console.error('❌ Erro ao criar registro de pagamento:', paymentError);
+        // Não vamos travar o fluxo se apenas o registro de pagamento falhar, 
+        // mas é um problema crítico para o admin
+      } else {
+        console.log('✅ Registro de pagamento criado com ID:', paymentRecord?.id);
+      }
 
       // Processar baseado na validação
       // Separar documentId em array se houver múltiplos
@@ -524,7 +553,7 @@ export function ZelleCheckout() {
         }
 
         // Enviar notificação normal para admin informando pagamento válido
-        await sendNotificationToAdmin(userProfile, null, userId, false);
+        await sendNotificationToAdmin(userProfile, paymentRecord?.id || null, userId, false);
         
         console.log('✅ Comprovante validado automaticamente');
       } else {
@@ -547,7 +576,7 @@ export function ZelleCheckout() {
         console.log('DEBUG: UserProfile disponível:', !!userProfile);
         
         console.log('DEBUG: Chamando sendNotificationToAdmin com needsManualReview=true');
-        await sendNotificationToAdmin(userProfile, null, userId, true);
+        await sendNotificationToAdmin(userProfile, paymentRecord?.id || null, userId, true);
         
         console.log('⚠️ Comprovante precisa de revisão manual');
       }

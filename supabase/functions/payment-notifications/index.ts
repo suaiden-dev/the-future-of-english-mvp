@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
 
     // Determinar destinatários baseado no tipo de notificação
     let recipients: NotificationRecipient[] = [];
-    
+
     if (payload.notification_type === 'payment_approved' || payload.notification_type === 'payment_rejected') {
       // Para aprovação/rejeição, notificar apenas o cliente
       console.log('DEBUG: Buscando dados do cliente para notificação de aprovação/rejeição...');
@@ -191,7 +191,7 @@ Deno.serve(async (req: Request) => {
 
     for (const recipient of recipients) {
       let notificationPayload: any;
-      
+
       if (payload.notification_type === 'payment_approved' || payload.notification_type === 'payment_rejected') {
         // Para aprovação/rejeição, notificar o cliente
         notificationPayload = {
@@ -226,7 +226,7 @@ Deno.serve(async (req: Request) => {
           payment_method: payload.payment_method,
           recipient_role: recipient.role
         };
-        
+
         console.log('DEBUG: Payload para admin/autenticador:', {
           user_name: notificationPayload.user_name,
           user_email: notificationPayload.user_email,
@@ -237,11 +237,150 @@ Deno.serve(async (req: Request) => {
 
       try {
         console.log(`DEBUG: Enviando notificação para ${recipient.role}: ${recipient.email}`);
-        console.log('DEBUG: Payload da notificação:', JSON.stringify(notificationPayload, null, 2));
+
+        // Se for Zelle requerendo revisão manual, enviar via SMTP direta além do webhook (ou em vez de)
+        if (payload.payment_method === 'zelle' && payload.status === 'comprovante requer revisão manual') {
+          console.log(`DEBUG: Enviando email de revisão manual Zelle via SMTP para ${recipient.email}`);
+
+          const zelleHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .logo-container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+        }
+        .logo {
+            width: 130px;
+            height: auto;
+        }
+        .content {
+            padding: 40px 30px;
+            color: #1e293b;
+        }
+        .content h1 {
+            margin: 0 0 20px 0;
+            font-size: 24px;
+            color: #1e3a8a;
+        }
+        .info-row {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f1f5f9;
+            border-radius: 6px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            color: #1e293b;
+            word-wrap: break-word;
+        }
+        .footer {
+            padding: 20px 30px;
+            background-color: #f8fafc;
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+        }
+        .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background-color: #1e3a8a;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="logo-container">
+            <img src="https://thefutureofenglish.com/logo.png" alt="TFOE Logo" class="logo">
+        </div>
+        <div class="header">
+            <h2 style="color: white; margin: 0; font-size: 20px;">Zelle Manual Review Required</h2>
+        </div>
+        
+        <div class="content">
+            <h1>Zelle Payment Review</h1>
+            <p>A payment via Zelle requires manual review by administrators.</p>
+            
+            <div class="info-row">
+                <div class="info-label">Client:</div>
+                <div class="info-value">${payingUser.name} (${payingUser.email})</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Amount:</div>
+                <div class="info-value">$${payload.amount.toFixed(2)}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Document:</div>
+                <div class="info-value">${payload.filename || 'Document'}</div>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="https://thefutureofenglish.com/admin/documents" class="button">View in Admin Panel</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p style="margin: 0;">Notification System - The Future of English</p>
+        </div>
+    </div>
+</body>
+</html>
+          `;
+
+          const { error: emailError } = await supabase.functions.invoke('send-email', {
+            body: {
+              to: recipient.email,
+              subject: `Zelle Requer Revisão Manual - ${payingUser.name}`,
+              html: zelleHtml,
+              fromName: 'Sistema TFOE'
+            },
+          });
+
+          if (emailError) {
+            console.error(`ERROR: Falha ao enviar email SMTP para ${recipient.email}:`, emailError);
+          } else {
+            console.log(`SUCCESS: Email SMTP enviado para ${recipient.email}`);
+          }
+        }
 
         const webhookResponse = await fetch(webhookUrl, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'User-Agent': 'Supabase-Payment-Notifications/1.0'
           },
@@ -249,7 +388,7 @@ Deno.serve(async (req: Request) => {
         });
 
         const responseText = await webhookResponse.text();
-        
+
         if (webhookResponse.ok) {
           console.log(`SUCCESS: Notificação enviada com sucesso para ${recipient.email}`);
           notificationResults.push({
@@ -267,7 +406,7 @@ Deno.serve(async (req: Request) => {
             error: `HTTP ${webhookResponse.status}: ${responseText}`
           });
         }
-      } catch (notificationError) {
+      } catch (notificationError: any) {
         console.error(`ERROR: Erro ao enviar notificação para ${recipient.email}:`, notificationError);
         notificationResults.push({
           recipient: recipient.email,
@@ -302,11 +441,11 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('ERROR:', error);
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: false,
         error: error.message || 'Erro interno do servidor',
         timestamp: new Date().toISOString()

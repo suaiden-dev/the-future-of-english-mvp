@@ -8,7 +8,7 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 // Token padrão para N8N - deve ser configurado como secret no Supabase
-const N8N_STORAGE_TOKEN = import.meta.env.VITE_N8N_STORAGE_TOKEN || 'tfoe_n8n_2026';
+const N8N_STORAGE_TOKEN = import.meta.env.VITE_N8N_STORAGE_TOKEN || 'tfoe_n8n_2026_a7b3c9d1e5f2';
 
 /**
  * Converte URL pública do Supabase para URL do proxy N8N.
