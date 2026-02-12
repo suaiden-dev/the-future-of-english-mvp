@@ -521,17 +521,23 @@
       "uploadArea": {
         "clickToUpload": "Click to upload or drag and drop",
         "supportedFormats": "PDF, JPG, PNG up to 10MB",
-        "removeFile": "Remove file"
+        "removeFile": "Remove file",
+        "dropToAddMore": "Drop to add more files"
       },
       "numberOfPages": "2. Number of Pages",
       "translationType": "3. Translation Type",
       "isBankStatement": "4. Is it a bank statement?",
+      "sourceCurrencyLabel": "4.1. Source Currency (Original Document)",
+      "targetCurrencyLabel": "4.2. Target Currency (Translation To)",
       "originalLanguage": "5. Original Document Language",
       "targetLanguage": "6. Target Language (Translation To)",
       "selectOptions": {
         "yes": "Yes",
         "no": "No"
-      }
+      },
+      "addMore": "Add More",
+      "addedDocuments": "Added Documents",
+      "removeDocument": "Remove document"
     },
     "summary": {
       "title": "Order Summary",
@@ -542,6 +548,10 @@
       "targetLang": "Target Language",
       "translationType": "Translation Type",
       "bankStatement": "Bank Statement",
+      "subtotal": "Subtotal",
+      "totalAmount": "Total Amount",
+      "noDocumentsSelected": "No documents selected",
+      "finalizeOrder": "Finalize Order",
       "pricing": {
         "title": "Pricing",
         "perPage": "per page",
@@ -557,6 +567,10 @@
         "moneyBack": "Money Back Guarantee"
       },
       "processPayment": "Process Payment"
+    },
+    "badges": {
+      "uscisAccepted": "USCIS Accepted",
+      "fastDelivery": "Fast Delivery"
     },
     "errors": {
       "noFile": "No file selected",

@@ -168,7 +168,7 @@ export function createContactNotificationEmail(data: {
         </div>
         
         <div class="content">
-            <h1>New Lead from Landing Pages</h1>
+            <h1>New Lead</h1>
             
             ${data.source ? `<p><span class="badge">${data.source}</span></p>` : ''}
             
@@ -185,7 +185,7 @@ export function createContactNotificationEmail(data: {
             ${data.phone ? `
             <div class="info-row">
                 <div class="info-label">Phone:</div>
-                <div class="info-value"><a href="tel:${data.phone}" style="color: #3b82f6; text-decoration: none;">${data.phone}</a></div>
+                <div class="info-value"><a href="https://wa.me/${data.phone.replace(/\D/g, '')}" style="color: #3b82f6; text-decoration: none;">${data.phone}</a></div>
             </div>
             ` : ''}
             
@@ -220,13 +220,14 @@ export async function sendContactNotification(contactData: {
     source?: string;
 }) {
     // Email da equipe que receberá as notificações
-    const notificationEmail = import.meta.env.VITE_NOTIFICATION_EMAIL || 'contato@thefutureofenglish.com';
+    const notificationEmail = import.meta.env.VITE_NOTIFICATION_EMAIL || 'info@thefutureofenglish.com';
 
     const html = createContactNotificationEmail(contactData);
+    const subject = `${contactData.source || 'Contact'} - ${contactData.name}`;
 
     return await sendEmail(
         notificationEmail,
-        `New Contact: ${contactData.name}`,
+        subject,
         html,
         'The Future of English System'
     );
