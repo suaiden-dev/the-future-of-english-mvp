@@ -558,7 +558,7 @@ export default function UploadDocument() {
                         className="flex items-center gap-2 px-4 py-2 bg-[#163353]/10 text-[#163353] rounded-xl font-bold hover:bg-[#163353]/20 transition-all border border-[#163353]/10 text-sm"
                       >
                         <Plus className="w-4 h-4" />
-                        Adicionar Mais
+                        {t('upload.form.addMore')}
                       </button>
                     )}
                   </div>
@@ -593,7 +593,7 @@ export default function UploadDocument() {
                         <p className="text-lg text-gray-900 font-black">
                           {documents.length === 0
                             ? t('upload.form.uploadArea.clickToUpload')
-                            : 'Solte para adicionar mais arquivos'}
+                            : t('upload.form.uploadArea.dropToAddMore')}
                         </p>
                         <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
                           {t('upload.form.uploadArea.supportedFormats')}
@@ -609,7 +609,7 @@ export default function UploadDocument() {
                     <div className="flex items-center gap-3">
                       <div className="h-px flex-1 bg-gray-200" />
                       <h2 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
-                        Documentos Adicionados ({documents.length})
+                        {t('upload.form.addedDocuments')} ({documents.length})
                       </h2>
                       <div className="h-px flex-1 bg-gray-200" />
                     </div>
@@ -632,7 +632,7 @@ export default function UploadDocument() {
                             <button
                               onClick={() => removeDocument(doc.id)}
                               className="p-2 text-gray-400 hover:text-[#C71B2D] hover:bg-[#C71B2D]/5 rounded-xl transition-all"
-                              title="Remover documento"
+                              title={t('upload.form.removeDocument')}
                             >
                               <X className="w-5 h-5" />
                             </button>
@@ -728,7 +728,7 @@ export default function UploadDocument() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-gray-100">
                               <div>
                                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">
-                                  4.1. Source Currency (Original Document)
+                                  {t('upload.form.sourceCurrencyLabel')}
                                 </label>
                                 <select
                                   value={doc.sourceCurrency}
@@ -742,7 +742,7 @@ export default function UploadDocument() {
                               </div>
                               <div>
                                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">
-                                  4.2. Target Currency (Translation To)
+                                  {t('upload.form.targetCurrencyLabel')}
                                 </label>
                                 <select
                                   value={doc.targetCurrency}
@@ -759,7 +759,7 @@ export default function UploadDocument() {
 
                           <div className="mt-6 pt-4 border-t border-gray-100">
                             <div className="flex justify-between items-center">
-                              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Subtotal</span>
+                              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('upload.summary.subtotal')}</span>
                               <span className="text-2xl font-black text-[#163353] tracking-tight">
                                 ${calcularValor(doc.pages, doc.isExtrato, doc.tipoTrad)}.00
                               </span>
@@ -840,7 +840,7 @@ export default function UploadDocument() {
                     </div>
                     <div className="pt-6 border-t border-white/10 space-y-4">
                       <div className="flex justify-between items-end">
-                        <span className="text-xs font-black uppercase tracking-widest text-white/60">Total Amount</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-white/60">{t('upload.summary.totalAmount')}</span>
                         <span className="text-4xl font-black tracking-tight">${totalValue}.00</span>
                       </div>
                     </div>
@@ -848,7 +848,7 @@ export default function UploadDocument() {
                 ) : (
                   <div className="relative z-10 text-center py-10 opacity-60">
                     <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                    <p className="text-sm font-bold uppercase tracking-widest">Nenhum documento selecionado</p>
+                    <p className="text-sm font-bold uppercase tracking-widest">{t('upload.summary.noDocumentsSelected')}</p>
                   </div>
                 )}
               </div>
@@ -859,14 +859,14 @@ export default function UploadDocument() {
                   disabled={isUploading || documents.length === 0}
                   className="w-full bg-[#163353] text-white py-5 rounded-[20px] font-black text-lg transition-all active:scale-95 shadow-xl disabled:opacity-50"
                 >
-                  {isUploading ? t('common.loading') : `Finalizar Pedido • $${totalValue}.00`}
+                  {isUploading ? t('common.loading') : `${t('upload.summary.finalizeOrder')} • $${totalValue}.00`}
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { icon: Shield, label: 'USCIS Accepted' },
-                  { icon: Globe, label: 'Fast Delivery' }
+                  { icon: Shield, label: t('upload.badges.uscisAccepted') },
+                  { icon: Globe, label: t('upload.badges.fastDelivery') }
                 ].map((badge, i) => (
                   <div key={i} className="bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-gray-200 flex flex-col items-center text-center">
                     <badge.icon className="w-5 h-5 text-[#163353] mb-2" />
