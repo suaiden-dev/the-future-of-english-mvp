@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { FileText, Download, Calendar, DollarSign, User, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Download, Calendar, DollarSign, User, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { getValidFileUrl } from '../../utils/fileUtils';
 import { DocumentViewerModal } from '../../components/DocumentViewerModal';
 import { TranslatedDocumentsFilters } from '../../components/TranslatedDocumentsFilters';
@@ -51,6 +51,8 @@ export default function TranslatedDocuments() {
   const [userError, setUserError] = useState<string | null>(null);
   const [showDocViewer, setShowDocViewer] = useState(false);
   const [docToView, setDocToView] = useState<{ url: string; filename: string } | null>(null);
+  const [actionDoc, setActionDoc] = useState<TranslatedDocument | null>(null);
+  const [actionModalOpen, setActionModalOpen] = useState(false);
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -212,20 +214,25 @@ export default function TranslatedDocuments() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden">
+      {/* Decorative background blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#C71B2D]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#163353]/5 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="max-w-7xl mx-auto py-6 sm:py-10 px-4 sm:px-6 relative z-10">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
-          <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Translated Documents</h1>
-            <p className="text-sm sm:text-base text-gray-600">
-              {user?.role === 'admin'
-                ? 'View all documents that have been translated and sent to clients.'
-                : 'View documents that you have authenticated and sent to clients.'
-              }
-            </p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2 tracking-tight uppercase">
+            Translated Documents
+          </h1>
+          <p className="text-gray-600 font-medium opacity-80 uppercase tracking-[0.2em] text-xs">
+            {user?.role === 'admin'
+              ? 'View all documents that have been translated and sent to clients'
+              : 'View documents that you have authenticated and sent to clients'
+            }
+          </p>
         </div>
 
         {/* Filters */}
@@ -241,117 +248,134 @@ export default function TranslatedDocuments() {
         />
 
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-tfe-blue-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-tfe-blue-950" />
-            </div>
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{totalDocuments}</div>
-              <div className="text-xs sm:text-sm text-gray-600 font-medium">Total Documents</div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-900" />
-            </div>
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">${totalValue.toFixed(2)}</div>
-              <div className="text-xs sm:text-sm text-gray-600 font-medium">Total Value</div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 pt-8">
+          <div className="relative group bg-white/80 backdrop-blur-xl rounded-[24px] p-6 border border-gray-200 hover:border-[#163353]/40 transition-all hover:shadow-2xl hover:-translate-y-1 overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#163353]/5 rounded-full blur-[60px] pointer-events-none" />
+            <div className="relative flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Total Documents</p>
+                <p className="text-3xl sm:text-4xl font-black text-[#163353]">{totalDocuments}</p>
+              </div>
+              <div className="w-14 h-14 bg-[#163353]/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-[#163353]/20 group-hover:bg-[#163353]/20 transition-colors">
+                <FileText className="w-7 h-7 text-[#163353]" />
+              </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-900" />
+
+          <div className="relative group bg-white/80 backdrop-blur-xl rounded-[24px] p-6 border border-gray-200 hover:border-green-500/40 transition-all hover:shadow-2xl hover:-translate-y-1 overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-[60px] pointer-events-none" />
+            <div className="relative flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Total Value</p>
+                <p className="text-3xl sm:text-4xl font-black text-green-700">${totalValue.toFixed(2)}</p>
+              </div>
+              <div className="w-14 h-14 bg-green-500/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-green-500/20 group-hover:bg-green-500/20 transition-colors">
+                <DollarSign className="w-7 h-7 text-green-700" />
+              </div>
             </div>
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{totalPages}</div>
-              <div className="text-xs sm:text-sm text-gray-600 font-medium">Total Pages</div>
+          </div>
+
+          <div className="relative group bg-white/80 backdrop-blur-xl rounded-[24px] p-6 border border-gray-200 hover:border-purple-500/40 transition-all hover:shadow-2xl hover:-translate-y-1 overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-[60px] pointer-events-none" />
+            <div className="relative flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Total Pages</p>
+                <p className="text-3xl sm:text-4xl font-black text-purple-700">{totalPages}</p>
+              </div>
+              <div className="w-14 h-14 bg-purple-500/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-purple-500/20 group-hover:bg-purple-500/20 transition-colors">
+                <Calendar className="w-7 h-7 text-purple-700" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Documents Table */}
-        <div className="bg-white rounded-lg shadow w-full">
+        <div className="relative bg-white/80 backdrop-blur-xl rounded-[30px] shadow-lg border border-gray-200 p-6 overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#163353]/5 rounded-full blur-[100px] pointer-events-none" />
+
           {loading && (
-            <div className="p-6">
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-12 bg-gray-200 rounded animate-pulse"></div>
-                ))}
+            <div className="relative flex flex-col items-center justify-center py-12">
+              <div className="relative inline-block mb-4">
+                <div className="absolute inset-0 bg-[#163353]/20 blur-2xl rounded-full animate-pulse" />
+                <div className="relative w-12 h-12 border-4 border-[#163353] border-t-transparent rounded-full animate-spin" />
               </div>
+              <p className="text-[#163353] font-black uppercase tracking-[0.3em] text-xs">Loading Documents...</p>
             </div>
           )}
           {error && (
-            <div className="p-6">
-              <p className="text-red-500 text-base">Error: {error}</p>
+            <div className="relative text-center py-12 bg-[#C71B2D]/5 rounded-[24px] border border-[#C71B2D]/20">
+              <p className="text-[#C71B2D] font-bold text-lg">Error: {error}</p>
             </div>
           )}
 
           {/* Mobile Cards View */}
-          <div className="block sm:hidden space-y-4">
+          <div className="relative block sm:hidden space-y-4">
             {currentDocuments.map(doc => (
-              <div key={doc.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div key={doc.id} className="relative group bg-white/60 backdrop-blur-sm rounded-[24px] p-5 border border-gray-200 hover:border-[#163353]/40 hover:shadow-lg transition-all">
                 <div className="space-y-3">
                   {/* Document Name */}
                   <div>
-                    <span className="text-gray-900 font-medium text-sm">
+                    <span className="text-[#163353] font-black text-sm">
                       {doc.filename}
                     </span>
                   </div>
 
-
-
                   {/* Document Details */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50/50 rounded-[16px] p-3 border border-gray-100">
                     <div>
-                      <span className="font-medium text-gray-600">Value:</span>
-                      <span className="ml-1">${doc.total_cost?.toFixed(2) || '0.00'}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Value</span>
+                      <span className="font-bold text-[#C71B2D]">${doc.total_cost?.toFixed(2) || '0.00'}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Pages:</span>
-                      <span className="ml-1">{doc.pages}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Pages</span>
+                      <span className="font-bold text-gray-900">{doc.pages}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Language:</span>
-                      <span className="ml-1">{doc.source_language} → {doc.target_language}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Language</span>
+                      <span className="font-bold text-gray-900">{doc.source_language} → {doc.target_language}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Status:</span>
-                      <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_authenticated ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Status</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-black uppercase ${doc.is_authenticated ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                         {doc.is_authenticated ? 'Authenticated' : 'Pending'}
                       </span>
                     </div>
                   </div>
 
                   {/* Client Info */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600 truncate max-w-32" title={doc.user_name || doc.user_id}>
+                      <span className="text-xs font-black text-gray-900 truncate max-w-32" title={doc.user_name || doc.user_id}>
                         {doc.user_name || `${doc.user_id.slice(0, 8)}...`}
                       </span>
-                      <button
-                        className="text-tfe-blue-600 hover:text-tfe-blue-950 p-1 rounded hover:bg-tfe-blue-50 transition-colors"
-                        title="View user information"
-                        onClick={() => handleViewUser(doc.user_id)}
-                      >
-                        <User className="w-4 h-4" />
-                      </button>
                     </div>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">
                       {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
                     </span>
                   </div>
 
+                  <div className="pt-2">
+                    <button
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-900 text-white rounded-[12px] text-xs font-black uppercase tracking-wider hover:bg-gray-800 transition-all"
+                      title="Open details"
+                      onClick={() => {
+                        setActionDoc(doc);
+                        setActionModalOpen(true);
+                      }}
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Details
+                    </button>
+                  </div>
+
                   {/* Authentication Info */}
                   {doc.authenticated_by_name && (
-                    <div className="pt-2 border-t border-gray-200">
-                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <div className="pt-2 border-t border-gray-200 bg-green-50/50 -mx-5 -mb-5 px-5 pb-5 mt-3 rounded-b-[24px]">
+                      <div className="flex items-center gap-2 text-xs font-bold text-green-800">
                         <CheckCircle className="w-3 h-3 text-green-600" />
                         <span>Authenticated by {doc.authenticated_by_name}</span>
                       </div>
                       {doc.authentication_date && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-green-600 font-medium mt-1">
                           {new Date(doc.authentication_date).toLocaleDateString()}
                         </div>
                       )}
@@ -363,131 +387,67 @@ export default function TranslatedDocuments() {
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full bg-white border rounded-lg shadow">
-              <thead className="bg-tfe-blue-50">
+          <div className="relative hidden sm:block overflow-x-auto scrollbar-standard">
+            <table className="w-full bg-white/50 backdrop-blur-sm border border-gray-200 rounded-[20px] shadow-sm overflow-hidden">
+              <thead className="bg-[#163353]/10 backdrop-blur-md">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Document</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Actions</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Client</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Value</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Language</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Details</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Authenticated By</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Sent Date</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Document</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Client</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Value</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Language</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Authenticated By</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Sent Date</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {currentDocuments.map(doc => {
                   return (
-                    <tr key={doc.id} className="border-t hover:bg-tfe-blue-50 transition-colors">
+                    <tr key={doc.id} className="border-t border-gray-200 hover:bg-[#163353]/5 transition-all group">
                       <td className="px-4 py-3">
                         <div>
-                          <span className="text-gray-900 font-medium text-sm">
+                          <span className="text-[#163353] font-black text-sm">
                             {doc.filename}
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={async () => {
-                              try {
-                                if (!doc.translated_file_url) {
-                                  alert('No PDF file available to view.');
-                                  return;
-                                }
-
-                                const validUrl = await getValidFileUrl(doc.translated_file_url);
-                                setDocToView({ url: validUrl, filename: doc.filename });
-                                setShowDocViewer(true);
-                              } catch (error) {
-                                console.error('Error opening PDF:', error);
-                                alert((error as Error).message || 'Failed to open PDF.');
-                              }
-                            }}
-                            className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
-                            title="View PDF"
-                          >
-                            <FileText className="w-3 h-3" /> View
-                          </button>
-                          <button
-                            className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
-                            onClick={async e => {
-                              e.preventDefault();
-                              try {
-                                const validUrl = await getValidFileUrl(doc.translated_file_url || '');
-                                const response = await fetch(validUrl);
-                                const blob = await response.blob();
-                                const url = window.URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.download = doc.filename || 'translated_document.pdf';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                window.URL.revokeObjectURL(url);
-                              } catch (err) {
-                                console.error('Error downloading file:', err);
-                                alert((err as Error).message || 'Failed to download file.');
-                              }
-                            }}
-                            title="Download PDF"
-                          >
-                            <Download className="w-3 h-3" /> Download
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600 truncate max-w-32" title={doc.user_name || doc.user_id}>
+                          <span className="text-sm font-bold text-gray-900 truncate max-w-32" title={doc.user_name || doc.user_id}>
                             {doc.user_name || `${doc.user_id.slice(0, 8)}...`}
                           </span>
-                          <button
-                            className="text-tfe-blue-600 hover:text-tfe-blue-950 p-1 rounded hover:bg-tfe-blue-50 transition-colors"
-                            title="View user information"
-                            onClick={() => handleViewUser(doc.user_id)}
-                          >
-                            <User className="w-4 h-4" />
-                          </button>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-sm">
+                      <td className="px-4 py-3 font-black text-sm text-[#C71B2D]">
                         ${doc.total_cost?.toFixed(2) || '0.00'}
                       </td>
-                      <td className="px-4 py-3 text-sm">
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900">
                         {doc.source_language} → {doc.target_language}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="space-y-1 text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Pages:</span>
-                            <span>{doc.pages}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Status:</span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_authenticated ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                              {doc.is_authenticated ? 'Authenticated' : 'Pending'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Code:</span>
-                            <span className="font-mono">{doc.verification_code}</span>
-                          </div>
-                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {doc.authenticated_by_name ? (
                           <div>
-                            <div className="font-medium text-gray-900">{doc.authenticated_by_name}</div>
-                            <div className="text-xs text-gray-500">{doc.authenticated_by_email}</div>
+                            <div className="font-black text-gray-900">{doc.authenticated_by_name}</div>
+                            <div className="text-xs text-gray-500 font-medium">{doc.authenticated_by_email}</div>
                           </div>
                         ) : (
-                          <span className="text-gray-400">Not authenticated</span>
+                          <span className="text-gray-400 font-medium">Not authenticated</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
+                      <td className="px-4 py-3 text-xs font-black text-gray-400 uppercase tracking-widest">
                         {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => {
+                            setActionDoc(doc);
+                            setActionModalOpen(true);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white rounded-[12px] text-xs font-black uppercase tracking-wider hover:bg-gray-800 transition-all hover:scale-105"
+                          title="Open details"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Details
+                        </button>
                       </td>
                     </tr>
                   );
@@ -497,25 +457,28 @@ export default function TranslatedDocuments() {
           </div>
 
           {!loading && !error && filteredDocuments.length === 0 && (
-            <div className="text-center py-8 px-4">
-              <FileText className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-              <p className="text-base font-medium text-gray-700">No documents found</p>
-              <p className="text-sm text-gray-500">Try adjusting your search or filter criteria.</p>
+            <div className="relative text-center py-16">
+              <div className="relative inline-block mb-4">
+                <div className="absolute inset-0 bg-gray-300/20 blur-2xl rounded-full" />
+                <FileText className="relative w-16 h-16 mx-auto text-gray-300" />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">No Documents Found</h3>
+              <p className="text-gray-500 font-medium">Try adjusting your search or filter criteria</p>
             </div>
           )}
 
           {/* Controles de Paginação */}
           {filteredDocuments.length > 0 && (
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="relative px-6 py-4 border-t border-gray-200 bg-gray-50/50 rounded-b-[30px] mt-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="text-sm text-gray-700 text-center sm:text-left">
+                <div className="text-sm font-bold text-gray-700 text-center sm:text-left">
                   Showing {startIndex + 1} to {Math.min(endIndex, filteredDocuments.length)} of {filteredDocuments.length} documents
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 text-sm font-black uppercase tracking-wider text-gray-700 bg-white border border-gray-300 rounded-[12px] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 disabled:hover:scale-100"
                   >
                     Previous
                   </button>
@@ -525,9 +488,9 @@ export default function TranslatedDocuments() {
                       <button
                         key={page}
                         onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentPage === page
-                          ? 'bg-tfe-blue-600 text-white'
-                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                        className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === page
+                          ? 'bg-[#163353] text-white shadow-md'
+                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
                           }`}
                       >
                         {page}
@@ -538,7 +501,7 @@ export default function TranslatedDocuments() {
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPagesForPagination}
-                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 text-sm font-black uppercase tracking-wider text-gray-700 bg-white border border-gray-300 rounded-[12px] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 disabled:hover:scale-100"
                   >
                     Next
                   </button>
@@ -551,35 +514,48 @@ export default function TranslatedDocuments() {
 
       {/* Modal de informações do usuário */}
       {userModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 w-full max-w-md sm:min-w-[400px] relative animate-fade-in">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 backdrop-blur-md z-50 p-4 animate-in fade-in zoom-in-95 duration-300">
+          <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] p-8 w-full max-w-md border border-white/20">
             <button
-              className="absolute top-2 sm:top-4 right-2 sm:right-4 text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="absolute top-4 right-4 p-3 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-[16px] transition-all hover:scale-105 active:scale-95 shadow-lg"
               onClick={() => setUserModalOpen(false)}
               aria-label="Close modal"
             >
-              <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+              <XCircle className="w-5 h-5" />
             </button>
-            <h3 className="text-xl font-bold mb-6 text-gray-900">Client Information</h3>
-            {userLoading && <p className="text-tfe-blue-700 text-lg">Loading...</p>}
-            {userError && <p className="text-tfe-red-500 text-lg">{userError}</p>}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-14 h-14 bg-[#163353]/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-[#163353]/20">
+                <User className="w-7 h-7 text-[#163353]" />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Client Information</h3>
+            </div>
+            {userLoading && (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-8 h-8 border-4 border-[#163353] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+            {userError && (
+              <div className="bg-[#C71B2D]/5 border border-[#C71B2D]/20 rounded-[16px] p-4">
+                <p className="text-[#C71B2D] font-bold text-lg">{userError}</p>
+              </div>
+            )}
             {selectedUser && (
               <div className="space-y-4">
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="font-medium text-gray-700">Name:</span>
-                  <span className="text-gray-900">{selectedUser.name}</span>
+                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                  <span className="font-black text-gray-400 uppercase tracking-widest text-xs">Name</span>
+                  <span className="font-bold text-gray-900">{selectedUser.name}</span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="font-medium text-gray-700">Email:</span>
-                  <span className="text-gray-900">{selectedUser.email}</span>
+                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                  <span className="font-black text-gray-400 uppercase tracking-widest text-xs">Email</span>
+                  <span className="font-bold text-gray-900 break-all">{selectedUser.email}</span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="font-medium text-gray-700">Role:</span>
-                  <span className="text-gray-900">{selectedUser.role}</span>
+                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                  <span className="font-black text-gray-400 uppercase tracking-widest text-xs">Role</span>
+                  <span className="font-bold text-gray-900 uppercase">{selectedUser.role}</span>
                 </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="font-medium text-gray-700">ID:</span>
-                  <span className="text-gray-900 font-mono text-sm">{selectedUser.id}</span>
+                <div className="flex justify-between items-center py-3">
+                  <span className="font-black text-gray-400 uppercase tracking-widest text-xs">ID</span>
+                  <span className="text-gray-900 font-mono text-xs font-bold break-all">{selectedUser.id}</span>
                 </div>
               </div>
             )}
@@ -596,6 +572,126 @@ export default function TranslatedDocuments() {
             setDocToView(null);
           }}
         />
+      )}
+      {actionModalOpen && actionDoc && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 backdrop-blur-md z-50 p-4 animate-in fade-in zoom-in-95 duration-300">
+          <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] p-8 w-full max-w-lg border border-white/20">
+            <button
+              className="absolute top-4 right-4 p-3 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-[16px] transition-all hover:scale-105 active:scale-95 shadow-lg"
+              onClick={() => {
+                setActionModalOpen(false);
+                setActionDoc(null);
+              }}
+              aria-label="Close modal"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-4 mb-6">
+              <div>
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Document Details</h3>
+                <p
+                  className="text-xs text-gray-500 font-bold uppercase tracking-[0.2em] truncate max-w-[360px]"
+                  title={actionDoc.filename}
+                >
+                  {actionDoc.filename}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Client</div>
+                <div className="font-bold text-gray-900">{actionDoc.user_name || actionDoc.user_email || actionDoc.user_id}</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Value</div>
+                <div className="font-black text-[#C71B2D]">${actionDoc.total_cost?.toFixed(2) || '0.00'}</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Language</div>
+                <div className="font-bold text-gray-900">{actionDoc.source_language} → {actionDoc.target_language}</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Pages</div>
+                <div className="font-bold text-gray-900">{actionDoc.pages}</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Status</div>
+                <div className={`inline-flex px-2 py-0.5 rounded-full text-xs font-black uppercase ${actionDoc.is_authenticated ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  {actionDoc.is_authenticated ? 'Authenticated' : 'Pending'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Code</div>
+                <div className="font-mono font-bold text-gray-900">{actionDoc.verification_code}</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Authenticated By</div>
+                <div className="font-bold text-gray-900">
+                  {actionDoc.authenticated_by_name || 'Not authenticated'}
+                </div>
+                {actionDoc.authenticated_by_email && (
+                  <div className="text-xs text-gray-500 font-medium">{actionDoc.authenticated_by_email}</div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Sent Date</div>
+                <div className="font-bold text-gray-900">
+                  {actionDoc.created_at ? new Date(actionDoc.created_at).toLocaleDateString() : '-'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
+              <button
+                onClick={async () => {
+                  try {
+                    if (!actionDoc.translated_file_url) {
+                      alert('No PDF file available to view.');
+                      return;
+                    }
+
+                    const validUrl = await getValidFileUrl(actionDoc.translated_file_url);
+                    setDocToView({ url: validUrl, filename: actionDoc.filename });
+                    setShowDocViewer(true);
+                  } catch (error) {
+                    console.error('Error opening PDF:', error);
+                    alert((error as Error).message || 'Failed to open PDF.');
+                  }
+                }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-[14px] text-xs font-black uppercase tracking-wider hover:bg-gray-800 transition-all"
+                title="View PDF"
+              >
+                <FileText className="w-4 h-4" /> View PDF
+              </button>
+              <button
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-[14px] text-xs font-black uppercase tracking-wider hover:bg-green-700 transition-all"
+                onClick={async e => {
+                  e.preventDefault();
+                  try {
+                    const validUrl = await getValidFileUrl(actionDoc.translated_file_url || '');
+                    const response = await fetch(validUrl);
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = actionDoc.filename || 'translated_document.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error('Error downloading file:', err);
+                    alert((err as Error).message || 'Failed to download file.');
+                  }
+                }}
+                title="Download PDF"
+              >
+                <Download className="w-4 h-4" /> Download
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

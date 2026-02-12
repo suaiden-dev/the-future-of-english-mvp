@@ -365,87 +365,129 @@ export default function DocumentsToAuthenticate({ user }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto py-4 sm:py-10 px-3 sm:px-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-3 mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
-          <Clock className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-600" />
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Documents to Authenticate</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">All documents pending your review, ordered by arrival.</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden">
+      {/* Decorative background blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#C71B2D]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#163353]/5 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="max-w-5xl mx-auto py-8 sm:py-10 px-4 sm:px-6 relative z-10">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2 tracking-tight uppercase">
+            Authenticate Documents
+          </h1>
+          <p className="text-gray-600 font-medium opacity-80 uppercase tracking-[0.2em] text-xs">
+            Review and process pending authentication requests
+          </p>
+        </div>
+
+        {/* Stats Card */}
+        <div className="relative bg-white/80 backdrop-blur-xl rounded-[30px] p-6 mb-8 border border-gray-200 shadow-lg overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-[#C71B2D]/5 rounded-full blur-[80px] pointer-events-none" />
+          <div className="relative flex items-center gap-4">
+            <div className="w-14 h-14 bg-[#C71B2D]/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-[#C71B2D]/20">
+              <Clock className="w-7 h-7 text-[#C71B2D]" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Pending Queue</p>
+              <p className="text-2xl font-black text-gray-900">{documents.length} Documents Awaiting Review</p>
+            </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          {loading && <p className="text-tfe-blue-700 text-base sm:text-lg">Loading documents...</p>}
-          {error && <p className="text-tfe-red-500 text-base sm:text-lg">Error: {error}</p>}
+
+        <div className="relative bg-white/80 backdrop-blur-xl rounded-[30px] shadow-lg border border-gray-200 p-6 overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#163353]/5 rounded-full blur-[100px] pointer-events-none" />
+
+          {loading && (
+            <div className="relative flex flex-col items-center justify-center py-12">
+              <div className="relative inline-block mb-4">
+                <div className="absolute inset-0 bg-[#163353]/20 blur-2xl rounded-full animate-pulse" />
+                <div className="relative w-12 h-12 border-4 border-[#163353] border-t-transparent rounded-full animate-spin" />
+              </div>
+              <p className="text-[#163353] font-black uppercase tracking-[0.3em] text-xs">Loading Documents...</p>
+            </div>
+          )}
+          {error && (
+            <div className="relative text-center py-12 bg-[#C71B2D]/5 rounded-[24px] border border-[#C71B2D]/20">
+              <p className="text-[#C71B2D] font-bold text-lg">Error: {error}</p>
+            </div>
+          )}
           {!loading && documents.length === 0 && (
-            <p className="text-gray-500 text-base sm:text-lg text-center py-8">No pending documents for authentication.</p>
+            <div className="relative text-center py-16">
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">All Clear!</h3>
+              <p className="text-gray-500 font-medium">No pending documents for authentication.</p>
+            </div>
           )}
           
           {/* Mobile Cards View */}
-          <div className="block sm:hidden space-y-4">
+          <div className="relative block sm:hidden space-y-4">
             {documents.map(doc => (
-              <div key={doc.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="space-y-3">
+              <div key={doc.id} className="relative group bg-white/60 backdrop-blur-sm rounded-[24px] p-5 border border-gray-200 hover:border-[#163353]/40 hover:shadow-lg transition-all">
+                <div className="space-y-4">
                   {/* Document Name */}
                   <div>
-                    <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-tfe-blue-700 underline font-medium text-sm">{doc.filename}</a>
+                    <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-[#163353] underline font-black text-sm hover:text-[#C71B2D] transition-colors">{doc.filename}</a>
                   </div>
 
                   {/* Document Details */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50/50 rounded-[16px] p-3 border border-gray-100">
                     <div>
-                      <span className="font-medium text-gray-600">Type:</span>
-                      <span className="ml-1">{doc.tipo_trad || '-'}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Type</span>
+                      <span className="font-bold text-gray-900">{doc.tipo_trad || '-'}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Value:</span>
-                      <span className="ml-1">{doc.valor ? `$${doc.valor}` : '-'}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Value</span>
+                      <span className="font-bold text-[#C71B2D]">{doc.valor ? `$${doc.valor}` : '-'}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Language:</span>
-                      <span className="ml-1">{doc.idioma_raiz || '-'}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Language</span>
+                      <span className="font-bold text-gray-900">{doc.idioma_raiz || '-'}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Pages:</span>
-                      <span className="ml-1">{doc.pages || '-'}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Pages</span>
+                      <span className="font-bold text-gray-900">{doc.pages || '-'}</span>
                     </div>
                   </div>
 
                   {/* Client/User and Date */}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                     <div className="flex items-center gap-2">
                       {doc.client_name ? (
                         <div className="flex flex-col">
-                          <span className="text-xs font-medium text-gray-900">{doc.client_name}</span>
-                          <span className="text-xs font-mono text-gray-600 truncate max-w-20" title={doc.user_id}>
+                          <span className="text-xs font-black text-gray-900">{doc.client_name}</span>
+                          <span className="text-xs font-mono text-gray-500 truncate max-w-20" title={doc.user_id}>
                             {doc.user_id.slice(0, 8)}...
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs font-mono text-gray-600 truncate max-w-20" title={doc.user_id}>
+                        <span className="text-xs font-mono text-gray-500 truncate max-w-20" title={doc.user_id}>
                           {doc.user_id.slice(0, 8)}...
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">
                       {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
                     </span>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2 border-t border-gray-200">
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-200">
                     <button
                       onClick={() => handleApprove(doc.id)}
                       disabled={processingDoc === doc.id}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="relative flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-[16px] font-black text-xs uppercase tracking-widest hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all overflow-hidden group/btn"
                     >
-                      <CheckCircle className="w-4 h-4" />
-                      {processingDoc === doc.id ? 'Processing...' : 'Approve'}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover/btn:translate-x-[200%] transition-transform duration-700" />
+                      <CheckCircle className="w-4 h-4 relative z-10" />
+                      <span className="relative z-10">{processingDoc === doc.id ? 'Processing...' : 'Approve'}</span>
                     </button>
                     <button
                       onClick={() => handleRejectClick(doc)}
                       disabled={processingDoc === doc.id}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-tfe-red-600 text-white rounded-lg font-medium text-sm hover:bg-tfe-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-[#C71B2D] text-white rounded-[16px] font-black text-xs uppercase tracking-widest hover:bg-[#A01624] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       <XCircle className="w-4 h-4" />
                       Reject
@@ -454,33 +496,33 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                 </div>
               </div>
             ))}
-          </div>
+          </ div>
 
           {/* Desktop Table View */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="min-w-full bg-white border rounded-lg shadow">
-              <thead className="bg-tfe-blue-50">
+          <div className="relative hidden sm:block overflow-x-auto">
+            <table className="w-full bg-white/50 backdrop-blur-sm border border-gray-200 rounded-[20px] shadow-sm overflow-hidden">
+              <thead className="bg-[#163353]/10 backdrop-blur-md">
                 <tr>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-900">Original File</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-900">Client / User</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-900">Type</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-900">Value</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-900">Language</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-900">Pages</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-900">Submitted At</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-900">Actions</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Original File</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Client / User</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Type</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Value</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Language</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Pages</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Submitted At</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {documents.map(doc => (
-                  <tr key={doc.id} className="border-t hover:bg-tfe-blue-50 transition-colors">
-                    <td className="px-4 py-2">
-                      <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-tfe-blue-700 underline font-medium text-sm">{doc.filename}</a>
+                  <tr key={doc.id} className="border-t border-gray-200 hover:bg-[#163353]/5 transition-all group">
+                    <td className="px-4 py-3">
+                      <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-[#163353] underline font-black text-sm hover:text-[#C71B2D] transition-colors">{doc.filename}</a>
                     </td>
-                    <td className="px-4 py-2 text-sm">
+                    <td className="px-4 py-3 text-sm">
                       {doc.client_name ? (
                         <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">{doc.client_name}</span>
+                          <span className="font-black text-gray-900">{doc.client_name}</span>
                           <span className="text-xs text-gray-500 font-mono truncate max-w-24" title={doc.user_id}>
                             {doc.user_id.slice(0, 8)}...
                           </span>
@@ -491,29 +533,29 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-sm">{doc.tipo_trad || '-'}</td>
-                    <td className="px-4 py-2 text-sm">{doc.valor ? `$${doc.valor}` : '-'}</td>
-                    <td className="px-4 py-2 text-sm">{doc.idioma_raiz || '-'}</td>
-                    <td className="px-4 py-2 text-sm">{doc.pages || '-'}</td>
-                    <td className="px-4 py-2 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{doc.tipo_trad || '-'}</td>
+                    <td className="px-4 py-3 text-sm font-black text-[#C71B2D]">{doc.valor ? `$${doc.valor}` : '-'}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{doc.idioma_raiz || '-'}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{doc.pages || '-'}</td>
+                    <td className="px-4 py-3 text-xs font-black text-gray-400 uppercase tracking-widest">
                       {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleApprove(doc.id)}
                           disabled={processingDoc === doc.id}
-                          className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-[12px] text-xs font-black uppercase tracking-wider hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105"
                         >
-                          <CheckCircle className="w-3 h-3" />
+                          <CheckCircle className="w-3.5 h-3.5" />
                           {processingDoc === doc.id ? 'Processing...' : 'Approve'}
                         </button>
                         <button
                           onClick={() => handleRejectClick(doc)}
                           disabled={processingDoc === doc.id}
-                          className="flex items-center gap-1 px-3 py-1 bg-tfe-red-600 text-white rounded text-sm hover:bg-tfe-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-[#C71B2D] text-white rounded-[12px] text-xs font-black uppercase tracking-wider hover:bg-[#A01624] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105"
                         >
-                          <XCircle className="w-3 h-3" />
+                          <XCircle className="w-3.5 h-3.5" />
                           Reject
                         </button>
                       </div>
@@ -528,117 +570,120 @@ export default function DocumentsToAuthenticate({ user }: Props) {
 
              {/* Modal de Rejeição */}
        {showRejectModal && selectedDocForRejection && (
-         <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
-           <div className="relative bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+         <div className="fixed inset-0 bg-[#0A1A2F]/95 backdrop-blur-2xl overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in-95 duration-300">
+           <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
              {/* Header */}
-             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-               <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 bg-tfe-red-100 rounded-lg flex items-center justify-center">
-                   <XCircle className="w-6 h-6 text-tfe-red-600" />
+             <div className="flex items-center justify-between p-8 border-b border-gray-200 bg-gradient-to-r from-[#C71B2D]/5 to-transparent">
+               <div className="flex items-center gap-4">
+                 <div className="w-14 h-14 bg-[#C71B2D]/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-[#C71B2D]/20">
+                   <XCircle className="w-7 h-7 text-[#C71B2D]" />
                  </div>
                  <div>
-                   <h3 className="text-xl font-bold text-gray-900">Rejeitar Documento</h3>
-                   <p className="text-sm text-gray-600">Forneça detalhes sobre a rejeição</p>
+                   <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Reject Document</h3>
+                   <p className="text-sm font-black text-gray-400 uppercase tracking-widest mt-1">Provide detailed feedback</p>
                  </div>
                </div>
                <button
                  type="button"
                  onClick={handleRejectCancel}
-                 className="text-gray-400 hover:text-gray-600 transition-colors"
-                 title="Fechar modal"
+                 className="p-3 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-[16px] transition-all hover:scale-105 active:scale-95 shadow-lg"
+                 title="Close modal"
                >
-                 <XCircle className="w-6 h-6" />
+                 <XCircle className="w-5 h-5" />
                </button>
              </div>
 
              {/* Document Info */}
-             <div className="p-6 bg-gray-50 border-b border-gray-200">
-               <div className="flex items-center justify-between mb-3">
+             <div className="p-8 bg-gray-50/50 border-b border-gray-200">
+               <div className="flex items-center justify-between mb-4">
                  <div className="flex items-center gap-3">
-                   <FileText className="w-5 h-5 text-tfe-blue-600" />
-                   <span className="font-medium text-gray-900">{selectedDocForRejection.filename}</span>
+                   <div className="w-10 h-10 bg-[#163353]/10 backdrop-blur-sm rounded-[14px] flex items-center justify-center border border-[#163353]/20">
+                     <FileText className="w-5 h-5 text-[#163353]" />
+                   </div>
+                   <span className="font-black text-gray-900 text-lg">{selectedDocForRejection.filename}</span>
                  </div>
                  <button
                    onClick={() => fetchUserProfile(selectedDocForRejection.user_id)}
                    disabled={loadingUserInfo}
-                   className="flex items-center gap-2 px-3 py-1.5 bg-tfe-blue-100 text-tfe-blue-700 rounded-lg hover:bg-tfe-blue-200 transition-colors text-sm font-medium"
+                   className="flex items-center gap-2 px-4 py-2 bg-[#163353]/10 text-[#163353] rounded-[14px] hover:bg-[#163353]/20 transition-all text-sm font-black uppercase tracking-wider border border-[#163353]/20"
                  >
                    <Eye className="w-4 h-4" />
                    {loadingUserInfo ? 'Loading...' : 'View User Info'}
                  </button>
                </div>
-               
+
                {/* User Information Display */}
                {showUserInfo && userProfile && (
-                 <div className="mb-4 p-4 bg-white rounded-lg border border-tfe-blue-200">
-                   <div className="flex items-center gap-2 mb-3">
-                     <User className="w-4 h-4 text-tfe-blue-600" />
-                     <span className="font-medium text-gray-900">Client Information</span>
+                 <div className="mb-4 p-5 bg-white/80 backdrop-blur-sm rounded-[20px] border border-[#163353]/20 shadow-sm">
+                   <div className="flex items-center gap-2 mb-4">
+                     <User className="w-5 h-5 text-[#163353]" />
+                     <span className="font-black text-gray-900 uppercase tracking-wider">Client Information</span>
                    </div>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                      <div>
-                       <label className="text-xs font-medium text-gray-600">Name</label>
-                       <p className="text-gray-900">{userProfile.name || 'Not provided'}</p>
+                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-1">Name</label>
+                       <p className="text-gray-900 font-bold">{userProfile.name || 'Not provided'}</p>
                      </div>
                      <div>
-                       <label className="text-xs font-medium text-gray-600">Email</label>
-                       <p className="text-gray-900 break-all">{userProfile.email}</p>
+                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-1">Email</label>
+                       <p className="text-gray-900 font-bold break-all">{userProfile.email}</p>
                      </div>
                      <div>
-                       <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 mb-1">
                          <Phone className="w-3 h-3" />
                          Phone Number
                        </label>
-                       <p className="text-gray-900">{userProfile.phone || 'Not provided'}</p>
+                       <p className="text-gray-900 font-bold">{userProfile.phone || 'Not provided'}</p>
                      </div>
                      <div>
-                       <label className="text-xs font-medium text-gray-600">User ID</label>
-                       <p className="text-gray-900 font-mono text-xs break-all">{selectedDocForRejection.user_id}</p>
+                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-1">User ID</label>
+                       <p className="text-gray-900 font-mono text-xs break-all font-bold">{selectedDocForRejection.user_id}</p>
                      </div>
                    </div>
                  </div>
                )}
-               
-               <div className="grid grid-cols-2 gap-4 text-sm">
+
+               <div className="grid grid-cols-2 gap-4 text-sm bg-white/60 backdrop-blur-sm rounded-[16px] p-4 border border-gray-200">
                  <div className="flex items-center gap-2">
                    <User className="w-4 h-4 text-gray-500" />
-                   <span className="text-gray-600">ID: {selectedDocForRejection.user_id.slice(0, 8)}...</span>
+                   <span className="font-black text-gray-400 uppercase tracking-widest text-xs">ID:</span>
+                   <span className="text-gray-900 font-bold">{selectedDocForRejection.user_id.slice(0, 8)}...</span>
                  </div>
                  <div className="flex items-center gap-2">
                    <Calendar className="w-4 h-4 text-gray-500" />
-                   <span className="text-gray-600">
+                   <span className="text-gray-900 font-bold">
                      {selectedDocForRejection.created_at ? new Date(selectedDocForRejection.created_at).toLocaleDateString() : '-'}
                    </span>
                  </div>
                  {selectedDocForRejection.tipo_trad && (
                    <div className="flex items-center gap-2">
                      <FileImage className="w-4 h-4 text-gray-500" />
-                     <span className="text-gray-600">{selectedDocForRejection.tipo_trad}</span>
+                     <span className="text-gray-900 font-bold">{selectedDocForRejection.tipo_trad}</span>
                    </div>
                  )}
                  {selectedDocForRejection.pages && (
                    <div className="flex items-center gap-2">
                      <FileText className="w-4 h-4 text-gray-500" />
-                     <span className="text-gray-600">{selectedDocForRejection.pages} páginas</span>
+                     <span className="text-gray-900 font-bold">{selectedDocForRejection.pages} pages</span>
                    </div>
                  )}
                </div>
              </div>
 
              {/* Form */}
-             <div className="p-6 space-y-6">
+             <div className="p-8 space-y-6">
                {/* Motivo da Rejeição */}
                <div>
-                 <label htmlFor="rejectionReason" className="block mb-3 text-sm font-semibold text-gray-900">
-                   Motivo da Rejeição <span className="text-tfe-red-500">*</span>
+                 <label htmlFor="rejectionReason" className="block mb-3 text-xs font-black text-gray-900 uppercase tracking-widest">
+                   Rejection Reason <span className="text-[#C71B2D]">*</span>
                  </label>
                  <select
                    id="rejectionReason"
                    value={rejectionReason}
                    onChange={(e) => setRejectionReason(e.target.value)}
-                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-tfe-red-500 transition-colors"
+                   className="w-full px-4 py-3 border border-gray-300 rounded-[16px] focus:ring-2 focus:ring-[#C71B2D] focus:border-[#C71B2D] transition-all font-medium"
                  >
-                   <option value="">Selecione um motivo</option>
+                   <option value="">Select a reason</option>
                    {REJECTION_REASONS.map(option => (
                      <option key={option.value} value={option.value}>{option.label}</option>
                    ))}
@@ -648,61 +693,62 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                {/* Outro Motivo */}
                {rejectionReason === 'other' && (
                  <div>
-                   <label htmlFor="rejectionOtherReason" className="block mb-3 text-sm font-semibold text-gray-900">
-                     Especifique o Motivo <span className="text-tfe-red-500">*</span>
+                   <label htmlFor="rejectionOtherReason" className="block mb-3 text-xs font-black text-gray-900 uppercase tracking-widest">
+                     Specify Reason <span className="text-[#C71B2D]">*</span>
                    </label>
                    <input
                      type="text"
                      id="rejectionOtherReason"
                      value={rejectionOtherReason}
                      onChange={(e) => setRejectionOtherReason(e.target.value)}
-                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-tfe-red-500 transition-colors"
-                     placeholder="Descreva o motivo específico da rejeição..."
+                     className="w-full px-4 py-3 border border-gray-300 rounded-[16px] focus:ring-2 focus:ring-[#C71B2D] focus:border-[#C71B2D] transition-all font-medium"
+                     placeholder="Describe the specific rejection reason..."
                    />
                  </div>
                )}
 
                {/* Comentário Detalhado */}
                <div>
-                 <label htmlFor="rejectionComment" className="block mb-3 text-sm font-semibold text-gray-900">
-                   Comentário Detalhado <span className="text-tfe-red-500">*</span>
+                 <label htmlFor="rejectionComment" className="block mb-3 text-xs font-black text-gray-900 uppercase tracking-widest">
+                   Detailed Comment <span className="text-[#C71B2D]">*</span>
                  </label>
                  <textarea
                    id="rejectionComment"
                    value={rejectionComment}
                    onChange={(e) => setRejectionComment(e.target.value)}
                    rows={4}
-                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-tfe-red-500 transition-colors resize-none"
-                   placeholder="Forneça detalhes específicos sobre os problemas encontrados e sugestões para correção..."
+                   className="w-full px-4 py-3 border border-gray-300 rounded-[16px] focus:ring-2 focus:ring-[#C71B2D] focus:border-[#C71B2D] transition-all resize-none font-medium"
+                   placeholder="Provide specific details about the issues found and suggestions for correction..."
                  />
-                 <p className="mt-2 text-xs text-gray-500">
-                   Este comentário será visível para o usuário que enviou o documento.
+                 <p className="mt-2 text-xs font-medium text-gray-500">
+                   This comment will be visible to the user who submitted the document.
                  </p>
                </div>
              </div>
 
              {/* Actions */}
-             <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+             <div className="flex items-center justify-end gap-3 p-8 border-t border-gray-200 bg-gray-50/50">
                <button
                  onClick={handleRejectCancel}
-                 className="px-6 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                 className="px-8 py-3 text-gray-700 bg-white border border-gray-300 rounded-[16px] hover:bg-gray-50 transition-all font-black uppercase tracking-wider"
                >
-                 Cancelar
+                 Cancel
                </button>
                <button
                  onClick={handleRejectConfirm}
                  disabled={rejectionLoading || !rejectionReason || !rejectionComment.trim() || (rejectionReason === 'other' && !rejectionOtherReason.trim())}
-                 className="px-6 py-3 bg-tfe-red-600 text-white rounded-lg hover:bg-tfe-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
+                 className="relative px-8 py-3 bg-[#C71B2D] text-white rounded-[16px] hover:bg-[#A01624] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all font-black uppercase tracking-wider flex items-center gap-2 hover:scale-105 disabled:hover:scale-100 overflow-hidden group"
                >
+                 {!rejectionLoading && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />}
                  {rejectionLoading ? (
                    <>
-                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                     Rejeitando...
+                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
+                     <span className="relative z-10">Rejecting...</span>
                    </>
                  ) : (
                    <>
-                     <XCircle className="w-4 h-4" />
-                     Confirmar Rejeição
+                     <XCircle className="w-4 h-4 relative z-10" />
+                     <span className="relative z-10">Confirm Rejection</span>
                    </>
                  )}
                </button>

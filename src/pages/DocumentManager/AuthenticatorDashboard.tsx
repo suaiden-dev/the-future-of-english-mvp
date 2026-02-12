@@ -62,8 +62,8 @@ export default function AuthenticatorDashboard() {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [showDocViewer, setShowDocViewer] = useState(false);
   const [docToView, setDocToView] = useState<{ url: string; filename: string } | null>(null);
-  const [userLoading, setUserLoading] = useState(false);
-  const [userError, setUserError] = useState<string | null>(null);
+  const [actionDoc, setActionDoc] = useState<Document | null>(null);
+  const [actionModalOpen, setActionModalOpen] = useState(false);
 
   // Estados para modais de confirmação
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -230,24 +230,44 @@ export default function AuthenticatorDashboard() {
 
         const allDocuments = [...mainDocumentsWithVerifiedData, ...verifiedOnlyDocsMapped];
 
-        // Filtrar documentos pendentes e em processamento para a lista (excluir documentos já processados)
-        const pendingDocs = allDocuments.filter(doc => doc.status === 'pending' || doc.status === 'processing');
-
         // Calcular estatísticas usando apenas documentos relevantes (excluir processados)
         const relevantDocs = allDocuments.filter(doc => doc.status !== 'processed');
+
+        // Filtrar documentos pendentes e em processamento para a lista (excluir documentos já processados)
+        // MOSTRAR TODOS OS DOCUMENTOS (Pendentes primeiro)
+        const displayDocs = relevantDocs.sort((a, b) => {
+          // Define a ordem dos status
+          const statusOrder: Record<string, number> = {
+            'pending': 1,
+            'processing': 2, 
+            'completed': 3,
+            'rejected': 4
+          };
+
+          const orderA = statusOrder[a.status] || 99;
+          const orderB = statusOrder[b.status] || 99;
+
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+           // Desempate por data (mais recente primeiro)
+           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+
+        // Calcular estatísticas usando apenas documentos relevantes (excluir processados)
         const pendingCount = relevantDocs.filter(doc => doc.status === 'pending' || doc.status === 'processing').length;
         const approvedCount = relevantDocs.filter(doc => doc.status === 'completed').length;
 
         console.log('[AuthenticatorDashboard] Estatísticas calculadas:', { pendingCount, approvedCount });
-        console.log('[AuthenticatorDashboard] Documentos pendentes e em processamento para exibir:', pendingDocs.length);
+        console.log('[AuthenticatorDashboard] Documentos carregados para exibição:', displayDocs.length);
 
         setStats({
           pending: pendingCount,
           approved: approvedCount
         });
 
-        setDocuments(pendingDocs);
-        console.log('[AuthenticatorDashboard] Documentos carregados para exibição:', pendingDocs.length);
+        setDocuments(displayDocs);
+        console.log('[AuthenticatorDashboard] Documentos carregados para exibição:', displayDocs.length);
 
       } catch (err) {
         console.error('[AuthenticatorDashboard] Unexpected error:', err);
@@ -644,77 +664,109 @@ export default function AuthenticatorDashboard() {
     setCurrentPage(page);
   };
 
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return {
+        pages: Array.from({ length: totalPages }, (_, i) => i + 1),
+        showLeftEllipsis: false,
+        showRightEllipsis: false
+      };
+    }
+
+    let start = Math.max(2, currentPage - 1);
+    let end = Math.min(totalPages - 1, currentPage + 1);
+
+    if (currentPage <= 3) {
+      start = 2;
+      end = 4;
+    } else if (currentPage >= totalPages - 2) {
+      start = totalPages - 3;
+      end = totalPages - 1;
+    }
+
+    const pages = [] as number[];
+    for (let i = start; i <= end; i += 1) {
+      pages.push(i);
+    }
+
+    return {
+      pages,
+      showLeftEllipsis: start > 2,
+      showRightEllipsis: end < totalPages - 1
+    };
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden">
+      {/* Decorative background blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#C71B2D]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#163353]/5 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="max-w-7xl mx-auto py-6 sm:py-10 px-4 sm:px-6 relative z-10">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-4 sm:gap-6">
-            <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Authenticator Dashboard</h1>
-              <p className="text-sm sm:text-base text-gray-600">Approve or reject translated documents submitted for verification. Only authenticators have access to this panel.</p>
-            </div>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2 tracking-tight uppercase">Authenticator Dashboard</h1>
+          <p className="text-gray-600 font-medium opacity-80 uppercase tracking-[0.2em] text-xs">Approve or reject translated documents submitted for verification</p>
         </div>
 
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-10">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-900" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.pending}</div>
-              <div className="text-sm sm:text-base text-gray-600 font-medium">Pending</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8">
+          <div className="relative group bg-white/80 backdrop-blur-xl rounded-[24px] p-6 border border-gray-200 hover:border-yellow-500/40 transition-all hover:shadow-2xl hover:-translate-y-1 overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-[60px] pointer-events-none" />
+            <div className="relative flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Pending</p>
+                <p className="text-3xl sm:text-4xl font-black text-yellow-900">{stats.pending}</p>
+              </div>
+              <div className="w-14 h-14 bg-yellow-100 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-yellow-200 group-hover:bg-yellow-200 transition-colors">
+                <Clock className="w-7 h-7 text-yellow-900" />
+              </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Check className="w-6 h-6 sm:w-7 sm:h-7 text-green-900" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.approved}</div>
-              <div className="text-sm sm:text-base text-gray-600 font-medium">Approved</div>
+          <div className="relative group bg-white/80 backdrop-blur-xl rounded-[24px] p-6 border border-gray-200 hover:border-green-500/40 transition-all hover:shadow-2xl hover:-translate-y-1 overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-[60px] pointer-events-none" />
+            <div className="relative flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Approved</p>
+                <p className="text-3xl sm:text-4xl font-black text-green-900">{stats.approved}</p>
+              </div>
+              <div className="w-14 h-14 bg-green-100 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-green-200 group-hover:bg-green-200 transition-colors">
+                <Check className="w-7 h-7 text-green-900" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Documents Table */}
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8">
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center gap-3">
-            <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-tfe-blue-700" /> Documents to Authenticate
+        <div className="relative bg-white/80 backdrop-blur-xl rounded-[30px] shadow-lg border border-gray-200 p-6 sm:p-8 overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#163353]/5 rounded-full blur-[100px] pointer-events-none" />
+
+          <h2 className="relative text-2xl sm:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3 uppercase tracking-tight">
+            <FileText className="w-7 h-7 text-[#163353]" /> Documents to Authenticate
           </h2>
 
-          {/* Instructions for Authenticators */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4" />
-              Authentication Instructions
-            </h3>
-            <div className="space-y-2 text-sm text-blue-800">
-              <div className="flex items-start gap-2">
-                <span className="font-medium min-w-fit">• View Original:</span>
-                <span>Document is being translated. Wait 1-2 minutes and refresh the page to view the translated document.</span>
+          
+          {loading && (
+            <div className="relative flex flex-col items-center justify-center py-12">
+              <div className="relative inline-block mb-4">
+                <div className="absolute inset-0 bg-[#163353]/20 blur-2xl rounded-full animate-pulse" />
+                <div className="relative w-12 h-12 border-4 border-[#163353] border-t-transparent rounded-full animate-spin" />
               </div>
-              <div className="flex items-start gap-2">
-                <span className="font-medium min-w-fit">• View Original (persistent):</span>
-                <span>If the "View Original" button persists for a long time, the automatic AI translation failed and only the original document will be shown.</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-medium min-w-fit">• View PDF:</span>
-                <span>Translation was successful. Please verify the document for any errors before approval.</span>
-              </div>
+              <p className="text-[#163353] font-black uppercase tracking-[0.3em] text-xs">Loading Documents...</p>
             </div>
-          </div>
-
-          {loading && <p className="text-tfe-blue-700 text-base sm:text-lg">Loading documents...</p>}
-          {error && <p className="text-tfe-red-500 text-base sm:text-lg">Error: {error}</p>}
+          )}
+          {error && (
+            <div className="relative text-center py-12 bg-[#C71B2D]/5 rounded-[24px] border border-[#C71B2D]/20">
+              <p className="text-[#C71B2D] font-bold text-lg">Error: {error}</p>
+            </div>
+          )}
 
           {/* Mobile Cards View */}
-          <div className="block sm:hidden space-y-4">
+          <div className="relative block sm:hidden space-y-4">
             {currentDocuments.map(doc => (
-              <div key={doc.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div key={doc.id} className="relative group bg-white/60 backdrop-blur-sm rounded-[24px] p-5 border border-gray-200 hover:border-[#163353]/40 hover:shadow-lg transition-all">
                 <div className="space-y-3">
                   {/* Document Name */}
                   <div>
@@ -734,7 +786,7 @@ export default function AuthenticatorDashboard() {
                           alert((error as Error).message || 'Failed to open document.');
                         }
                       }}
-                      className="text-tfe-blue-700 underline font-medium hover:text-tfe-blue-950 transition-colors text-sm text-left"
+                      className="text-[#163353] underline font-black hover:text-[#C71B2D] transition-colors text-sm text-left"
                     >
                       {getDisplayFilename(doc)}
                     </button>
@@ -757,14 +809,14 @@ export default function AuthenticatorDashboard() {
                             alert((error as Error).message || 'Failed to open document.');
                           }
                         }}
-                        className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
+                        className="flex items-center gap-1.5 bg-[#163353] text-white px-3 py-2 rounded-[12px] text-xs hover:bg-[#0F2438] transition-all font-black uppercase tracking-wider hover:scale-105"
                         title={doc.translated_file_url ? "View Translated PDF" : "View Original Document"}
                       >
-                        <FileText className="w-3 h-3" /> View {doc.translated_file_url ? "PDF" : "Original"}
+                        <FileText className="w-3.5 h-3.5" /> View {doc.translated_file_url ? "PDF" : "Original"}
                       </button>
 
                       <button
-                        className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
+                        className="flex items-center gap-1.5 bg-green-600 text-white px-3 py-2 rounded-[12px] text-xs hover:bg-green-700 transition-all font-black uppercase tracking-wider hover:scale-105"
                         onClick={async e => {
                           e.preventDefault();
                           try {
@@ -801,22 +853,22 @@ export default function AuthenticatorDashboard() {
 
 
                   {/* Document Details */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50/50 rounded-[16px] p-4 border border-gray-100">
                     <div>
-                      <span className="font-medium text-gray-600">Value:</span>
-                      <span className="ml-1">{typeof doc.total_cost === 'number' ? `$${doc.total_cost.toFixed(2)}` : '-'}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Value</span>
+                      <span className="font-bold text-[#C71B2D]">{typeof doc.total_cost === 'number' ? `$${doc.total_cost.toFixed(2)}` : '-'}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Pages:</span>
-                      <span className="ml-1">{doc.pages}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Pages</span>
+                      <span className="font-bold text-gray-900">{doc.pages}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Language:</span>
-                      <span className="ml-1">{doc.source_language && doc.target_language ? `${doc.source_language} → ${doc.target_language}` : (doc.source_language || '-')}</span>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Language</span>
+                      <span className="font-bold text-gray-900">{doc.source_language && doc.target_language ? `${doc.source_language} → ${doc.target_language}` : (doc.source_language || '-')}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Bank:</span>
-                      <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_bank_statement ? 'bg-tfe-red-100 text-tfe-red-800' : 'bg-green-100 text-green-800'}`}>
+                      <span className="font-black text-gray-400 uppercase tracking-widest block mb-1">Bank</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-black uppercase ${doc.is_bank_statement ? 'bg-[#C71B2D]/10 text-[#C71B2D]' : 'bg-green-100 text-green-800'}`}>
                         {doc.is_bank_statement ? 'Yes' : 'No'}
                       </span>
                     </div>
@@ -824,46 +876,46 @@ export default function AuthenticatorDashboard() {
 
                   {/* Client Name */}
                   {doc.client_name && (
-                    <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="mt-2 pt-3 border-t border-gray-200 bg-gray-50/30 rounded-[12px] p-3">
                       <div className="text-xs">
-                        <span className="font-medium text-gray-600">Client:</span>
-                        <span className="ml-1 text-gray-800 font-medium">{doc.client_name}</span>
+                        <span className="font-black text-gray-400 uppercase tracking-widest">Client:</span>
+                        <span className="ml-2 text-gray-900 font-bold">{doc.client_name}</span>
                       </div>
                     </div>
                   )}
 
                   {/* User Info */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600 truncate max-w-32" title={doc.user_name || doc.user_id}>
+                      <span className="text-xs font-bold text-gray-900 truncate max-w-32" title={doc.user_name || doc.user_id}>
                         {doc.user_name || `${doc.user_id.slice(0, 8)}...`}
                       </span>
                       <button
-                        className="text-tfe-blue-600 hover:text-tfe-blue-950 p-1 rounded hover:bg-tfe-blue-50 transition-colors"
+                        className="text-[#163353] hover:text-[#C71B2D] p-1.5 rounded-[8px] hover:bg-[#163353]/5 transition-all"
                         title="View user information"
                         onClick={() => handleViewUser(doc.user_id)}
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                     </div>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">
                       {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
                     </span>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="pt-2 border-t border-gray-200">
+                  <div className="pt-3 border-t border-gray-200">
                     {rejectedRows[doc.id] ? (
                       <div className="space-y-3">
                         {/* File Upload Area */}
                         <div className="relative">
-                          <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors group">
+                          <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-[#163353]/30 rounded-[16px] cursor-pointer bg-[#163353]/5 hover:bg-[#163353]/10 transition-all group">
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <UploadIcon className="w-6 h-6 mb-2 text-gray-400 group-hover:text-tfe-blue-500 transition-colors" />
-                              <p className="mb-1 text-sm text-gray-600">
-                                <span className="font-medium text-tfe-blue-600 hover:text-tfe-blue-500">Click to select</span> or drag file
+                              <UploadIcon className="w-6 h-6 mb-2 text-[#163353]/60 group-hover:text-[#163353] transition-colors" />
+                              <p className="mb-1 text-sm text-gray-700">
+                                <span className="font-black text-[#163353] hover:text-[#C71B2D]">Click to select</span> or drag file
                               </p>
-                              <p className="text-xs text-gray-500">PDF only</p>
+                              <p className="text-xs text-gray-500 font-medium">PDF only</p>
                             </div>
                             <input
                               type="file"
@@ -878,10 +930,10 @@ export default function AuthenticatorDashboard() {
 
                           {/* Selected File Display */}
                           {uploadStates[doc.id]?.file && (
-                            <div className="mt-2 p-2 bg-tfe-blue-50 border border-tfe-blue-200 rounded-md">
+                            <div className="mt-2 p-3 bg-[#163353]/10 border border-[#163353]/20 rounded-[12px]">
                               <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-tfe-blue-600" />
-                                <span className="text-xs text-tfe-blue-800 font-medium truncate">
+                                <FileText className="w-4 h-4 text-[#163353]" />
+                                <span className="text-xs text-[#163353] font-bold truncate">
                                   {uploadStates[doc.id]?.file?.name}
                                 </span>
                               </div>
@@ -891,34 +943,35 @@ export default function AuthenticatorDashboard() {
 
                         {/* Send Button */}
                         <button
-                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-4 py-3 font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                          className="relative w-full bg-gradient-to-r from-[#163353] to-[#0F2438] text-white rounded-[16px] px-4 py-3 font-black hover:from-[#0F2438] hover:to-[#163353] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-lg hover:shadow-xl hover:scale-[1.02] overflow-hidden group uppercase tracking-wider"
                           disabled={!uploadStates[doc.id]?.file || uploadStates[doc.id]?.uploading}
                           onClick={() => showSendCorrectionConfirmation(doc)}
                         >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
                           {uploadStates[doc.id]?.uploading ? (
                             <div className="flex items-center justify-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Sending correction...
+                              <div className="relative w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin z-10"></div>
+                              <span className="relative z-10">Sending correction...</span>
                             </div>
                           ) : (
                             <div className="flex items-center justify-center gap-2">
-                              <UploadIcon className="w-4 h-4" />
-                              Send Correction
+                              <UploadIcon className="relative w-4 h-4 z-10" />
+                              <span className="relative z-10">Send Correction</span>
                             </div>
                           )}
                         </button>
 
                         {/* Status Messages */}
                         {uploadStates[doc.id]?.success && (
-                          <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                          <div className="flex items-center gap-2 p-3 bg-green-50/80 backdrop-blur-sm border border-green-200 rounded-[12px]">
                             <CheckCircle className="w-4 h-4 text-green-600" />
-                            <span className="text-green-700 text-xs font-medium">Correction sent successfully!</span>
+                            <span className="text-green-700 text-xs font-bold">Correction sent successfully!</span>
                           </div>
                         )}
                         {uploadStates[doc.id]?.error && (
-                          <div className="flex items-center gap-2 p-2 bg-tfe-red-50 border border-tfe-red-200 rounded-md">
-                            <XCircle className="w-4 h-4 text-tfe-red-600" />
-                            <span className="text-tfe-red-700 text-xs">{uploadStates[doc.id]?.error}</span>
+                          <div className="flex items-center gap-2 p-3 bg-[#C71B2D]/5 border border-[#C71B2D]/20 rounded-[12px]">
+                            <XCircle className="w-4 h-4 text-[#C71B2D]" />
+                            <span className="text-[#C71B2D] text-xs font-bold">{uploadStates[doc.id]?.error}</span>
                           </div>
                         )}
                       </div>
@@ -927,11 +980,11 @@ export default function AuthenticatorDashboard() {
                         <button onClick={() => {
                           console.log('Botão Approve clicado para documento:', doc.id);
                           showApprovalConfirmation(doc.id);
-                        }} className="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded text-xs hover:bg-green-700 transition-colors font-medium">
-                          <CheckCircle className="w-3 h-3" />Approve
+                        }} className="flex-1 flex items-center justify-center gap-1.5 bg-green-600 text-white px-4 py-3 rounded-[16px] text-xs hover:bg-green-700 transition-all font-black uppercase tracking-wider hover:scale-105">
+                          <CheckCircle className="w-3.5 h-3.5" />Approve
                         </button>
-                        <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex-1 flex items-center justify-center gap-1 bg-tfe-red-600 text-white px-3 py-2 rounded text-xs hover:bg-tfe-red-700 transition-colors font-medium">
-                          <XCircle className="w-3 h-3" />Reject
+                        <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex-1 flex items-center justify-center gap-1.5 bg-[#C71B2D] text-white px-4 py-3 rounded-[16px] text-xs hover:bg-[#A01624] transition-all font-black uppercase tracking-wider hover:scale-105">
+                          <XCircle className="w-3.5 h-3.5" />Reject
                         </button>
                       </div>
                     )}
@@ -941,241 +994,67 @@ export default function AuthenticatorDashboard() {
             ))}
           </div>
 
+
           {/* Desktop Table View */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full bg-white border rounded-lg shadow">
-              <thead className="bg-tfe-blue-50">
+          <div className="relative hidden sm:block overflow-x-auto scrollbar-standard">
+            <table className="w-full bg-white/50 backdrop-blur-sm border border-gray-200 rounded-[20px] shadow-sm overflow-hidden">
+              <thead className="bg-[#163353]/10 backdrop-blur-md">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Document</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Actions</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Client</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">User</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Value</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Language</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Details</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Document</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Client</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">User</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Value</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Language</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Date</th>
+                  <th className="px-4 py-3 text-left font-black text-xs uppercase tracking-widest text-gray-900">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {currentDocuments.map(doc => {
                   return (
-                    <tr key={doc.id} className="border-t hover:bg-tfe-blue-50 transition-colors">
+                    <tr key={doc.id} className="border-t border-gray-200 hover:bg-[#163353]/5 transition-all group">
                       <td className="px-4 py-3">
                         <div className="space-y-2">
                           <div>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const urlToView = doc.translated_file_url || doc.file_url;
-                                  if (!urlToView) {
-                                    alert('No document available to view.');
-                                    return;
-                                  }
-                                  const validUrl = await getValidFileUrl(urlToView);
-                                  setDocToView({ url: validUrl, filename: getDisplayFilename(doc) });
-                                  setShowDocViewer(true);
-                                } catch (error) {
-                                  console.error('Error opening document:', error);
-                                  alert((error as Error).message || 'Failed to open document.');
-                                }
-                              }}
-                              className="text-tfe-blue-700 underline font-medium hover:text-tfe-blue-950 transition-colors text-sm"
-                            >
+                            <span className="text-[#163353] font-black text-sm">
                               {getDisplayFilename(doc)}
-                            </button>
-                          </div>
-                          <div className="flex gap-2">
-                            {/* Botão View - sempre disponível */}
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const urlToView = doc.translated_file_url || doc.file_url;
-                                  if (!urlToView) {
-                                    alert('No document available to view.');
-                                    return;
-                                  }
-                                  const validUrl = await getValidFileUrl(urlToView);
-                                  setDocToView({ url: validUrl, filename: getDisplayFilename(doc) });
-                                  setShowDocViewer(true);
-                                } catch (error) {
-                                  console.error('Error opening document:', error);
-                                  alert((error as Error).message || 'Failed to open document.');
-                                }
-                              }}
-                              className="flex items-center gap-1 bg-tfe-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-tfe-blue-700 transition-colors font-medium"
-                              title={doc.translated_file_url ? "View Translated PDF" : "View Original Document"}
-                            >
-                              <FileText className="w-3 h-3" /> View {doc.translated_file_url ? "PDF" : "Original"}
-                            </button>
-
-                            {/* Botão Download - sempre disponível */}
-                            <button
-                              className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors font-medium"
-                              onClick={async e => {
-                                e.preventDefault();
-                                try {
-                                  // Preferir documento traduzido se existir, senão baixar o original
-                                  const urlToDownload = doc.translated_file_url || doc.file_url;
-                                  if (!urlToDownload) {
-                                    alert('No document available to download.');
-                                    return;
-                                  }
-
-                                  const validUrl = await getValidFileUrl(urlToDownload);
-                                  const response = await fetch(validUrl);
-                                  const blob = await response.blob();
-                                  const url = window.URL.createObjectURL(blob);
-                                  const link = document.createElement('a');
-                                  link.href = url;
-                                  link.download = (getDisplayFilename(doc) ? String(getDisplayFilename(doc)) : 'document.pdf');
-                                  document.body.appendChild(link);
-                                  link.click();
-                                  document.body.removeChild(link);
-                                  window.URL.revokeObjectURL(url);
-                                } catch (err) {
-                                  console.error('Error downloading file:', err);
-                                  alert((err as Error).message || 'Failed to download file.');
-                                }
-                              }}
-                              title={doc.translated_file_url ? "Download Translated PDF" : "Download Original Document"}
-                            >
-                              <Download className="w-3 h-3" /> Download
-                            </button>
+                            </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        {rejectedRows[doc.id] ? (
-                          <div className="flex flex-col gap-3 w-64">
-                            {/* File Upload Area */}
-                            <div className="relative">
-                              <label className="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors group">
-                                <div className="flex items-center justify-center">
-                                  <UploadIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-tfe-blue-500 transition-colors" />
-                                  <span className="text-sm text-gray-600 group-hover:text-tfe-blue-600">
-                                    Select PDF
-                                  </span>
-                                </div>
-                                <input
-                                  type="file"
-                                  accept="application/pdf"
-                                  className="hidden"
-                                  onChange={e => {
-                                    const file = e.target.files?.[0] || null;
-                                    setUploadStates(prev => ({ ...prev, [doc.id]: { file, uploading: false, success: false, error: null } }));
-                                  }}
-                                />
-                              </label>
-
-                              {/* Selected File Display */}
-                              {uploadStates[doc.id]?.file && (
-                                <div className="mt-2 p-2 bg-tfe-blue-50 border border-tfe-blue-200 rounded-md">
-                                  <div className="flex items-center gap-2">
-                                    <FileText className="w-3 h-3 text-tfe-blue-600" />
-                                    <span className="text-xs text-tfe-blue-800 font-medium truncate">
-                                      {uploadStates[doc.id]?.file?.name}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Send Button */}
-                            <button
-                              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-3 py-2 font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm hover:shadow-md"
-                              disabled={!uploadStates[doc.id]?.file || uploadStates[doc.id]?.uploading}
-                              onClick={() => {
-                                console.log('Botão Send Correction (versão 2) clicado para documento:', doc.id);
-                                showSendCorrectionConfirmation(doc);
-                              }}
-                            >
-                              {uploadStates[doc.id]?.uploading ? (
-                                <div className="flex items-center justify-center gap-2">
-                                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                  Sending...
-                                </div>
-                              ) : (
-                                <div className="flex items-center justify-center gap-2">
-                                  <UploadIcon className="w-3 h-3" />
-                                  Send Correction
-                                </div>
-                              )}
-                            </button>
-
-                            {/* Status Messages */}
-                            {uploadStates[doc.id]?.success && (
-                              <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                                <CheckCircle className="w-3 h-3 text-green-600" />
-                                <span className="text-green-700 text-xs font-medium">Sent!</span>
-                              </div>
-                            )}
-                            {uploadStates[doc.id]?.error && (
-                              <div className="flex items-center gap-2 p-2 bg-tfe-red-50 border border-tfe-red-200 rounded-md">
-                                <XCircle className="w-3 h-3 text-tfe-red-600" />
-                                <span className="text-tfe-red-700 text-xs">{uploadStates[doc.id]?.error}</span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <button onClick={() => {
-                              console.log('Botão Approve (versão 1) clicado para documento:', doc.id);
-                              showApprovalConfirmation(doc.id);
-                            }} className="flex items-center gap-1 bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors font-medium">
-                              <CheckCircle className="w-3 h-3" />Approve
-                            </button>
-                            <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex items-center gap-1 bg-tfe-red-600 text-white px-3 py-1 rounded text-xs hover:bg-tfe-red-700 transition-colors font-medium">
-                              <XCircle className="w-3 h-3" />Reject
-                            </button>
-                          </div>
-                        )}
-                      </td>
                       {/* Client Name */}
                       <td className="px-4 py-3">
-                        <span className="text-xs text-gray-800 font-medium">
+                        <span className="text-sm font-bold text-gray-900">
                           {doc.client_name || '-'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600 truncate max-w-32" title={doc.user_name || doc.user_id}>
+                          <span className="text-sm font-bold text-gray-900 truncate max-w-32" title={doc.user_name || doc.user_id}>
                             {doc.user_name || `${doc.user_id.slice(0, 8)}...`}
                           </span>
-                          <button
-                            className="text-tfe-blue-600 hover:text-tfe-blue-950 p-1 rounded hover:bg-tfe-blue-50 transition-colors"
-                            title="View user information"
-                            onClick={() => handleViewUser(doc.user_id)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-sm">
+                      <td className="px-4 py-3 font-black text-sm text-[#C71B2D]">
                         {typeof doc.total_cost === 'number' ? `$${doc.total_cost.toFixed(2)}` : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm">
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900">
                         {doc.source_language && doc.target_language ? `${doc.source_language} → ${doc.target_language}` : (doc.source_language || '-')}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="space-y-1 text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Pages:</span>
-                            <span>{doc.pages}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Type:</span>
-                            <span>{doc.translation_status || '-'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Bank:</span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_bank_statement ? 'bg-tfe-red-100 text-tfe-red-800' : 'bg-green-100 text-green-800'}`}>
-                              {doc.is_bank_statement ? 'Yes' : 'No'}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
+                      <td className="px-4 py-3 text-xs font-black text-gray-400 uppercase tracking-widest">
                         {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => {
+                            setActionDoc(doc);
+                            setActionModalOpen(true);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white rounded-[12px] text-xs font-black uppercase tracking-wider hover:bg-gray-800 transition-all hover:scale-105"
+                          title="Open details"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Details
+                        </button>
                       </td>
                     </tr>
                   );
@@ -1184,45 +1063,92 @@ export default function AuthenticatorDashboard() {
             </table>
           </div>
 
-          {documents.length === 0 && !loading && <p className="mt-8 text-gray-500 text-center text-base sm:text-lg">No pending documents for authentication.</p>}
+          {documents.length === 0 && !loading && (
+            <div className="relative text-center py-16">
+              <div className="relative inline-block mb-4">
+                <div className="absolute inset-0 bg-green-500/20 blur-2xl rounded-full" />
+                <CheckCircle className="relative w-16 h-16 text-green-500" />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">All Clear!</h3>
+              <p className="text-gray-500 font-medium">No pending documents for authentication.</p>
+            </div>
+          )}
 
           {/* Controles de Paginação */}
           {documents.length > 0 && (
-            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="text-sm text-gray-700 text-center sm:text-left">
-                Showing {startIndex + 1} to {Math.min(endIndex, documents.length)} of {documents.length} documents
-              </div>
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Previous
-                </button>
-
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentPage === page
-                        ? 'bg-tfe-blue-600 text-white'
-                        : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                        }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+            <div className="relative px-6 py-4 border-t border-gray-200 bg-gray-50/50 rounded-b-[30px] mt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="text-sm font-bold text-gray-700 text-center sm:text-left">
+                  Showing {startIndex + 1} to {Math.min(endIndex, documents.length)} of {documents.length} documents
                 </div>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 text-sm font-black uppercase tracking-wider text-gray-700 bg-white border border-gray-300 rounded-[12px] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 disabled:hover:scale-100"
+                  >
+                    Previous
+                  </button>
 
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Next
-                </button>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {(() => {
+                      const { pages, showLeftEllipsis, showRightEllipsis } = getPageNumbers();
+
+                      return (
+                        <>
+                          <button
+                            onClick={() => handlePageChange(1)}
+                            className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === 1
+                              ? 'bg-[#163353] text-white shadow-md'
+                              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                              }`}
+                          >
+                            1
+                          </button>
+
+                          {showLeftEllipsis && (
+                            <span className="px-2 text-gray-400 text-sm font-black">...</span>
+                          )}
+
+                          {pages.map(page => (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === page
+                                ? 'bg-[#163353] text-white shadow-md'
+                                : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                }`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+
+                          {showRightEllipsis && (
+                            <span className="px-2 text-gray-400 text-sm font-black">...</span>
+                          )}
+
+                          <button
+                            onClick={() => handlePageChange(totalPages)}
+                            className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === totalPages
+                              ? 'bg-[#163353] text-white shadow-md'
+                              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                              }`}
+                          >
+                            {totalPages}
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 text-sm font-black uppercase tracking-wider text-gray-700 bg-white border border-gray-300 rounded-[12px] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 disabled:hover:scale-100"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1230,64 +1156,270 @@ export default function AuthenticatorDashboard() {
       </div>
 
       {/* Modal de confirmação de aprovação */}
-      {showApprovalModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            maxWidth: '400px',
-            width: '100%',
-            textAlign: 'center'
-          }}>
-            <div style={{
-              margin: '0 auto 1rem',
-              width: '48px',
-              height: '48px',
-              backgroundColor: '#dcfce7',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <CheckCircle style={{ width: '24px', height: '24px', color: '#16a34a' }} />
+      {actionModalOpen && actionDoc && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 backdrop-blur-md z-50 p-4 animate-in fade-in zoom-in-95 duration-300">
+          <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] p-8 w-full max-w-lg border border-white/20">
+            <button
+              className="absolute top-4 right-4 p-3 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-[16px] transition-all hover:scale-105 active:scale-95 shadow-lg"
+              onClick={() => {
+                setActionModalOpen(false);
+                setActionDoc(null);
+              }}
+              aria-label="Close modal"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-14 h-14 bg-[#163353]/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-[#163353]/20">
+                <FileText className="w-7 h-7 text-[#163353]" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Document Details</h3>
+                <p
+                  className="text-xs text-gray-500 font-bold uppercase tracking-[0.2em] truncate max-w-[360px]"
+                  title={getDisplayFilename(actionDoc)}
+                >
+                  {getDisplayFilename(actionDoc)}
+                </p>
+              </div>
             </div>
 
-            <h3 style={{ fontSize: '18px', fontWeight: '500', color: '#111827', marginBottom: '8px' }}>
+            <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Client</div>
+                <div className="font-bold text-gray-900">{actionDoc.client_name || '-'}</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">User</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-gray-900 truncate max-w-[150px]" title={actionDoc.user_name || actionDoc.user_id}>
+                    {actionDoc.user_name || `${actionDoc.user_id.slice(0, 8)}...`}
+                  </span>
+                  <button
+                    className="text-[#163353] hover:text-[#C71B2D] p-1 rounded hover:bg-[#163353]/5 transition-colors"
+                    title="View user information"
+                    onClick={() => handleViewUser(actionDoc.user_id)}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Value</div>
+                <div className="font-black text-[#C71B2D]">{typeof actionDoc.total_cost === 'number' ? `$${actionDoc.total_cost.toFixed(2)}` : '-'}</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Language</div>
+                <div className="font-bold text-gray-900">
+                  {actionDoc.source_language && actionDoc.target_language ? `${actionDoc.source_language} → ${actionDoc.target_language}` : (actionDoc.source_language || '-')}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Pages</div>
+                <div className="font-bold text-gray-900">{actionDoc.pages}</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Type</div>
+                <div className="font-bold text-gray-900 uppercase">{actionDoc.translation_status || '-'}</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Bank Statement</div>
+                <div className={`inline-flex px-2 py-0.5 rounded-full text-xs font-black uppercase ${actionDoc.is_bank_statement ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {actionDoc.is_bank_statement ? 'Yes' : 'No'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-gray-400 font-black uppercase tracking-widest text-xs">Created At</div>
+                <div className="font-bold text-gray-900">
+                  {actionDoc.created_at ? new Date(actionDoc.created_at).toLocaleDateString() : '-'}
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    try {
+                      const urlToView = actionDoc.translated_file_url || actionDoc.file_url;
+                      if (!urlToView) {
+                        alert('No document available to view.');
+                        return;
+                      }
+
+                      const validUrl = await getValidFileUrl(urlToView);
+                      setDocToView({ url: validUrl, filename: getDisplayFilename(actionDoc) });
+                      setShowDocViewer(true);
+                    } catch (error) {
+                      console.error('Error opening document:', error);
+                      alert((error as Error).message || 'Failed to open document.');
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#163353] text-white rounded-[14px] text-xs font-black uppercase tracking-wider hover:bg-[#0F2438] transition-all"
+                  title="View PDF"
+                >
+                  <FileText className="w-4 h-4" /> View
+                </button>
+                <button
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-[14px] text-xs font-black uppercase tracking-wider hover:bg-green-700 transition-all"
+                  onClick={async e => {
+                    e.preventDefault();
+                    try {
+                      const urlToDownload = actionDoc.translated_file_url || actionDoc.file_url;
+                      if (!urlToDownload) {
+                        alert('No document available to download.');
+                        return;
+                      }
+
+                      const validUrl = await getValidFileUrl(urlToDownload);
+                      const response = await fetch(validUrl);
+                      const blob = await response.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = (getDisplayFilename(actionDoc) ? String(getDisplayFilename(actionDoc)) : 'document.pdf');
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      window.URL.revokeObjectURL(url);
+                    } catch (err) {
+                      console.error('Error downloading file:', err);
+                      alert((err as Error).message || 'Failed to download file.');
+                    }
+                  }}
+                  title="Download"
+                >
+                  <Download className="w-4 h-4" /> Download
+                </button>
+              </div>
+
+              {!rejectedRows[actionDoc.id] ? (
+                <div className="flex gap-3 pt-3 border-t border-gray-100">
+                  <button 
+                    onClick={() => {
+                      setActionModalOpen(false);
+                      showApprovalConfirmation(actionDoc.id);
+                    }} 
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-green-600/10 text-green-700 border border-green-600/20 px-4 py-3 rounded-[14px] text-xs hover:bg-green-600 hover:text-white transition-all font-black uppercase tracking-wider"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />Approve
+                  </button>
+                  <button 
+                    onClick={() => setRejectedRows(prev => ({ ...prev, [actionDoc.id]: true }))} 
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-[#C71B2D]/10 text-[#C71B2D] border border-[#C71B2D]/20 px-4 py-3 rounded-[14px] text-xs hover:bg-[#C71B2D] hover:text-white transition-all font-black uppercase tracking-wider"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />Reject
+                  </button>
+                </div>
+              ) : (
+                <div className="pt-3 border-t border-gray-100 animate-in slide-in-from-top-2">
+                   <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-black text-gray-900 uppercase tracking-widest">Upload Correction</span>
+                        <button 
+                          onClick={() => setRejectedRows(prev => ({ ...prev, [actionDoc.id]: false }))}
+                          className="text-xs text-gray-400 hover:text-gray-600 font-bold"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      
+                      {/* File Upload Area */}
+                      <div className="relative">
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-[#163353]/30 rounded-[16px] cursor-pointer bg-[#163353]/5 hover:bg-[#163353]/10 transition-all group">
+                          <div className="flex flex-col items-center justify-center">
+                            <UploadIcon className="w-5 h-5 mb-2 text-[#163353]/60 group-hover:text-[#163353] transition-colors" />
+                            <span className="text-xs text-gray-700 font-medium group-hover:font-bold group-hover:text-[#163353]">
+                              Click to select PDF
+                            </span>
+                          </div>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="hidden"
+                            onChange={e => {
+                              const file = e.target.files?.[0] || null;
+                              setUploadStates(prev => ({ ...prev, [actionDoc.id]: { file, uploading: false, success: false, error: null } }));
+                            }}
+                          />
+                        </label>
+
+                        {/* Selected File Display */}
+                        {uploadStates[actionDoc.id]?.file && (
+                          <div className="mt-2 p-3 bg-[#163353]/10 border border-[#163353]/20 rounded-[12px]">
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-3.5 h-3.5 text-[#163353]" />
+                              <span className="text-xs text-[#163353] font-bold truncate">
+                                {uploadStates[actionDoc.id]?.file?.name}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Send Button */}
+                      <button
+                        className="relative w-full bg-gradient-to-r from-[#163353] to-[#0F2438] text-white rounded-[16px] px-3 py-3 font-black hover:from-[#0F2438] hover:to-[#163353] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs shadow-lg hover:shadow-xl overflow-hidden group uppercase tracking-wider"
+                        disabled={!uploadStates[actionDoc.id]?.file || uploadStates[actionDoc.id]?.uploading}
+                        onClick={() => {
+                          console.log('Botão Send Correction clicado para documento:', actionDoc.id);
+                          // Fechar modal de detalhes ao enviar confirmacao? 
+                          // Melhor esperar confirmacao
+                          setActionModalOpen(false); 
+                          showSendCorrectionConfirmation(actionDoc);
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
+                        {uploadStates[actionDoc.id]?.uploading ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="relative w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin z-10"></div>
+                            <span className="relative z-10">Sending...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-2">
+                            <UploadIcon className="relative w-3.5 h-3.5 z-10" />
+                            <span className="relative z-10">Send Correction</span>
+                          </div>
+                        )}
+                      </button>
+
+                      {/* Status Messages */}
+                      {uploadStates[actionDoc.id]?.error && (
+                        <div className="flex items-center gap-2 p-2 bg-[#C71B2D]/5 border border-[#C71B2D]/20 rounded-[12px]">
+                          <XCircle className="w-3.5 h-3.5 text-[#C71B2D]" />
+                          <span className="text-[#C71B2D] text-xs font-bold">{uploadStates[actionDoc.id]?.error}</span>
+                        </div>
+                      )}
+                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de aprovação */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 bg-[#0A1A2F]/95 backdrop-blur-2xl flex items-center justify-center z-[9999] p-4 animate-in fade-in zoom-in-95 duration-300">
+          <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] p-8 max-w-md w-full text-center border border-white/20">
+            <div className="mx-auto mb-6 w-16 h-16 bg-green-100/80 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-green-200">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+
+            <h3 className="text-2xl font-black text-gray-900 mb-3 uppercase tracking-tight">
               Confirm Approval
             </h3>
 
-            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
-              Are you sure you want to approve the document "{modalDocumentName}"? This action cannot be undone.
+            <p className="text-sm text-gray-600 font-medium mb-8">
+              Are you sure you want to approve the document "<span className="font-black text-gray-900">{modalDocumentName}</span>"? This action cannot be undone.
             </p>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <div className="flex gap-3 justify-center">
               <button
                 onClick={() => {
                   setShowApprovalModal(false);
                 }}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  backgroundColor: 'white',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
+                className="px-6 py-3 text-sm font-black text-gray-700 bg-white border border-gray-300 rounded-[16px] hover:bg-gray-50 transition-all uppercase tracking-wider hover:scale-105 active:scale-95"
               >
                 Cancel
               </button>
@@ -1297,18 +1429,10 @@ export default function AuthenticatorDashboard() {
                   setShowApprovalModal(false);
                   handleApprove(modalDocumentId);
                 }}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: 'white',
-                  backgroundColor: '#16a34a',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
+                className="relative px-6 py-3 text-sm font-black text-white bg-green-600 rounded-[16px] hover:bg-green-700 transition-all uppercase tracking-wider hover:scale-105 active:scale-95 overflow-hidden group shadow-lg"
               >
-                Approve
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
+                <span className="relative z-10">Approve</span>
               </button>
             </div>
           </div>
@@ -1317,64 +1441,27 @@ export default function AuthenticatorDashboard() {
 
       {/* Modal de confirmação de envio de correção */}
       {showCorrectionModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            maxWidth: '400px',
-            width: '100%',
-            textAlign: 'center'
-          }}>
-            <div style={{
-              margin: '0 auto 1rem',
-              width: '48px',
-              height: '48px',
-              backgroundColor: '#dbeafe',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <UploadIcon style={{ width: '24px', height: '24px', color: '#2563eb' }} />
+        <div className="fixed inset-0 bg-[#0A1A2F]/95 backdrop-blur-2xl flex items-center justify-center z-[9999] p-4 animate-in fade-in zoom-in-95 duration-300">
+          <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] p-8 max-w-md w-full text-center border border-white/20">
+            <div className="mx-auto mb-6 w-16 h-16 bg-[#163353]/10 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-[#163353]/20">
+              <UploadIcon className="w-8 h-8 text-[#163353]" />
             </div>
 
-            <h3 style={{ fontSize: '18px', fontWeight: '500', color: '#111827', marginBottom: '8px' }}>
+            <h3 className="text-2xl font-black text-gray-900 mb-3 uppercase tracking-tight">
               Confirm Send Correction
             </h3>
 
-            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
-              Are you sure you want to send the correction for the document "{modalDocumentName}"? This action cannot be undone.
+            <p className="text-sm text-gray-600 font-medium mb-8">
+              Are you sure you want to send the correction for the document "<span className="font-black text-gray-900">{modalDocumentName}</span>"? This action cannot be undone.
             </p>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <div className="flex gap-3 justify-center">
               <button
                 onClick={() => {
                   console.log('[AuthenticatorDashboard] Cancelando envio de correção');
                   setShowCorrectionModal(false);
                 }}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  backgroundColor: 'white',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
+                className="px-6 py-3 text-sm font-black text-gray-700 bg-white border border-gray-300 rounded-[16px] hover:bg-gray-50 transition-all uppercase tracking-wider hover:scale-105 active:scale-95"
               >
                 Cancel
               </button>
@@ -1388,18 +1475,10 @@ export default function AuthenticatorDashboard() {
                     handleCorrectionUpload(doc);
                   }
                 }}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: 'white',
-                  backgroundColor: '#2563eb',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
+                className="relative px-6 py-3 text-sm font-black text-white bg-[#163353] rounded-[16px] hover:bg-[#0F2438] transition-all uppercase tracking-wider hover:scale-105 active:scale-95 overflow-hidden group shadow-lg"
               >
-                Send Correction
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
+                <span className="relative z-10">Send Correction</span>
               </button>
             </div>
           </div>
@@ -1408,42 +1487,57 @@ export default function AuthenticatorDashboard() {
 
       {/* Modal de informações do usuário */}
       {userModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 w-full max-w-md sm:min-w-[400px] relative animate-fade-in">
+        <div className="fixed inset-0 flex items-center justify-center bg-[#0A1A2F]/95 backdrop-blur-2xl z-50 p-4 animate-in fade-in zoom-in-95 duration-300">
+          <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] p-8 w-full max-w-md border border-white/20">
             <button
-              className="absolute top-2 sm:top-4 right-2 sm:right-4 text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="absolute top-4 right-4 p-3 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-[16px] transition-all hover:scale-105 active:scale-95 shadow-lg"
               onClick={() => setUserModalOpen(false)}
               aria-label="Close modal"
             >
-              <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+              <XCircle className="w-5 h-5" />
             </button>
-            <h3 className="text-xl font-bold mb-6 text-gray-900">User Information</h3>
-            {userLoading && <p className="text-tfe-blue-700 text-lg">Loading...</p>}
-            {userError && <p className="text-tfe-red-500 text-lg">{userError}</p>}
+
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-14 h-14 bg-[#163353]/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-[#163353]/20">
+                <User className="w-7 h-7 text-[#163353]" />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">User Information</h3>
+            </div>
+
+            {userLoading && (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-8 h-8 border-4 border-[#163353] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+            {userError && (
+              <div className="bg-[#C71B2D]/5 border border-[#C71B2D]/20 rounded-[16px] p-4">
+                <p className="text-[#C71B2D] font-bold text-lg">{userError}</p>
+              </div>
+            )}
             {selectedUser && (
               <div className="space-y-4">
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="font-medium text-gray-700">Name:</span>
-                  <span className="text-gray-900">{selectedUser.name}</span>
+                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                  <span className="font-black text-gray-400 uppercase tracking-widest text-xs">Name</span>
+                  <span className="font-bold text-gray-900">{selectedUser.name}</span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="font-medium text-gray-700">Email:</span>
-                  <span className="text-gray-900">{selectedUser.email}</span>
+                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                  <span className="font-black text-gray-400 uppercase tracking-widest text-xs">Email</span>
+                  <span className="font-bold text-gray-900 break-all">{selectedUser.email}</span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="font-medium text-gray-700 flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    Phone:
+                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                  <span className="font-black text-gray-400 uppercase tracking-widest text-xs flex items-center gap-1">
+                    <Phone className="w-3 h-3" />
+                    Phone
                   </span>
-                  <span className="text-gray-900">{selectedUser.phone || 'Not provided'}</span>
+                  <span className="font-bold text-gray-900">{selectedUser.phone || 'Not provided'}</span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="font-medium text-gray-700">Role:</span>
-                  <span className="text-gray-900">{selectedUser.role}</span>
+                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                  <span className="font-black text-gray-400 uppercase tracking-widest text-xs">Role</span>
+                  <span className="font-bold text-gray-900 uppercase">{selectedUser.role}</span>
                 </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="font-medium text-gray-700">ID:</span>
-                  <span className="text-gray-900 font-mono text-sm">{selectedUser.id}</span>
+                <div className="flex justify-between items-center py-3">
+                  <span className="font-black text-gray-400 uppercase tracking-widest text-xs">ID</span>
+                  <span className="text-gray-900 font-mono text-xs font-bold break-all">{selectedUser.id}</span>
                 </div>
               </div>
             )}

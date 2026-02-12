@@ -546,38 +546,46 @@ export default function AuthenticatorUpload() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden py-10 px-4">
+      {/* Decorative background blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#C71B2D]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#163353]/5 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Document Translation</h1>
-          <p className="text-gray-600 text-lg">Upload documents for professional translation - Free access for authenticators.</p>
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-2 tracking-tight uppercase">Document Translation</h1>
+          <p className="text-gray-600 font-medium opacity-80 uppercase tracking-[0.2em] text-xs">Upload documents for professional translation - Free access for authenticators</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Upload Form */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+            <div className="relative bg-white/80 backdrop-blur-xl rounded-[30px] shadow-lg border border-gray-200 p-8 overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#163353]/5 rounded-full blur-[100px] pointer-events-none" />
+
               {/* Instructions Section */}
-              <div className="bg-tfe-blue-50 border border-tfe-blue-200 rounded-xl p-6 mb-8">
-                <h2 className="text-2xl font-bold text-tfe-blue-950 mb-3 flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
+              <div className="relative bg-[#163353]/10 backdrop-blur-md border border-[#163353]/20 rounded-[24px] p-6 mb-8">
+                <h2 className="text-2xl font-black text-[#163353] mb-4 flex items-center gap-2 uppercase tracking-tight">
+                  <FileText className="w-6 h-6" />
                   How It Works
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-tfe-blue-800">
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-tfe-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">1</div>
-                    <p className="font-medium">Upload Document</p>
-                    <p className="text-tfe-blue-700">Select your PDF or image file</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="flex flex-col items-center text-center bg-white/60 backdrop-blur-sm rounded-[16px] p-4 border border-gray-100">
+                    <div className="w-10 h-10 bg-[#163353] text-white rounded-full flex items-center justify-center font-black mb-3 shadow-md shadow-[#163353]/20">1</div>
+                    <p className="font-black text-gray-900 uppercase tracking-wider text-xs mb-1">Upload Document</p>
+                    <p className="text-gray-600 text-xs font-medium">Select your PDF or image file</p>
                   </div>
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-tfe-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">2</div>
-                    <p className="font-medium">Choose Service</p>
-                    <p className="text-tfe-blue-700">Select translation type and language</p>
+                  <div className="flex flex-col items-center text-center bg-white/60 backdrop-blur-sm rounded-[16px] p-4 border border-gray-100">
+                    <div className="w-10 h-10 bg-[#163353] text-white rounded-full flex items-center justify-center font-black mb-3 shadow-md shadow-[#163353]/20">2</div>
+                    <p className="font-black text-gray-900 uppercase tracking-wider text-xs mb-1">Choose Service</p>
+                    <p className="text-gray-600 text-xs font-medium">Select translation type and language</p>
                   </div>
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-tfe-blue-600 text-white rounded-full flex items-center justify-center font-bold mb-2">3</div>
-                    <p className="font-medium">Get Translation</p>
-                    <p className="text-tfe-blue-700">Receive your translated document</p>
+                  <div className="flex flex-col items-center text-center bg-white/60 backdrop-blur-sm rounded-[16px] p-4 border border-gray-100">
+                    <div className="w-10 h-10 bg-[#163353] text-white rounded-full flex items-center justify-center font-black mb-3 shadow-md shadow-[#163353]/20">3</div>
+                    <p className="font-black text-gray-900 uppercase tracking-wider text-xs mb-1">Get Translation</p>
+                    <p className="text-gray-600 text-xs font-medium">Receive your translated document</p>
                   </div>
                 </div>
               </div>
@@ -902,20 +910,20 @@ export default function AuthenticatorUpload() {
 
                 {/* Error/Success Messages */}
                 {error && (
-                  <div className="flex items-center bg-tfe-red-50 border border-tfe-red-200 rounded-lg p-3 text-tfe-red-700">
-                    <AlertCircle className="w-5 h-5 mr-2" />
-                    <span>{error}</span>
+                  <div className="relative bg-[#C71B2D]/5 border border-[#C71B2D]/20 rounded-[16px] p-4 flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-[#C71B2D] flex-shrink-0" />
+                    <span className="text-[#C71B2D] font-bold">{error}</span>
                   </div>
                 )}
                 {success && (
-                  <div className="flex items-center bg-green-50 border border-green-200 rounded-lg p-3 text-green-700">
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    <span>{success}</span>
+                  <div className="relative bg-green-50 border border-green-200 rounded-[16px] p-4 flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-700 flex-shrink-0" />
+                    <span className="text-green-700 font-bold">{success}</span>
                   </div>
                 )}
 
                 {/* Upload Button */}
-                <div className="pt-4">
+                <div className="pt-4 relative">
                   <button
                     onClick={(e) => {
                       e.preventDefault();
@@ -925,9 +933,10 @@ export default function AuthenticatorUpload() {
                       }
                     }}
                     disabled={!selectedFile || (uploadType === 'client' && !clientName.trim()) || isUploading}
-                    className="w-full bg-gradient-to-r from-tfe-blue-950 to-tfe-red-950 text-white py-4 rounded-xl font-bold shadow-lg hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-all"
+                    className="relative w-full bg-gradient-to-r from-[#163353] to-[#C71B2D] text-white py-4 rounded-[18px] font-black shadow-lg hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-all uppercase tracking-wider hover:scale-[1.02] active:scale-[0.98] overflow-hidden group"
                   >
-                    {isUploading ? 'Uploading...' : 'Upload Document (Free for Authenticators)'}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
+                    <span className="relative z-10">{isUploading ? 'Uploading...' : 'Upload Document (Free for Authenticators)'}</span>
                   </button>
                 </div>
               </div>
@@ -938,33 +947,46 @@ export default function AuthenticatorUpload() {
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-6">
               {/* Summary Card */}
-              <div className="bg-tfe-blue-50 rounded-2xl p-6 border border-tfe-blue-100">
-                <h3 className="text-2xl font-bold text-tfe-blue-950 mb-3 flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
+              <div className="relative bg-white/80 backdrop-blur-xl rounded-[30px] p-6 border border-gray-200 shadow-lg overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#163353]/5 rounded-full blur-[60px] pointer-events-none" />
+                <h3 className="relative text-2xl font-black text-[#163353] mb-4 flex items-center gap-2 uppercase tracking-tight">
+                  <Shield className="w-6 h-6" />
                   Authenticator Access
                 </h3>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-base text-gray-700">Regular Cost:</span>
-                  <span className="text-2xl font-bold text-gray-400 line-through">${valor}.00</span>
+                <div className="relative flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">Regular Cost:</span>
+                  <span className="text-2xl font-black text-gray-400 line-through">${valor}.00</span>
                 </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-base text-tfe-blue-800 font-semibold">Your Cost:</span>
-                  <span className="text-2xl font-bold text-green-600">FREE</span>
+                <div className="relative flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+                  <span className="text-base text-[#163353] font-black uppercase tracking-wider">Your Cost:</span>
+                  <span className="text-3xl font-black text-green-600">FREE</span>
                 </div>
-                <p className="text-xs text-tfe-blue-950/80 mb-2">
+                <p className="relative text-xs text-gray-600 font-medium mb-3 bg-gray-50/50 p-3 rounded-[12px]">
                   {translationTypes.find(t => t.value === tipoTrad)?.label} ${tipoTrad === 'Notarized' ? '20' : '15'} per page × {pages} pages = ${valor.toFixed(2)}
                 </p>
-                <div className="mb-3 p-2 bg-tfe-blue-100 rounded-lg">
-                  <p className="text-xs text-tfe-blue-950/80 font-medium flex items-center gap-1">
-                    <Globe className="w-3 h-3" />
+                <div className="relative mb-4 p-3 bg-[#163353]/10 backdrop-blur-sm rounded-[16px] border border-[#163353]/20">
+                  <p className="text-xs font-black text-[#163353] flex items-center gap-2 uppercase tracking-wider">
+                    <Globe className="w-4 h-4" />
                     {idiomaRaiz} → {idiomaDestino}
                   </p>
                 </div>
-                <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
-                  <li>USCIS accepted translations</li>
-                  <li>Official certification & authentication</li>
-                  <li>Digital verification system</li>
-                  <li>24/7 customer support</li>
+                <ul className="relative text-xs text-gray-700 space-y-2">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="font-medium">USCIS accepted translations</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="font-medium">Official certification & authentication</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="font-medium">Digital verification system</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="font-medium">24/7 customer support</span>
+                  </li>
                 </ul>
               </div>
 

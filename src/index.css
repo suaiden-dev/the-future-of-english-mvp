@@ -195,4 +195,20 @@ All colors MUST be HSL.
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(199, 27, 45, 0.5);
   }
+  
+  /* Class to override global red scrollbar with a neutral one */
+  .scrollbar-standard::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .scrollbar-standard::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-standard::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 5px;
+  }
+  .scrollbar-standard::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
 }
