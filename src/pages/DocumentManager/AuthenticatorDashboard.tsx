@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { FileText, Check, Clock, ShieldCheck, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone } from 'lucide-react';
+import { FileText, Check, Clock, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone, User } from 'lucide-react';
 import { getValidFileUrl } from '../../utils/fileUtils';
 import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
 import { sendTranslationCompletionNotification } from '../../lib/emails';
@@ -60,6 +60,8 @@ export default function AuthenticatorDashboard() {
   const [rejectedRows, setRejectedRows] = useState<{ [docId: string]: boolean }>({});
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [userModalOpen, setUserModalOpen] = useState(false);
+  const [userLoading, setUserLoading] = useState(false);
+  const [userError, setUserError] = useState<string | null>(null);
   const [showDocViewer, setShowDocViewer] = useState(false);
   const [docToView, setDocToView] = useState<{ url: string; filename: string } | null>(null);
   const [actionDoc, setActionDoc] = useState<Document | null>(null);
@@ -192,10 +194,10 @@ export default function AuthenticatorDashboard() {
           if (profilesError) {
             console.error('[AuthenticatorDashboard] Error fetching user profiles:', profilesError);
           } else {
-            userProfiles = profiles?.reduce((acc, profile) => {
+            userProfiles = profiles?.reduce((acc: Record<string, { name: string, email: string }>, profile) => {
               acc[profile.id] = profile;
               return acc;
-            }, {}) || {};
+            }, {} as Record<string, { name: string, email: string }>) || {};
           }
         }
 
@@ -233,26 +235,26 @@ export default function AuthenticatorDashboard() {
         // Calcular estatísticas usando apenas documentos relevantes (excluir processados)
         const relevantDocs = allDocuments.filter(doc => doc.status !== 'processed');
 
-        // Filtrar documentos pendentes e em processamento para a lista (excluir documentos já processados)
-        // MOSTRAR TODOS OS DOCUMENTOS (Pendentes primeiro)
-        const displayDocs = relevantDocs.sort((a, b) => {
-          // Define a ordem dos status
-          const statusOrder: Record<string, number> = {
-            'pending': 1,
-            'processing': 2, 
-            'completed': 3,
-            'rejected': 4
-          };
+        // Filtrar documentos pendentes e em processamento para a lista
+        // MOSTRAR APENAS DOCUMENTOS QUE PRECISAM DE AÇÃO (Pendentes e em Processamento)
+        const displayDocs = relevantDocs
+          .filter(doc => doc.status === 'pending' || doc.status === 'processing')
+          .sort((a, b) => {
+            // Define a ordem dos status
+            const statusOrder: Record<string, number> = {
+              'pending': 1,
+              'processing': 2
+            };
 
-          const orderA = statusOrder[a.status] || 99;
-          const orderB = statusOrder[b.status] || 99;
+            const orderA = statusOrder[a.status || ''] || 99;
+            const orderB = statusOrder[b.status || ''] || 99;
 
-          if (orderA !== orderB) {
-            return orderA - orderB;
-          }
-           // Desempate por data (mais recente primeiro)
-           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
+            if (orderA !== orderB) {
+              return orderA - orderB;
+            }
+            // Desempate por data (mais recente primeiro)
+            return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
+          });
 
         // Calcular estatísticas usando apenas documentos relevantes (excluir processados)
         const pendingCount = relevantDocs.filter(doc => doc.status === 'pending' || doc.status === 'processing').length;
@@ -437,7 +439,7 @@ export default function AuthenticatorDashboard() {
         `Document approved by authenticator: ${doc.filename}`,
         {
           entityType: 'document',
-          entityId: verificationId,
+          entityId: verificationId || '',
           metadata: {
             document_id: verificationId,
             original_document_id: document.id,
@@ -1091,54 +1093,69 @@ export default function AuthenticatorDashboard() {
                   </button>
 
                   <div className="flex items-center gap-1 flex-wrap">
-                    {(() => {
-                      const { pages, showLeftEllipsis, showRightEllipsis } = getPageNumbers();
+                          {(() => {
+                            const { pages, showLeftEllipsis, showRightEllipsis } = getPageNumbers();
 
-                      return (
-                        <>
-                          <button
-                            onClick={() => handlePageChange(1)}
-                            className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === 1
-                              ? 'bg-[#163353] text-white shadow-md'
-                              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                              }`}
-                          >
-                            1
-                          </button>
+                            if (totalPages <= 7) {
+                              return pages.map(page => (
+                                <button
+                                  key={page}
+                                  onClick={() => handlePageChange(page)}
+                                  className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === page
+                                    ? 'bg-[#163353] text-white shadow-md'
+                                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  {page}
+                                </button>
+                              ));
+                            }
 
-                          {showLeftEllipsis && (
-                            <span className="px-2 text-gray-400 text-sm font-black">...</span>
-                          )}
+                            return (
+                              <>
+                                <button
+                                  onClick={() => handlePageChange(1)}
+                                  className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === 1
+                                    ? 'bg-[#163353] text-white shadow-md'
+                                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  1
+                                </button>
 
-                          {pages.map(page => (
-                            <button
-                              key={page}
-                              onClick={() => handlePageChange(page)}
-                              className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === page
-                                ? 'bg-[#163353] text-white shadow-md'
-                                : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                                }`}
-                            >
-                              {page}
-                            </button>
-                          ))}
+                                {showLeftEllipsis && (
+                                  <span className="px-2 text-gray-400 text-sm font-black">...</span>
+                                )}
 
-                          {showRightEllipsis && (
-                            <span className="px-2 text-gray-400 text-sm font-black">...</span>
-                          )}
+                                {pages.map(page => (
+                                  <button
+                                    key={page}
+                                    onClick={() => handlePageChange(page)}
+                                    className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === page
+                                      ? 'bg-[#163353] text-white shadow-md'
+                                      : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                  >
+                                    {page}
+                                  </button>
+                                ))}
 
-                          <button
-                            onClick={() => handlePageChange(totalPages)}
-                            className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === totalPages
-                              ? 'bg-[#163353] text-white shadow-md'
-                              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                              }`}
-                          >
-                            {totalPages}
-                          </button>
-                        </>
-                      );
-                    })()}
+                                {showRightEllipsis && (
+                                  <span className="px-2 text-gray-400 text-sm font-black">...</span>
+                                )}
+
+                                <button
+                                  onClick={() => handlePageChange(totalPages)}
+                                  className={`px-3 py-2 text-sm font-black rounded-[12px] transition-all hover:scale-105 ${currentPage === totalPages
+                                    ? 'bg-[#163353] text-white shadow-md'
+                                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  {totalPages}
+                                </button>
+                              </>
+                            );
+                          })()}
                   </div>
 
                   <button
