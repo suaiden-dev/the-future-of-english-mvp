@@ -173,7 +173,8 @@
         "completed": "Concluído",
         "approved": "Aprovado",
         "rejected": "Rejeitado",
-        "unknown": "Desconhecido"
+        "unknown": "Desconhecido",
+        "translated": "Traduzido"
       },
       "actions": {
         "download": "Baixar",

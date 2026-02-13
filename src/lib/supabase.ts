@@ -47,7 +47,7 @@ export const auth = {
     });
     if (authError) {
       console.error('[auth.signUp] Erro no signup:', authError);
-        throw authError;
+      throw authError;
     }
     console.log('[auth.signUp] Signup realizado com sucesso', { authData });
     return authData;
@@ -111,7 +111,7 @@ export const db = {
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     return data;
   },
@@ -165,7 +165,7 @@ export const db = {
       .eq('id', documentId)
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },
@@ -176,14 +176,14 @@ export const db = {
       .select('*')
       .ilike('verification_code', verificationCode)
       .single();
-    
+
     if (error) {
       if (error.code === 'PGRST116') {
         return null;
       }
       throw error;
     }
-    
+
     return data;
   },
 
@@ -194,7 +194,7 @@ export const db = {
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     return data;
   },
@@ -210,7 +210,7 @@ export const db = {
       .insert(folder)
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },
@@ -222,7 +222,7 @@ export const db = {
       .eq('id', folderId)
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },
@@ -232,7 +232,7 @@ export const db = {
       .from('folders')
       .delete()
       .eq('id', folderId);
-    
+
     if (error) throw error;
   },
 
@@ -243,35 +243,36 @@ export const db = {
       .eq('user_id', userId)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     return data;
   },
 
   getVerificationCode: async (documentId: string) => {
-    // Busca o código de verificação real na tabela translated_documents
-    // Primeiro busca o documento em documents_to_be_verified que corresponde ao documento original
+    // Busca o documento em documents_to_be_verified que corresponde ao documento original
+    // Tenta primeiro por ID direto, depois por original_document_id (link para a tabela documents)
     const { data: toBeVerifiedData, error: toBeVerifiedError } = await supabase
       .from('documents_to_be_verified')
       .select('id, filename, status')
-      .eq('id', documentId)
-      .single();
-    
+      .or(`id.eq.${documentId},original_document_id.eq.${documentId}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     if (toBeVerifiedError) {
-      if (toBeVerifiedError.code === 'PGRST116') {
-        // Documento não encontrado na tabela de documentos a serem verificados
-        return null;
-      }
+      console.error('[db.getVerificationCode] Erro ao buscar documento para verificar:', toBeVerifiedError);
       throw toBeVerifiedError;
     }
-    
+
+    if (!toBeVerifiedData) return null;
+
     // Agora busca o documento traduzido usando o ID do documento a ser verificado
     const { data, error } = await supabase
       .from('translated_documents')
       .select('verification_code, original_document_id, filename, translated_file_url, is_authenticated, authentication_date, authenticated_by_name')
       .eq('original_document_id', toBeVerifiedData.id)
       .single();
-    
+
     if (error) {
       if (error.code === 'PGRST116') {
         // Documento não encontrado na tabela de traduzidos
@@ -279,7 +280,7 @@ export const db = {
       }
       throw error;
     }
-    
+
     return data;
   },
 
@@ -289,7 +290,7 @@ export const db = {
       const { data: { publicUrl } } = supabase.storage
         .from('documents')
         .getPublicUrl(filePath);
-      
+
       return publicUrl;
     } catch (error) {
       console.error('Erro ao gerar URL pública:', error);
@@ -303,12 +304,12 @@ export const db = {
       const { data, error } = await supabase.storage
         .from('documents')
         .createSignedUrl(filePath, 2592000); // 30 dias de validade
-      
+
       if (error) {
         console.error('Erro ao gerar URL:', error);
         return null;
       }
-      
+
       return data.signedUrl;
     } catch (error) {
       console.error('Erro ao gerar URL do arquivo:', error);
@@ -322,9 +323,9 @@ export const db = {
       const { data, error } = await supabase.storage
         .from('documents')
         .list(filePath.split('/').slice(0, -1).join('/'));
-      
+
       if (error) return false;
-      
+
       const fileName = filePath.split('/').pop();
       return data?.some(file => file.name === fileName) || false;
     } catch (error) {

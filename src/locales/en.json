@@ -113,7 +113,8 @@
         "completed": "Completed",
         "approved": "Approved",
         "rejected": "Rejected",
-        "unknown": "Unknown"
+        "unknown": "Unknown",
+        "translated": "Translated"
       },
       "actions": {
         "download": "Download",

@@ -10,64 +10,86 @@ interface RecentActivityProps {
   onViewDocument: (document: Document) => void;
 }
 
-interface DocumentStatus {
-  [documentId: string]: string;
-}
 
 export function RecentActivity({ documents, onViewDocument }: RecentActivityProps) {
   const { t } = useI18n();
-  const [documentStatuses, setDocumentStatuses] = useState<DocumentStatus>({});
+  // Estados para dados de tradução e verificação
+  const [verificationData, setVerificationData] = useState<any[]>([]);
   const [translatedDocs, setTranslatedDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Otimizar o cálculo dos documentos recentes com useMemo
-  // Isso garante que a ordenação e o corte só aconteçam quando a lista 'documents' mudar.
-  // Buscar documentos traduzidos do usuário
   useEffect(() => {
-    if (!documents.length) return;
+    if (!documents.length) {
+      setLoading(false);
+      return;
+    }
+    
     const userId = documents[0].user_id;
-    supabase
-      .from('translated_documents')
-      .select('*')
-      .eq('user_id', userId)
-      .then(({ data }) => {
-        setTranslatedDocs(data || []);
-        console.log('[DEBUG] translatedDocs do Supabase:', data);
-      });
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // 1. Buscar registros de verificação (o elo entre documents e translated_documents)
+        const { data: vData } = await supabase
+          .from('documents_to_be_verified')
+          .select('id, original_document_id, filename, status, translated_file_url, user_id')
+          .eq('user_id', userId);
+
+        // 2. Buscar documentos traduzidos
+        const { data: tData } = await supabase
+          .from('translated_documents')
+          .select('*')
+          .eq('user_id', userId);
+
+        setVerificationData(vData || []);
+        setTranslatedDocs(tData || []);
+      } catch (err) {
+        console.error('[RecentActivity] Erro ao buscar dados de tradução:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [documents]);
 
-  // Mesclar documentos originais e traduzidos, priorizando o traduzido se existir
+  // Mesclar documentos originais com seus status e URLs de tradução
   const recentDocuments = useMemo(() => {
     if (!documents.length) return [];
-    console.log('[DEBUG] documents recebidos:', documents);
-    console.log('[DEBUG] translatedDocs para merge:', translatedDocs);
-    // Para cada documento, se houver translated com mesmo filename, substitui info
+
     const merged = documents.map(doc => {
-      // Se houver original_filename, priorizar para exibição
-      const displayFilename = doc.original_filename || doc.filename;
-      // Busca apenas por user_id e filename semelhante
-      const docFilename = (doc.filename || '').toLowerCase().trim();
-      const translated = translatedDocs.find(td => {
-        const tdFilename = (td.filename || '').toLowerCase();
-        const match = td.user_id === doc.user_id && tdFilename.includes(docFilename.split('_')[0]);
-        if (match) {
-          console.log('[DEBUG] MATCH por user_id e filename:', { doc, td });
-        }
-        return match;
-      });
-      if (translated) {
-        console.log('[DEBUG] Documento MESCLADO como traduzido (por user_id/filename):', { doc, translated });
-        return {
-          ...doc,
-          status: 'completed' as 'completed',
-          file_url: translated.translated_file_url,
-          translated: true,
-          translated_id: translated.id,
-        };
+      // Tentar encontrar o registro de verificação correspondente
+      const verification = verificationData.find(v => 
+        v.original_document_id === doc.id || 
+        (v.filename === doc.filename && v.user_id === doc.user_id)
+      );
+
+      // Tentar encontrar a tradução correspondente (pode vir da verificação ou de translated_documents)
+      let translationUrl = verification?.translated_file_url;
+      
+      if (!translationUrl && verification) {
+        const td = translatedDocs.find(t => t.original_document_id === verification.id);
+        if (td) translationUrl = td.translated_file_url;
       }
-      return doc;
+
+      // Se ainda não achou, fallback para busca por filename (como era antes, mas como último recurso)
+      if (!translationUrl) {
+        const td = translatedDocs.find(t => 
+          (t.filename || '').toLowerCase().includes((doc.filename || '').toLowerCase().split('_')[0])
+        );
+        if (td) translationUrl = td.translated_file_url;
+      }
+
+      const finalStatus = verification?.status || doc.status;
+
+      return {
+        ...doc,
+        status: (finalStatus as any),
+        file_url: translationUrl || doc.file_url,
+        is_translated: !!translationUrl
+      } as Document & { is_translated: boolean };
     });
-    console.log('[DEBUG] merged recentDocuments:', merged);
+
     return merged
       .sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -75,60 +97,10 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
         return dateB - dateA;
       })
       .slice(0, 5);
-  }, [documents, translatedDocs]);
+  }, [documents, verificationData, translatedDocs]);
 
-  // 2. Unificar a lógica em um único useEffect
-  // Este efeito será executado sempre que 'recentDocuments' mudar.
-  useEffect(() => {
-    // Função para buscar os status é definida e chamada dentro do mesmo efeito.
-    const fetchDocumentStatuses = async () => {
-      if (recentDocuments.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-
-      console.log('🔍 Documentos na RecentActivity:', recentDocuments.map(doc => ({
-        id: doc.id,
-        filename: doc.filename,
-        user_id: doc.user_id
-      })));
-
-      // Buscar por user_id em vez de document_id (que não existe)
-      const { data, error } = await supabase
-        .from('documents_to_be_verified')
-        .select('id, filename, status, user_id')
-        .eq('user_id', recentDocuments[0]?.user_id); // Todos os docs são do mesmo usuário
-
-      console.log('🔍 Query para documents_to_be_verified - user_id:', recentDocuments[0]?.user_id);
-
-      if (error) {
-        console.error('Error fetching document statuses:', error);
-        setLoading(false);
-        return;
-      }
-
-      console.log('🔍 Dados encontrados na documents_to_be_verified:', data);
-
-      // Mapear por filename em vez de document_id
-      const statusMap: DocumentStatus = {};
-      data?.forEach(item => {
-        // Usar filename como chave para relacionar com documents
-        const matchingDoc = recentDocuments.find(doc => doc.filename === item.filename && doc.user_id === item.user_id);
-        if (matchingDoc) {
-          statusMap[matchingDoc.id] = item.status;
-        }
-      });
-
-      console.log('🔍 Mapa de status criado:', statusMap);
-
-      setDocumentStatuses(statusMap);
-      setLoading(false);
-    };
-
-    fetchDocumentStatuses();
-  }, [recentDocuments]); // A dependência agora é estável graças ao useMemo
+  // Simplificado: Agora o status e a URL já estão mesclados em recentDocuments
+  // Removemos o fetchDocumentStatuses separado pois já é feito no useEffect inicial
 
   // Função para download automático - agora usando URLs seguras
   const handleDownload = async (url: string, filename: string) => {
@@ -164,9 +136,8 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
   };
 
   // O restante do componente (getStatusBadge e JSX) permanece o mesmo.
-  const getStatusBadge = (doc: Document) => {
-    // Se for documento traduzido, sempre completed
-    const currentStatus = (doc as any).translated ? 'completed' : (documentStatuses[doc.id] || doc.status);
+  const getStatusBadge = (doc: any) => {
+    const currentStatus = doc.status;
     let color = '';
     let text = '';
     switch (currentStatus) {
@@ -191,7 +162,18 @@ export function RecentActivity({ documents, onViewDocument }: RecentActivityProp
         color = 'bg-slate-700/30 text-slate-400';
         text = currentStatus || t('dashboard.recentActivity.status.unknown');
     }
-    return <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${color}`}>{text}</span>;
+    return (
+      <div className="flex items-center gap-2">
+        <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${color}`}>
+          {text}
+        </span>
+        {doc.is_translated && (
+          <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#C71B2D] text-white animate-pulse">
+            {t('dashboard.recentActivity.status.translated') || 'CERTIFIED'}
+          </span>
+        )}
+      </div>
+    );
   };
 
 
