@@ -5,6 +5,7 @@ import { sendTranslationCompletionNotification } from '../../lib/emails';
 import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
 import { Logger } from '../../lib/loggingHelpers';
 import { ActionTypes } from '../../types/actionTypes';
+import { generateUniqueFileName } from '../../utils/fileUtils';
 
 interface Document {
   id: string;
@@ -244,7 +245,7 @@ export default function DocumentsToAuthenticate({ user }: Props) {
     try {
       console.log('[DocumentsToAuthenticate] Enviando correção manual:', selectedDocForRejection.id);
       
-      const fileName = `${Date.now()}_${manualFile.name}`;
+      const fileName = generateUniqueFileName(manualFile.name);
       const filePath = `corrections/${selectedDocForRejection.id}/${fileName}`;
       
       // 1. Upload do arquivo

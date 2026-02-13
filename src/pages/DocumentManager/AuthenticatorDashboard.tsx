@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { FileText, Check, Clock, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone, User, Upload } from 'lucide-react';
-import { getValidFileUrl } from '../../utils/fileUtils';
+import { getValidFileUrl, generateUniqueFileName } from '../../utils/fileUtils';
 import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
 import { sendTranslationCompletionNotification } from '../../lib/emails';
 import { Logger } from '../../lib/loggingHelpers';
@@ -485,7 +485,7 @@ export default function AuthenticatorDashboard() {
     try {
       console.log('[AuthenticatorDashboard] Enviando correção manual:', selectedDocForRejection.id);
       
-      const fileName = `${Date.now()}_${manualFile.name}`;
+      const fileName = generateUniqueFileName(manualFile.name);
       const filePath = `corrections/${selectedDocForRejection.id}/${fileName}`;
       
       // 1. Upload do arquivo
