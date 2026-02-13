@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { CheckCircle, XCircle, Clock, FileText, User, Calendar, FileImage, Phone, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, FileText, User, Calendar, FileImage, Phone, Eye, Upload } from 'lucide-react';
 import { sendTranslationCompletionNotification } from '../../lib/emails';
+import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
+import { Logger } from '../../lib/loggingHelpers';
+import { ActionTypes } from '../../types/actionTypes';
 
 interface Document {
   id: string;
@@ -20,22 +23,16 @@ interface Document {
   rejection_comment?: string | null;
   rejected_by?: string | null;
   rejected_at?: string | null;
+  source_language?: string;
+  target_language?: string;
+  verification_code?: string;
 }
 
 interface Props {
   user: { id: string; role: string; user_metadata?: { name?: string }; email?: string };
 }
 
-// Opções de motivo de rejeição
-const REJECTION_REASONS = [
-  { value: 'translation_error', label: 'Tradução incorreta ou imprecisa' },
-  { value: 'illegible_document', label: 'Documento ilegível ou de baixa qualidade' },
-  { value: 'missing_information', label: 'Informações faltando ou incompletas' },
-  { value: 'inappropriate_format', label: 'Formato inadequado ou não aceito' },
-  { value: 'quality_issues', label: 'Problemas de qualidade geral' },
-  { value: 'duplicate_submission', label: 'Submissão duplicada' },
-  { value: 'other', label: 'Outro motivo' }
-];
+
 
 export default function DocumentsToAuthenticate({ user }: Props) {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -43,12 +40,10 @@ export default function DocumentsToAuthenticate({ user }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [processingDoc, setProcessingDoc] = useState<string | null>(null);
   
-  // Estados do modal de rejeição
+  // Estados do modal de correção manual
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedDocForRejection, setSelectedDocForRejection] = useState<Document | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [rejectionComment, setRejectionComment] = useState('');
-  const [rejectionOtherReason, setRejectionOtherReason] = useState('');
+  const [manualFile, setManualFile] = useState<File | null>(null);
   const [rejectionLoading, setRejectionLoading] = useState(false);
   
   // Estados para informações do usuário
@@ -239,94 +234,139 @@ export default function DocumentsToAuthenticate({ user }: Props) {
   const handleRejectClick = (doc: Document) => {
     setSelectedDocForRejection(doc);
     setShowRejectModal(true);
-    // Reset form
-    setRejectionReason('');
-    setRejectionComment('');
-    setRejectionOtherReason('');
+    setManualFile(null);
   };
 
   const handleRejectConfirm = async () => {
-    if (!selectedDocForRejection) return;
+    if (!selectedDocForRejection || !manualFile || !user) return;
     
-    // Validação
-    if (!rejectionReason) {
-      alert('Por favor, selecione um motivo para a rejeição.');
-      return;
-    }
-    
-    if (!rejectionComment.trim()) {
-      alert('Por favor, adicione um comentário detalhado sobre a rejeição.');
-      return;
-    }
-    
-    if (rejectionReason === 'other' && !rejectionOtherReason.trim()) {
-      alert('Por favor, especifique o motivo da rejeição.');
-      return;
-    }
-
     setRejectionLoading(true);
     try {
-      console.log('[DocumentsToAuthenticate] Rejeitando documento:', selectedDocForRejection.id);
+      console.log('[DocumentsToAuthenticate] Enviando correção manual:', selectedDocForRejection.id);
       
-      const finalReason = rejectionReason === 'other' ? rejectionOtherReason : rejectionReason;
-      const finalComment = rejectionComment.trim();
+      const fileName = `${Date.now()}_${manualFile.name}`;
+      const filePath = `corrections/${selectedDocForRejection.id}/${fileName}`;
       
-      // Atualizar status para rejected com motivo e comentário
-      const { error } = await supabase
+      // 1. Upload do arquivo
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, manualFile);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      const authData = {
+        authenticated_by: user.id,
+        authentication_date: new Date().toISOString(),
+        authenticated_by_name: user.user_metadata?.name || user.email || 'Authenticator',
+        authenticated_by_email: user.email
+      };
+
+      // 2. Inserir em translated_documents
+      // Note: selectedDocForRejection.id já é o ID da tabela documents_to_be_verified
+      const { error: translatedError } = await supabase
+        .from('translated_documents')
+        .insert({
+          original_document_id: selectedDocForRejection.id,
+          user_id: selectedDocForRejection.user_id,
+          filename: selectedDocForRejection.filename,
+          translated_file_url: publicUrl,
+          status: 'completed',
+          source_language: selectedDocForRejection.source_language || 'en',
+          target_language: selectedDocForRejection.target_language || 'pt',
+          verification_code: selectedDocForRejection.verification_code || `MANUAL-${Date.now()}`,
+          ...authData
+        });
+
+      if (translatedError) throw translatedError;
+
+      // 3. Atualizar documents_to_be_verified
+      const { error: vError } = await supabase
         .from('documents_to_be_verified')
         .update({ 
-          status: 'rejected',
-          rejection_reason: finalReason,
-          rejection_comment: finalComment,
-          rejected_by: user.id,
-          rejected_at: new Date().toISOString()
+          status: 'completed',
+          translated_file_url: publicUrl,
+          ...authData
         })
         .eq('id', selectedDocForRejection.id);
       
-      if (error) {
-        console.error('[DocumentsToAuthenticate] Erro ao rejeitar:', error);
-        alert('Erro ao rejeitar documento. Tente novamente.');
-        return;
+      if (vError) throw vError;
+
+      // 4. Atualizar documento principal
+      await supabase
+        .from('documents')
+        .update({ status: 'completed' })
+        .eq('id', selectedDocForRejection.id);
+
+      // Notificar usuário
+      try {
+        // Fetch profile if not already loaded
+        let targetEmail = userProfile?.email;
+        let targetName = userProfile?.name;
+        
+        if (!targetEmail) {
+          const { data: p } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('id', selectedDocForRejection.user_id)
+            .single();
+          if (p) {
+            targetEmail = p.email;
+            targetName = p.name;
+          }
+        }
+
+        if (targetEmail) {
+          await sendTranslationCompletionNotification(
+            targetEmail,
+            {
+              userName: targetName || 'Cliente',
+              filename: selectedDocForRejection.filename
+            }
+          );
+        }
+        await notifyTranslationCompleted(
+          selectedDocForRejection.user_id,
+          selectedDocForRejection.filename,
+          selectedDocForRejection.id
+        );
+      } catch (notifyErr) {
+        console.warn('Erro ao enviar notificações:', notifyErr);
       }
 
-      // Remover documento da lista
-      setDocuments(prev => prev.filter(doc => doc.id !== selectedDocForRejection.id));
-      console.log('[DocumentsToAuthenticate] Documento rejeitado com sucesso');
-      
-      // Log document rejection
+      // Log action
       try {
-        const { Logger } = await import('../../lib/loggingHelpers');
-        const { ActionTypes } = await import('../../types/actionTypes');
         await Logger.log(
-          ActionTypes.DOCUMENT.REJECTED,
-          `Document rejected by authenticator: ${selectedDocForRejection.filename}`,
+          ActionTypes.DOCUMENT.APPROVED,
+          `Document manual correction uploaded: ${selectedDocForRejection.filename}`,
           {
             entityType: 'document',
             entityId: selectedDocForRejection.id,
             metadata: {
-              document_id: selectedDocForRejection.id,
               filename: selectedDocForRejection.filename,
-              rejection_reason: finalReason,
-              rejection_comment: finalComment,
-              rejected_by: user.id,
-              rejected_at: new Date().toISOString(),
-              timestamp: new Date().toISOString()
+              correction_url: publicUrl,
+              ...authData
             },
             affectedUserId: selectedDocForRejection.user_id,
             performerType: 'authenticator'
           }
         );
-      } catch (logError) {
+      } catch (logErr) {
         // Non-blocking
       }
-      
-      // Fechar modal
+
+      // Remover documento da lista
+      setDocuments(prev => prev.filter(doc => doc.id !== selectedDocForRejection.id));
       setShowRejectModal(false);
       setSelectedDocForRejection(null);
+      setManualFile(null);
       
-    } catch (err) {
-      console.error('[DocumentsToAuthenticate] Erro inesperado ao rejeitar:', err);
-      alert('Erro inesperado ao rejeitar documento.');
+    } catch (err: any) {
+      console.error('[DocumentsToAuthenticate] Erro ao enviar correção:', err);
+      alert('Erro ao enviar correção: ' + (err.message || 'Erro desconhecido'));
     } finally {
       setRejectionLoading(false);
     }
@@ -335,9 +375,7 @@ export default function DocumentsToAuthenticate({ user }: Props) {
   const handleRejectCancel = () => {
     setShowRejectModal(false);
     setSelectedDocForRejection(null);
-    setRejectionReason('');
-    setRejectionComment('');
-    setRejectionOtherReason('');
+    setManualFile(null);
     setUserProfile(null);
     setShowUserInfo(false);
   };
@@ -489,8 +527,8 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                       disabled={processingDoc === doc.id}
                       className="flex items-center justify-center gap-2 px-4 py-3 bg-[#C71B2D] text-white rounded-[16px] font-black text-xs uppercase tracking-widest hover:bg-[#A01624] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                      <XCircle className="w-4 h-4" />
-                      Reject
+                      <Upload className="w-4 h-4" />
+                      Manual Upload
                     </button>
                   </div>
                 </div>
@@ -555,8 +593,8 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                           disabled={processingDoc === doc.id}
                           className="flex items-center gap-1.5 px-3 py-2 bg-[#C71B2D] text-white rounded-[12px] text-xs font-black uppercase tracking-wider hover:bg-[#A01624] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105"
                         >
-                          <XCircle className="w-3.5 h-3.5" />
-                          Reject
+                          <Upload className="w-3.5 h-3.5" />
+                          Manual Upload
                         </button>
                       </div>
                     </td>
@@ -568,19 +606,19 @@ export default function DocumentsToAuthenticate({ user }: Props) {
         </div>
       </div>
 
-             {/* Modal de Rejeição */}
+             {/* Modal de Correção Manual */}
        {showRejectModal && selectedDocForRejection && (
-         <div className="fixed inset-0 bg-[#0A1A2F]/95 backdrop-blur-2xl overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in-95 duration-300">
+         <div className="fixed inset-0 bg-black/20 backdrop-blur-md overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in-95 duration-300">
            <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
              {/* Header */}
-             <div className="flex items-center justify-between p-8 border-b border-gray-200 bg-gradient-to-r from-[#C71B2D]/5 to-transparent">
+             <div className="flex items-center justify-between p-8 border-b border-gray-200 bg-gradient-to-r from-[#163353]/5 to-transparent">
                <div className="flex items-center gap-4">
-                 <div className="w-14 h-14 bg-[#C71B2D]/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-[#C71B2D]/20">
-                   <XCircle className="w-7 h-7 text-[#C71B2D]" />
+                 <div className="w-14 h-14 bg-[#163353]/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-[#163353]/20">
+                   <Upload className="w-7 h-7 text-[#163353]" />
                  </div>
                  <div>
-                   <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Reject Document</h3>
-                   <p className="text-sm font-black text-gray-400 uppercase tracking-widest mt-1">Provide detailed feedback</p>
+                   <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Manual Correction</h3>
+                   <p className="text-sm font-black text-gray-400 uppercase tracking-widest mt-1">Upload the correct translation</p>
                  </div>
                </div>
                <button
@@ -672,58 +710,55 @@ export default function DocumentsToAuthenticate({ user }: Props) {
 
              {/* Form */}
              <div className="p-8 space-y-6">
-               {/* Motivo da Rejeição */}
-               <div>
-                 <label htmlFor="rejectionReason" className="block mb-3 text-xs font-black text-gray-900 uppercase tracking-widest">
-                   Rejection Reason <span className="text-[#C71B2D]">*</span>
-                 </label>
-                 <select
-                   id="rejectionReason"
-                   value={rejectionReason}
-                   onChange={(e) => setRejectionReason(e.target.value)}
-                   className="w-full px-4 py-3 border border-gray-300 rounded-[16px] focus:ring-2 focus:ring-[#C71B2D] focus:border-[#C71B2D] transition-all font-medium"
-                 >
-                   <option value="">Select a reason</option>
-                   {REJECTION_REASONS.map(option => (
-                     <option key={option.value} value={option.value}>{option.label}</option>
-                   ))}
-                 </select>
-               </div>
+                <div>
+                  <label className="block mb-3 text-xs font-black text-gray-900 uppercase tracking-widest">
+                    Manually Translated PDF <span className="text-[#C71B2D]">*</span>
+                  </label>
+                  
+                  <div className="relative">
+                    <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-[#163353]/30 rounded-[24px] cursor-pointer bg-[#163353]/5 hover:bg-[#163353]/10 transition-all group">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-10 h-10 mb-4 text-[#163353]/60 group-hover:text-[#163353] transition-colors" />
+                        <p className="mb-2 text-sm text-gray-700 font-bold group-hover:text-[#163353]">
+                          Click to upload or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500 font-black uppercase tracking-widest">
+                          PDF files only
+                        </p>
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="application/pdf"
+                        className="hidden" 
+                        onChange={(e) => setManualFile(e.target.files?.[0] || null)}
+                      />
+                    </label>
+                  </div>
 
-               {/* Outro Motivo */}
-               {rejectionReason === 'other' && (
-                 <div>
-                   <label htmlFor="rejectionOtherReason" className="block mb-3 text-xs font-black text-gray-900 uppercase tracking-widest">
-                     Specify Reason <span className="text-[#C71B2D]">*</span>
-                   </label>
-                   <input
-                     type="text"
-                     id="rejectionOtherReason"
-                     value={rejectionOtherReason}
-                     onChange={(e) => setRejectionOtherReason(e.target.value)}
-                     className="w-full px-4 py-3 border border-gray-300 rounded-[16px] focus:ring-2 focus:ring-[#C71B2D] focus:border-[#C71B2D] transition-all font-medium"
-                     placeholder="Describe the specific rejection reason..."
-                   />
-                 </div>
-               )}
+                  {manualFile && (
+                    <div className="mt-4 p-4 bg-green-50 rounded-[20px] border border-green-200 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{manualFile.name}</p>
+                          <p className="text-xs text-green-600 font-black uppercase tracking-widest">Selected file</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setManualFile(null)}
+                        className="p-2 hover:bg-green-100 rounded-full text-green-600 transition-colors"
+                      >
+                        <XCircle className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-               {/* Comentário Detalhado */}
-               <div>
-                 <label htmlFor="rejectionComment" className="block mb-3 text-xs font-black text-gray-900 uppercase tracking-widest">
-                   Detailed Comment <span className="text-[#C71B2D]">*</span>
-                 </label>
-                 <textarea
-                   id="rejectionComment"
-                   value={rejectionComment}
-                   onChange={(e) => setRejectionComment(e.target.value)}
-                   rows={4}
-                   className="w-full px-4 py-3 border border-gray-300 rounded-[16px] focus:ring-2 focus:ring-[#C71B2D] focus:border-[#C71B2D] transition-all resize-none font-medium"
-                   placeholder="Provide specific details about the issues found and suggestions for correction..."
-                 />
-                 <p className="mt-2 text-xs font-medium text-gray-500">
-                   This comment will be visible to the user who submitted the document.
-                 </p>
-               </div>
+                <div className="p-4 bg-yellow-50 rounded-[16px] border border-yellow-200">
+                  <p className="text-xs font-bold text-yellow-800 uppercase tracking-wider leading-relaxed">
+                    Note: Uploading a manual correction will mark this document as approved and complete the translation process immediately.
+                  </p>
+                </div>
              </div>
 
              {/* Actions */}
@@ -736,19 +771,19 @@ export default function DocumentsToAuthenticate({ user }: Props) {
                </button>
                <button
                  onClick={handleRejectConfirm}
-                 disabled={rejectionLoading || !rejectionReason || !rejectionComment.trim() || (rejectionReason === 'other' && !rejectionOtherReason.trim())}
-                 className="relative px-8 py-3 bg-[#C71B2D] text-white rounded-[16px] hover:bg-[#A01624] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all font-black uppercase tracking-wider flex items-center gap-2 hover:scale-105 disabled:hover:scale-100 overflow-hidden group"
+                 disabled={rejectionLoading || !manualFile}
+                 className="relative px-8 py-3 bg-[#163353] text-white rounded-[16px] hover:bg-[#0F2438] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all font-black uppercase tracking-wider flex items-center gap-2 hover:scale-105 disabled:hover:scale-100 overflow-hidden group"
                >
                  {!rejectionLoading && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />}
                  {rejectionLoading ? (
                    <>
                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
-                     <span className="relative z-10">Rejecting...</span>
+                     <span className="relative z-10">Uploading...</span>
                    </>
                  ) : (
                    <>
-                     <XCircle className="w-4 h-4 relative z-10" />
-                     <span className="relative z-10">Confirm Rejection</span>
+                     <Upload className="w-4 h-4 relative z-10" />
+                     <span className="relative z-10">Send Correction</span>
                    </>
                  )}
                </button>

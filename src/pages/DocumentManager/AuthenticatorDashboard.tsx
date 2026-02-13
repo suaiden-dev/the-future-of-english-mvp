@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { FileText, Check, Clock, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone, User } from 'lucide-react';
+import { FileText, Check, Clock, Download, CheckCircle, XCircle, Eye, Upload as UploadIcon, Phone, User, Upload } from 'lucide-react';
 import { getValidFileUrl } from '../../utils/fileUtils';
 import { notifyTranslationCompleted } from '../../utils/webhookNotifications';
 import { sendTranslationCompletionNotification } from '../../lib/emails';
@@ -36,7 +36,11 @@ interface Document {
   user_name?: string | null;
   user_email?: string | null;
   client_name?: string | null;
+  rejection_reason?: string | null;
+  rejection_comment?: string | null;
 }
+
+
 
 interface UserProfile {
   id: string;
@@ -72,6 +76,12 @@ export default function AuthenticatorDashboard() {
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [modalDocumentId, setModalDocumentId] = useState('');
   const [modalDocumentName, setModalDocumentName] = useState('');
+
+  // Estados do modal de rejeição
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedDocForRejection, setSelectedDocForRejection] = useState<Document | null>(null);
+  const [manualFile, setManualFile] = useState<File | null>(null);
+  const [rejectionLoading, setRejectionLoading] = useState(false);
 
   // Debug do estado do modal
   /* 
@@ -461,6 +471,141 @@ export default function AuthenticatorDashboard() {
       // Non-blocking
     }
   }
+
+  const handleRejectClick = (doc: Document) => {
+    setSelectedDocForRejection(doc);
+    setShowRejectModal(true);
+    setManualFile(null);
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!selectedDocForRejection || !manualFile || !currentUser) return;
+    
+    setRejectionLoading(true);
+    try {
+      console.log('[AuthenticatorDashboard] Enviando correção manual:', selectedDocForRejection.id);
+      
+      const fileName = `${Date.now()}_${manualFile.name}`;
+      const filePath = `corrections/${selectedDocForRejection.id}/${fileName}`;
+      
+      // 1. Upload do arquivo
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, manualFile);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      const authData = {
+        authenticated_by: currentUser.id,
+        authentication_date: new Date().toISOString(),
+        authenticated_by_name: currentUser.user_metadata?.name || currentUser.email || 'Authenticator',
+        authenticated_by_email: currentUser.email
+      };
+
+      // Determinar o ID correto para a foreign key
+      const verificationId = selectedDocForRejection.verification_id || selectedDocForRejection.id;
+
+      // 2. Inserir em translated_documents
+      const { error: translatedError } = await supabase
+        .from('translated_documents')
+        .insert({
+          original_document_id: verificationId,
+          user_id: selectedDocForRejection.user_id,
+          filename: selectedDocForRejection.filename,
+          translated_file_url: publicUrl,
+          status: 'completed',
+          source_language: selectedDocForRejection.source_language || 'en',
+          target_language: selectedDocForRejection.target_language || 'pt',
+          verification_code: selectedDocForRejection.verification_code || `MANUAL-${Date.now()}`,
+          ...authData
+        });
+
+      if (translatedError) throw translatedError;
+
+      // 3. Atualizar documents_to_be_verified
+      await supabase
+        .from('documents_to_be_verified')
+        .update({ 
+          status: 'completed',
+          translated_file_url: publicUrl,
+          ...authData
+        })
+        .eq('id', verificationId);
+      
+      // 4. Atualizar documento principal
+      await supabase
+        .from('documents')
+        .update({ status: 'completed' })
+        .eq('id', selectedDocForRejection.id);
+
+      // Remover documento da lista
+      setDocuments(prev => prev.filter(doc => doc.id !== selectedDocForRejection.id));
+      
+      // Log document completion (manual)
+      try {
+        await Logger.log(
+          ActionTypes.DOCUMENT.APPROVED,
+          `Document manually completed by authenticator: ${selectedDocForRejection.filename}`,
+          {
+            entityType: 'document',
+            entityId: selectedDocForRejection.id,
+            metadata: {
+              document_id: selectedDocForRejection.id,
+              filename: selectedDocForRejection.filename,
+              correction_url: publicUrl,
+              completed_by: currentUser.id,
+              timestamp: new Date().toISOString()
+            },
+            affectedUserId: selectedDocForRejection.user_id,
+            performerType: 'authenticator'
+          }
+        );
+      } catch (logError) {
+        // Non-blocking
+      }
+      
+      // Notificar usuário
+      try {
+        const { data: p } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', selectedDocForRejection.user_id)
+          .single();
+        
+        if (p?.email) {
+          await sendTranslationCompletionNotification(
+            p.email,
+            {
+              userName: p.name || 'Cliente',
+              filename: selectedDocForRejection.filename
+            }
+          );
+        }
+        await notifyTranslationCompleted(
+          selectedDocForRejection.user_id,
+          selectedDocForRejection.filename,
+          selectedDocForRejection.id
+        );
+      } catch (notifyErr) {
+        console.warn('Erro ao enviar notificações:', notifyErr);
+      }
+      
+      // Fechar modal
+      setShowRejectModal(false);
+      setSelectedDocForRejection(null);
+      setManualFile(null);
+      
+    } catch (err: any) {
+      console.error('[AuthenticatorDashboard] Erro ao enviar correção:', err);
+      alert('Erro ao enviar correção: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setRejectionLoading(false);
+    }
+  };
 
 
   async function handleCorrectionUpload(doc: Document) {
@@ -978,15 +1123,23 @@ export default function AuthenticatorDashboard() {
                         )}
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <button onClick={() => {
-                          console.log('Botão Approve clicado para documento:', doc.id);
-                          showApprovalConfirmation(doc.id);
-                        }} className="flex-1 flex items-center justify-center gap-1.5 bg-green-600 text-white px-4 py-3 rounded-[16px] text-xs hover:bg-green-700 transition-all font-black uppercase tracking-wider hover:scale-105">
-                          <CheckCircle className="w-3.5 h-3.5" />Approve
-                        </button>
-                        <button onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))} className="flex-1 flex items-center justify-center gap-1.5 bg-[#C71B2D] text-white px-4 py-3 rounded-[16px] text-xs hover:bg-[#A01624] transition-all font-black uppercase tracking-wider hover:scale-105">
-                          <XCircle className="w-3.5 h-3.5" />Reject
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <button onClick={() => {
+                            console.log('Botão Approve clicado para documento:', doc.id);
+                            showApprovalConfirmation(doc.id);
+                          }} className="flex-1 flex items-center justify-center gap-1.5 bg-green-600 text-white px-4 py-3 rounded-[16px] text-xs hover:bg-green-700 transition-all font-black uppercase tracking-wider hover:scale-105">
+                            <CheckCircle className="w-3.5 h-3.5" />Approve
+                          </button>
+                          <button onClick={() => handleRejectClick(doc)} className="flex-1 flex items-center justify-center gap-1.5 bg-[#C71B2D] text-white px-4 py-3 rounded-[16px] text-xs hover:bg-[#A01624] transition-all font-black uppercase tracking-wider hover:scale-105">
+                            <XCircle className="w-3.5 h-3.5" />Reject
+                          </button>
+                        </div>
+                        <button 
+                          onClick={() => setRejectedRows(prev => ({ ...prev, [doc.id]: true }))}
+                          className="w-full flex items-center justify-center gap-1.5 bg-[#163353] text-white px-4 py-2.5 rounded-[12px] text-[10px] hover:bg-[#0F2438] transition-all font-black uppercase tracking-widest border border-[#163353]/20"
+                        >
+                          <UploadIcon className="w-3 h-3" /> Send Correction
                         </button>
                       </div>
                     )}
@@ -1047,16 +1200,32 @@ export default function AuthenticatorDashboard() {
                         {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => {
-                            setActionDoc(doc);
-                            setActionModalOpen(true);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white rounded-[12px] text-xs font-black uppercase tracking-wider hover:bg-gray-800 transition-all hover:scale-105"
-                          title="Open details"
-                        >
-                          <Eye className="w-3.5 h-3.5" /> Details
-                        </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setActionDoc(doc);
+                                setActionModalOpen(true);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white rounded-[12px] text-xs font-black uppercase tracking-wider hover:bg-gray-800 transition-all hover:scale-105"
+                              title="Open details"
+                            >
+                              <Eye className="w-3.5 h-3.5" /> Details
+                            </button>
+                            <button 
+                              onClick={() => showApprovalConfirmation(doc.id)}
+                              className="p-2 bg-green-600 text-white rounded-[10px] hover:bg-green-700 transition-all hover:scale-105"
+                              title="Approve"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleRejectClick(doc)}
+                              className="p-2 bg-[#C71B2D] text-white rounded-[10px] hover:bg-[#A01624] transition-all hover:scale-105"
+                              title="Reject"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </div>
                       </td>
                     </tr>
                   );
@@ -1311,23 +1480,34 @@ export default function AuthenticatorDashboard() {
               </div>
 
               {!rejectedRows[actionDoc.id] ? (
-                <div className="flex gap-3 pt-3 border-t border-gray-100">
-                  <button 
-                    onClick={() => {
-                      setActionModalOpen(false);
-                      showApprovalConfirmation(actionDoc.id);
-                    }} 
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-green-600/10 text-green-700 border border-green-600/20 px-4 py-3 rounded-[14px] text-xs hover:bg-green-600 hover:text-white transition-all font-black uppercase tracking-wider"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />Approve
-                  </button>
-                  <button 
-                    onClick={() => setRejectedRows(prev => ({ ...prev, [actionDoc.id]: true }))} 
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-[#C71B2D]/10 text-[#C71B2D] border border-[#C71B2D]/20 px-4 py-3 rounded-[14px] text-xs hover:bg-[#C71B2D] hover:text-white transition-all font-black uppercase tracking-wider"
-                  >
-                    <XCircle className="w-3.5 h-3.5" />Reject
-                  </button>
-                </div>
+                  <div className="flex flex-col gap-2 pt-3 border-t border-gray-100">
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => {
+                          setActionModalOpen(false);
+                          showApprovalConfirmation(actionDoc.id);
+                        }} 
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-green-600 text-white px-4 py-3 rounded-[14px] text-xs hover:bg-green-700 transition-all font-black uppercase tracking-wider"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />Approve
+                      </button>
+                       <button 
+                        onClick={() => {
+                          setActionModalOpen(false);
+                          handleRejectClick(actionDoc);
+                        }} 
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#163353] text-white px-4 py-3 rounded-[14px] text-xs hover:bg-[#0F2438] transition-all font-black uppercase tracking-wider"
+                      >
+                        <Upload className="w-3.5 h-3.5" />Manual Upload
+                      </button>
+                    </div>
+                    <button 
+                      onClick={() => setRejectedRows(prev => ({ ...prev, [actionDoc.id]: true }))}
+                      className="w-full flex items-center justify-center gap-1.5 bg-[#163353] text-white px-4 py-2.5 rounded-[12px] text-[10px] hover:bg-[#0F2438] transition-all font-black uppercase tracking-widest border border-[#163353]/20"
+                    >
+                      <UploadIcon className="w-3 h-3" /> Send Correction
+                    </button>
+                  </div>
               ) : (
                 <div className="pt-3 border-t border-gray-100 animate-in slide-in-from-top-2">
                    <div className="flex flex-col gap-3">
@@ -1417,7 +1597,7 @@ export default function AuthenticatorDashboard() {
 
       {/* Modal de confirmação de aprovação */}
       {showApprovalModal && (
-        <div className="fixed inset-0 bg-[#0A1A2F]/95 backdrop-blur-2xl flex items-center justify-center z-[9999] p-4 animate-in fade-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-in fade-in zoom-in-95 duration-300">
           <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] p-8 max-w-md w-full text-center border border-white/20">
             <div className="mx-auto mb-6 w-16 h-16 bg-green-100/80 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-green-200">
               <CheckCircle className="w-8 h-8 text-green-600" />
@@ -1458,7 +1638,7 @@ export default function AuthenticatorDashboard() {
 
       {/* Modal de confirmação de envio de correção */}
       {showCorrectionModal && (
-        <div className="fixed inset-0 bg-[#0A1A2F]/95 backdrop-blur-2xl flex items-center justify-center z-[9999] p-4 animate-in fade-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-in fade-in zoom-in-95 duration-300">
           <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] p-8 max-w-md w-full text-center border border-white/20">
             <div className="mx-auto mb-6 w-16 h-16 bg-[#163353]/10 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-[#163353]/20">
               <UploadIcon className="w-8 h-8 text-[#163353]" />
@@ -1504,7 +1684,7 @@ export default function AuthenticatorDashboard() {
 
       {/* Modal de informações do usuário */}
       {userModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-[#0A1A2F]/95 backdrop-blur-2xl z-50 p-4 animate-in fade-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in zoom-in-95 duration-300">
           <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] p-8 w-full max-w-md border border-white/20">
             <button
               className="absolute top-4 right-4 p-3 bg-[#C71B2D] hover:bg-[#A01624] text-white rounded-[16px] transition-all hover:scale-105 active:scale-95 shadow-lg"
@@ -1572,6 +1752,119 @@ export default function AuthenticatorDashboard() {
           }}
         />
       )}
+
+      {/* Modal de Correção Manual */}
+      {showRejectModal && selectedDocForRejection && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-md overflow-y-auto h-full w-full flex items-center justify-center z-[100] p-4 animate-in fade-in zoom-in-95 duration-300">
+          <div className="relative bg-white/95 backdrop-blur-xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
+            {/* Header */}
+            <div className="flex items-center justify-between p-8 border-b border-gray-200 bg-gradient-to-r from-[#163353]/5 to-transparent">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-[#163353]/10 backdrop-blur-sm rounded-[20px] flex items-center justify-center border border-[#163353]/20">
+                  <Upload className="w-7 h-7 text-[#163353]" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Manual Correction</h3>
+                  <p className="text-sm font-black text-gray-400 uppercase tracking-widest mt-1">Upload the correct translation</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRejectModal(false)}
+                className="p-3 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-[16px] transition-all"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Document Info Summary */}
+            <div className="p-6 bg-gray-50/50 border-b border-gray-200">
+              <div className="flex items-center gap-3 mb-2">
+                <FileText className="w-5 h-5 text-[#163353]" />
+                <span className="font-black text-gray-900">{getDisplayFilename(selectedDocForRejection)}</span>
+              </div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                This process will mark the document as completed and send the manually translated file to the client.
+              </p>
+            </div>
+
+            {/* Form */}
+            <div className="p-8 space-y-6">
+                <div>
+                  <label className="block mb-3 text-xs font-black text-gray-900 uppercase tracking-widest">
+                    Manually Translated PDF <span className="text-[#C71B2D]">*</span>
+                  </label>
+                  
+                  <div className="relative">
+                    <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-[#163353]/30 rounded-[24px] cursor-pointer bg-[#163353]/5 hover:bg-[#163353]/10 transition-all group">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-10 h-10 mb-4 text-[#163353]/60 group-hover:text-[#163353] transition-colors" />
+                        <p className="mb-2 text-sm text-gray-700 font-bold group-hover:text-[#163353]">
+                          Click to upload or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500 font-black uppercase tracking-widest">
+                          PDF files only
+                        </p>
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="application/pdf"
+                        className="hidden" 
+                        onChange={(e) => setManualFile(e.target.files?.[0] || null)}
+                      />
+                    </label>
+                  </div>
+
+                  {manualFile && (
+                    <div className="mt-4 p-4 bg-green-50 rounded-[20px] border border-green-200 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{manualFile.name}</p>
+                          <p className="text-xs text-green-600 font-black uppercase tracking-widest">Selected file</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setManualFile(null)}
+                        className="p-2 hover:bg-green-100 rounded-full text-green-600 transition-colors"
+                      >
+                        <XCircle className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 p-8 border-t border-gray-200 bg-gray-50/50">
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="px-8 py-3 text-gray-700 bg-white border border-gray-300 rounded-[16px] hover:bg-gray-50 transition-all font-black uppercase tracking-wider"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectConfirm}
+                disabled={rejectionLoading || !manualFile}
+                className="relative px-8 py-3 bg-[#163353] text-white rounded-[16px] hover:bg-[#0F2438] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all font-black uppercase tracking-wider flex items-center gap-2 hover:scale-105 disabled:hover:scale-100 overflow-hidden group"
+              >
+                {!rejectionLoading && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />}
+                {rejectionLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
+                    <span className="relative z-10">Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 relative z-10" />
+                    <span className="relative z-10">Send Correction</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}
