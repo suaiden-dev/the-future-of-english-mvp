@@ -749,5 +749,124 @@
     "statusPaid": "Paid",
     "documentsTranslated": "documents translated",
     "converted": "converted"
+  },
+  "processes": {
+    "title": "Process Steps",
+    "initial": {
+      "promise": "If your plan is to arrive in the United States already with an approved F1 visa, we organize the path from school choice to the consular appointment. With our guide, you understand each stage, all costs, and receive guidance to build a strong and coherent application for your life project.",
+      "subtitle": "Know all the necessary steps to obtain your F-1 student visa",
+      "step1": {
+        "title": "Selection Process",
+        "price": "$400",
+        "description": "First step to verify if you are eligible for the F-1 student visa.",
+        "items": [
+          "Valid passport (minimum 1 year)",
+          "Bank funds proof ($22,000 minimum)",
+          "Full address in country of origin",
+          "School transcripts or diploma",
+          "Payment via Zelle to: info@thefutureofenglish.com"
+        ]
+      }
+    },
+    "cos": {
+      "promise": "Changing your status within the USA doesn't have to be a maze. Here you find a complete guide with all the steps, all the values, and the necessary support to do your COS with safety, financial planning, and legal monitoring until the USCIS response.",
+      "subtitle": "Know all the steps necessary to carry out your visa status change",
+      "step1": {
+        "title": "Selection Process",
+        "price": "$400",
+        "description": "First step to verify if you are eligible for the COS process.",
+        "items": [
+          "Valid passport (minimum 1 year)",
+          "Valid I-94",
+          "Proof of current visa or status",
+          "Bank funds proof ($22,000 minimum)",
+          "Full address in the USA",
+          "Payment via Zelle to: info@thefutureofenglish.com"
+        ]
+      }
+    },
+    "transfer": {
+      "promise": "Want to transfer your I-20 without interrupting your studies or risking your status? We show you, step by step, when and how to do the transfer, what fees to consider, and how to keep your course load and dates in order, so that you continue studying with peace of mind at the new school.",
+      "subtitle": "Know all the steps necessary to carry out the school transfer",
+      "step1": {
+        "title": "Selection Process",
+        "price": "$400",
+        "description": "First step to verify if you are eligible for the Transfer process.",
+        "items": [
+          "Valid passport (minimum 1 year)",
+          "Valid I-94",
+          "Proof of current visa or status",
+          "Bank funds proof ($22,000 minimum)",
+          "Full address in the USA",
+          "Payment via Zelle to: info@thefutureofenglish.com"
+        ]
+      }
+    },
+    "shared": {
+      "placementFee": {
+        "title": "Placement Fee",
+        "price": "",
+        "description": "Variable value according to the scholarship won (annual tuition).",
+        "descriptionCos": "Placement fee proportional to the scholarship won during COS.",
+        "descriptionTransfer": "Placement fee proportional to the scholarship won during the Transfer process.",
+        "items": [
+          "Value varies according to annual Tuition",
+          "Tuition savings cover the fee",
+          "Support throughout the enrollment process"
+        ],
+        "viewTable": "View Value Table",
+        "modalTitle": "Placement Fee Table",
+        "modalSubtitle": "The fee amount is defined based on the annual tuition of the scholarship won.",
+        "tuitionLabel": "Annual Tuition",
+        "feeLabel": "Placement Fee",
+        "marchPromo": "March Promo: 50% discount"
+      },
+      "applicationFee": {
+        "title": "Application Fee",
+        "price": "$350",
+        "description": "Application fee for the scholarship program.",
+        "descriptionShort": "Scholarship application fee.",
+        "items": [
+          "Enrollment processing",
+          "$100 for each additional dependent"
+        ]
+      },
+      "legalFees": {
+        "title": "Legal Fees",
+        "price": "$1,800",
+        "description": "Complete legal monitoring of the visa process.",
+        "descriptionCos": "Complete legal monitoring of the COS process.",
+        "items": [
+          "$1,800 for the main applicant",
+          "$100 for each additional dependent",
+          "Preparation for consular interview",
+          "Complete legal monitoring",
+          "Preparation of all documentation"
+        ]
+      },
+      "funds": {
+        "title": "Proof of Funds",
+        "subtitleInitial": "Minimum financial proof requirements for F-1 visa",
+        "subtitleCos": "Minimum financial proof requirements for COS process",
+        "subtitleTransfer": "Minimum financial proof requirements for Transfer process",
+        "mainApplicant": "Main Applicant",
+        "mainAmount": "$22,000",
+        "mainDescription": "Minimum amount in bank account",
+        "perDependent": "Per Dependent",
+        "dependentAmount": "+$5,000",
+        "dependentDescription": "Additional amount for each dependent",
+        "noteInitial": "Values must be proven through an updated bank statement. The US consulate will require these documents during the visa interview.",
+        "noteShared": "Values must be proven through an updated bank statement. Investments and applications are also accepted as proof of funds."
+      },
+      "values": {
+        "title": "Value Summary",
+        "subtitleInitial": "All costs involved in the Initial process",
+        "subtitleCos": "All costs involved in the COS process",
+        "subtitleTransfer": "All costs involved in the Transfer process",
+        "optional": "Optional",
+        "total": "Total",
+        "promoMarch": "March Promotion: 50% discount"
+      }
+    }
   }
 }
