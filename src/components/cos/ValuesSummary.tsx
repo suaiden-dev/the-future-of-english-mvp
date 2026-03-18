@@ -1,33 +1,27 @@
-import { Check, AlertCircle } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { Check } from "lucide-react";
+
+const values = [
+  { label: "Processo Seletivo", value: "$350", included: true },
+  { label: "Application Fee + I-20", value: "$350", included: true },
+  { label: "Taxa da Bolsa", value: "$550", included: true },
+  { label: "Control Fee", value: "$900", included: true },
+  { label: "Honorários Jurídicos", value: "$1.800", included: true },
+];
 
 const ValuesSummary = () => {
-  const { t } = useTranslation();
-
-  const values = [
-    { label: t("processes.cos.step1.title"), price: 400, included: true },
-    { label: t("processes.shared.applicationFee.title"), price: 350, included: true },
-    { label: t("processes.shared.placementFee.title"), price: 100, isVariable: true, included: true },
-    { label: t("processes.shared.legalFees.title"), price: 1800, included: true },
-  ];
-
-  const totalRequired = 400 + 350 + 100 + 1800;
+  const totalRequired = 350 + 550 + 350 + 900 + 1800;
+  const totalOptional = 0;
 
   return (
     <section className="py-16 md:py-24 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            {t("processes.shared.values.title")}
+            Resumo de Valores
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            {t("processes.shared.values.subtitleCos")}
+            Todos os custos envolvidos no processo de COS
           </p>
-
-          <div className="mt-4 inline-flex items-center gap-2 bg-accent/10 border border-accent/20 text-accent px-4 py-2 rounded-full font-medium">
-            <AlertCircle className="w-5 h-5" />
-            {t("processes.shared.values.promoMarch")}
-          </div>
         </div>
 
         <div className="max-w-2xl mx-auto">
@@ -53,17 +47,14 @@ const ValuesSummary = () => {
                     </div>
                     <span className="text-foreground">
                       {item.label}
-                      {item.isVariable && (
+                      {!item.included && (
                         <span className="ml-2 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                          Variable
+                          Opcional
                         </span>
                       )}
                     </span>
                   </div>
-                  <span className="font-bold text-foreground">
-                    ${item.price.toLocaleString()}
-                    {item.isVariable && "+"}
-                  </span>
+                  <span className="font-bold text-foreground">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -71,14 +62,11 @@ const ValuesSummary = () => {
             {/* Total */}
             <div className="bg-muted p-6">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t("processes.shared.values.total")}:</span>
+                <span className="text-muted-foreground">Total:</span>
                 <span className="text-2xl font-bold text-gradient">
-                   A partir de ${totalRequired.toLocaleString()}
+                  ${totalRequired.toLocaleString()}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center italic">
-                * A Taxa de Colocação varia de acordo com o valor da bolsa obtida.
-              </p>
             </div>
           </div>
         </div>

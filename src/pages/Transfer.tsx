@@ -7,15 +7,14 @@ import ClientsSection from "@/components/shared/ClientsSection";
 import ContactForm from "@/components/shared/ContactForm";
 import Footer from "@/components/transfer/Footer";
 import ChatBot from "@/components/shared/Chatbot";
-import { useTranslation } from "react-i18next";
+
+const TRANSFER_PROMISE = "Quer transferir seu I-20 sem interromper seus estudos nem correr risco com seu status? Nós mostramos, passo a passo, quando e como fazer a transferência, quais taxas considerar e como manter sua carga horária e datas em ordem, para que você continue estudando com tranquilidade na nova escola.";
 
 const Transfer = () => {
-  const { t } = useTranslation();
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <PromiseSection text={t("processes.transfer.promise")} />
+      <PromiseSection text={TRANSFER_PROMISE} />
       <ClientsSection />
       <ProcessSteps />
       <FundsSummary />

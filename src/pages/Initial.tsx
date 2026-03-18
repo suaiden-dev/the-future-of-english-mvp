@@ -7,15 +7,14 @@ import ClientsSection from "@/components/shared/ClientsSection";
 import ContactForm from "@/components/shared/ContactForm";
 import Footer from "@/components/initial/Footer";
 import ChatBot from "@/components/shared/Chatbot";
-import { useTranslation } from "react-i18next";
+
+const INITIAL_PROMISE = "Se o seu plano é chegar aos Estados Unidos já com o visto F1 aprovado, nós organizamos o caminho desde a escolha da escola até o agendamento no consulado. Com nosso guia, você entende cada etapa, todos os custos e recebe orientação para montar uma aplicação forte e coerente com o seu projeto de vida.";
 
 const Initial = () => {
-  const { t } = useTranslation();
-  
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <PromiseSection text={t("processes.initial.promise")} />
+      <PromiseSection text={INITIAL_PROMISE} />
       <ClientsSection />
       <ProcessSteps />
       <FundsSummary />

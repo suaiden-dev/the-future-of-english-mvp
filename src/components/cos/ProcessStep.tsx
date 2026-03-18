@@ -10,7 +10,6 @@ interface ProcessStepProps {
   colorClass: string;
   icon: ReactNode;
   isOptional?: boolean;
-  actionButton?: ReactNode;
 }
 
 const ProcessStep = ({
@@ -23,7 +22,6 @@ const ProcessStep = ({
   colorClass,
   icon,
   isOptional = false,
-  actionButton,
 }: ProcessStepProps) => {
   return (
     <div 
@@ -49,10 +47,7 @@ const ProcessStep = ({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-3">
-                <h3 className="text-xl font-bold">{title}</h3>
-                {actionButton}
-              </div>
+              <h3 className="text-xl font-bold">{title}</h3>
             </div>
           </div>
           <div className="text-right">

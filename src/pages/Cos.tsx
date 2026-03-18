@@ -7,15 +7,14 @@ import ClientsSection from "@/components/shared/ClientsSection";
 import ContactForm from "@/components/shared/ContactForm";
 import Footer from "@/components/cos/Footer";
 import ChatBot from "@/components/shared/Chatbot";
-import { useTranslation } from "react-i18next";
+
+const COS_PROMISE = "Trocar seu status dentro dos EUA não precisa ser um labirinto. Aqui você encontra um guia completo com todas as etapas, todos os valores e o suporte necessário para fazer seu COS com segurança, planejamento financeiro e acompanhamento jurídico até a resposta do USCIS.";
 
 const Index = () => {
-  const { t } = useTranslation();
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <PromiseSection text={t("processes.cos.promise")} />
+      <PromiseSection text={COS_PROMISE} />
       <ClientsSection />
       <ProcessSteps />
       <FundsSummary />
