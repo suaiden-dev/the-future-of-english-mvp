@@ -735,5 +735,124 @@
     "statusPaid": "Pagado",
     "documentsTranslated": "documentos traducidos",
     "converted": "convertidos"
+  },
+  "processes": {
+    "title": "Etapas del Proceso",
+    "initial": {
+      "promise": "Si su plan es llegar a los Estados Unidos ya con la visa F1 aprobada, organizamos el camino desde la elección de la escuela hasta la cita consular. Con nuestra guía, entiende cada etapa, todos los costos y recibe orientación para armar una aplicación sólida y coherente con su proyecto de vida.",
+      "subtitle": "Conozca todas las etapas necesarias para obtener su visa de estudiante F-1",
+      "step1": {
+        "title": "Proceso de Selección",
+        "price": "$400",
+        "description": "Primer paso para verificar se usted es elegible para la visa de estudiante F-1.",
+        "items": [
+          "Pasaporte válido (mínimo 1 año)",
+          "Comprobante de fondos bancarios ($22.000 mínimo)",
+          "Dirección completa en el país de origen",
+          "Historial escolar o diploma",
+          "Pago vía Zelle para: info@thefutureofenglish.com"
+        ]
+      }
+    },
+    "cos": {
+      "promise": "Cambiar su estatus dentro de los EE.UU. no tiene por qué ser un labirinto. Aquí encontrará una guía completa con todas las etapas, todos los valores y el soporte necesario para realizar su COS con seguridad, planificación financiera y acompañamiento jurídico hasta la respuesta del USCIS.",
+      "subtitle": "Conozca todas las etapas necesarias para realizar el cambio de su estatus de visa",
+      "step1": {
+        "title": "Proceso de Selección",
+        "price": "$400",
+        "description": "Primer paso para verificar se usted es elegible para el proceso de COS.",
+        "items": [
+          "Pasaporte válido (mínimo 1 año)",
+          "I-94 válido",
+          "Comprobante de visa o estatus actual",
+          "Comprobante de fondos bancarios ($22.000 mínimo)",
+          "Dirección completa en los EE.UU.",
+          "Pago vía Zelle para: info@thefutureofenglish.com"
+        ]
+      }
+    },
+    "transfer": {
+      "promise": "¿Quiere transferir su I-20 sin interrumpir sus estudios ni correr riesgos con su estatus? Le mostramos, paso a paso, cuándo y cómo hacer la transferencia, qué tasas considerar y cómo mantener su carga horaria y fechas en orden, para que continúe estudiando con tranquilidad en la nueva escuela.",
+      "subtitle": "Conozca todas las etapas necesarias para realizar la transferencia de escuela",
+      "step1": {
+        "title": "Proceso de Selección",
+        "price": "$400",
+        "description": "Primer paso para verificar se usted es elegible para el processo de Transfer.",
+        "items": [
+          "Pasaporte válido (mínimo 1 año)",
+          "I-94 válido",
+          "Comprobante de visa o estatus actual",
+          "Comprobante de fondos bancarios ($22.000 mínimo)",
+          "Dirección completa en los EE.UU.",
+          "Pago vía Zelle para: info@thefutureofenglish.com"
+        ]
+      }
+    },
+    "shared": {
+      "placementFee": {
+        "title": "Cuota de Colocación",
+        "price": "",
+        "description": "Valor variable según la matrícula/tuition de la escuela.",
+        "descriptionCos": "Cuota de colocación variable según la matrícula de la escuela durante el COS.",
+        "descriptionTransfer": "Cuota de colocación variable según la matrícula de la escuela en el proceso de Transfer.",
+        "items": [
+          "El valor varía según la Tuition anual",
+          "El ahorro en la matrícula paga la cuota",
+          "Apoyo en todo el proceso de inscripción"
+        ],
+        "viewTable": "Ver Tabla de Valores",
+        "modalTitle": "Tabla de Cuota de Colocación",
+        "modalSubtitle": "El monto de la cuota se define en función de la matrícula (tuition) anual de la beca obtenida.",
+        "tuitionLabel": "Tuition Anual",
+        "feeLabel": "Cuota de Colocación",
+        "marchPromo": "Promo Março: 50% de descuento"
+      },
+      "applicationFee": {
+        "title": "Application Fee",
+        "price": "$350",
+        "description": "Tarifa de solicitud para el programa de becas.",
+        "descriptionShort": "Tarifa de solicitud de beca.",
+        "items": [
+          "Procesamiento de la matrícula",
+          "$100 por cada dependiente adicional"
+        ]
+      },
+      "legalFees": {
+        "title": "Honorarios Jurídicos",
+        "price": "$1.800",
+        "description": "Seguimiento jurídico completo del processo de visa.",
+        "descriptionCos": "Seguimiento jurídico completo del processo de COS.",
+        "items": [
+          "$1.800 para el solicitante principal",
+          "$100 por cada dependiente adicional",
+          "Preparación para la entrevista consular",
+          "Acompañamiento jurídico completo",
+          "Preparación de toda la documentación"
+        ]
+      },
+      "funds": {
+        "title": "Comprobación de Fondos",
+        "subtitleInitial": "Requisitos mínimos de comprobación financiera para la visa F-1",
+        "subtitleCos": "Requisitos mínimos de comprobación financiera para el proceso de COS",
+        "subtitleTransfer": "Requisitos mínimos de comprobación financiera para el proceso de Transfer",
+        "mainApplicant": "Solicitante Principal",
+        "mainAmount": "$22.000",
+        "mainDescription": "Cantidad mínima en cuenta bancaria",
+        "perDependent": "Por Dependiente",
+        "dependentAmount": "+$5.000",
+        "dependentDescription": "Cantidad adicional por cada dependiente",
+        "noteInitial": "Los valores deben ser comprobados mediante un extracto bancario actualizado. El consulado estadounidense exigirá estos documentos durante la entrevista de visa.",
+        "noteShared": "Los valores deben ser comprobados mediante un extracto bancario actualizado. Las inversiones y aplicaciones también se aceptan como comprobación de fondos."
+      },
+      "values": {
+        "title": "Resumen de Valores",
+        "subtitleInitial": "Todos los costos involucrados en el proceso Initial",
+        "subtitleCos": "Todos los costos involucrados en el proceso de COS",
+        "subtitleTransfer": "Todos los costos involucrados en el proceso de Transfer",
+        "optional": "Opcional",
+        "total": "Total",
+        "promoMarch": "Promoción de Marzo: 50% de descuento"
+      }
+    }
   }
 }

@@ -1,74 +1,62 @@
-import { FileText, CreditCard, Shield, Receipt } from "lucide-react";
+import { FileText, Shield, Receipt, Info } from "lucide-react";
 import ProcessStep from "../cos/ProcessStep";
-
-const steps = [
-  {
-    step: 1,
-    title: "Processo Seletivo",
-    price: "$350",
-    description: "Primeira etapa para verificar se você é elegível para o processo de Transfer.",
-    items: [
-      "Passaporte válido (mínimo 1 ano)",
-      "I-94 válido",
-      "Comprovante de visto ou status atual",
-      "Comprovante de fundos bancários ($22.000 mínimo)",
-      "Endereço completo nos EUA",
-      "Pagamento via Zelle para: info@thefutureofenglish.com",
-    ],
-    colorClass: "bg-teal",
-    icon: <FileText className="w-6 h-6" />,
-  },
-  {
-    step: 2,
-    title: "Application Fee + I-20",
-    price: "$350",
-    description: "Taxa de aplicação e emissão do I-20.",
-    items: [
-      "Emissão do formulário I-20",
-      "Processamento da matrícula",
-      "$100 por cada dependente adicional",
-    ],
-    colorClass: "bg-emerald-500",
-    icon: <Receipt className="w-6 h-6" />,
-  },
-  {
-    step: 3,
-    title: "Taxa da Bolsa",
-    price: "$550",
-    description: "Taxa referente à bolsa de estudos.",
-    items: [
-      "Formulário da matrícula na escola",
-      "Demais documentações necessárias",
-    ],
-    colorClass: "bg-coral",
-    icon: <CreditCard className="w-6 h-6" />,
-  },
-  {
-    step: 4,
-    title: "Control Fee",
-    price: "$900",
-    description: "Taxa de controle do I-20 durante todo o processo de Transfer.",
-    items: [
-      "Controle ativo do I-20",
-      "Acompanhamento durante todo o processo",
-      "Suporte para dúvidas e orientações",
-      "Pagamento dessa taxa na emissão da carta de aceite pela instituição",
-    ],
-    colorClass: "bg-purple",
-    icon: <Shield className="w-6 h-6" />,
-  },
-];
+import { useTranslation } from "react-i18next";
+import { useState } from "react";
+import PlacementFeeModal from "../shared/PlacementFeeModal";
 
 const ProcessSteps = () => {
+  const { t } = useTranslation();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const steps = [
+    {
+      step: 1,
+      title: t("processes.transfer.step1.title"),
+      price: t("processes.transfer.step1.price"),
+      description: t("processes.transfer.step1.description"),
+      items: t("processes.transfer.step1.items", { returnObjects: true }) as string[],
+      colorClass: "bg-teal",
+      icon: <FileText className="w-6 h-6" />,
+    },
+    {
+      step: 2,
+      title: t("processes.shared.applicationFee.title"),
+      price: t("processes.shared.applicationFee.price"),
+      description: t("processes.shared.applicationFee.descriptionShort"),
+      items: t("processes.shared.applicationFee.items", { returnObjects: true }) as string[],
+      colorClass: "bg-emerald-500",
+      icon: <Receipt className="w-6 h-6" />,
+    },
+    {
+      step: 3,
+      title: t("processes.shared.placementFee.title"),
+      price: t("processes.shared.placementFee.price"),
+      description: t("processes.shared.placementFee.descriptionTransfer"),
+      items: t("processes.shared.placementFee.items", { returnObjects: true }) as string[],
+      colorClass: "bg-coral",
+      icon: <Shield className="w-6 h-6" />,
+      actionButton: (
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="p-1.5 rounded-full bg-white text-foreground shadow-lg hover:bg-white/90 transition-all flex items-center gap-1.5 px-4 transform hover:scale-105 active:scale-95"
+          title={t("processes.shared.placementFee.viewTable")}
+        >
+          <Info className="w-4 h-4 text-accent" />
+          <span className="text-xs font-bold uppercase tracking-wider">{t("processes.shared.placementFee.viewTable")}</span>
+        </button>
+      )
+    },
+  ];
+
   return (
     <section className="py-16 md:py-24 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Etapas do Processo
+            {t("processes.title")}
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Conheça todas as etapas necessárias para realizar a transferência de escola
+            {t("processes.transfer.subtitle")}
           </p>
         </div>
 
@@ -84,6 +72,7 @@ const ProcessSteps = () => {
           ))}
         </div>
       </div>
+      <PlacementFeeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </section>
   );
 };

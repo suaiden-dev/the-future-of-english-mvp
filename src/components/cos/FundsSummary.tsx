@@ -1,15 +1,18 @@
 import { DollarSign, Users, AlertCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const FundsSummary = () => {
+  const { t } = useTranslation();
+
   return (
     <section className="py-16 md:py-24 bg-muted">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Comprovação de Fundos
+            {t("processes.shared.funds.title")}
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Requisitos mínimos de comprovação financeira para o processo de COS
+            {t("processes.shared.funds.subtitleCos")}
           </p>
         </div>
 
@@ -20,13 +23,13 @@ const FundsSummary = () => {
               <DollarSign className="w-8 h-8 text-primary-foreground" />
             </div>
             <h3 className="text-xl font-bold text-center text-foreground mb-2">
-              Aplicante Principal
+              {t("processes.shared.funds.mainApplicant")}
             </h3>
             <p className="text-4xl font-bold text-center text-gradient mb-2">
-              $22.000
+              {t("processes.shared.funds.mainAmount")}
             </p>
             <p className="text-sm text-center text-muted-foreground">
-              Valor mínimo em conta bancária
+              {t("processes.shared.funds.mainDescription")}
             </p>
           </div>
 
@@ -36,13 +39,13 @@ const FundsSummary = () => {
               <Users className="w-8 h-8 text-accent-foreground" />
             </div>
             <h3 className="text-xl font-bold text-center text-foreground mb-2">
-              Por Dependente
+              {t("processes.shared.funds.perDependent")}
             </h3>
             <p className="text-4xl font-bold text-center text-gradient mb-2">
-              +$5.000
+              {t("processes.shared.funds.dependentAmount")}
             </p>
             <p className="text-sm text-center text-muted-foreground">
-              Valor adicional por cada dependente
+              {t("processes.shared.funds.dependentDescription")}
             </p>
           </div>
         </div>
@@ -52,8 +55,7 @@ const FundsSummary = () => {
           <div className="bg-card border-l-4 border-secondary rounded-lg p-4 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
             <p className="text-sm text-muted-foreground">
-              Os valores devem ser comprovados através de extrato bancário atualizado. 
-              Investimentos e aplicações também são aceitos como comprovação de fundos.
+              {t("processes.shared.funds.noteShared")}
             </p>
           </div>
         </div>
