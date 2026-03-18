@@ -800,13 +800,7 @@
           "Valor varia conforme a Tuition anual",
           "A economia na anuidade paga a taxa",
           "Suporte em todo o processo de matrícula"
-        ],
-        "viewTable": "Ver Tabela de Valores",
-        "modalTitle": "Tabela de Taxa de Colocação",
-        "modalSubtitle": "O valor da taxa é definido com base na anuidade (tuition) da bolsa conquistada.",
-        "tuitionLabel": "Tuition Anual",
-        "feeLabel": "Taxa de Colocação",
-        "marchPromo": "Promoção Março: 50% de desconto"
+        ]
       },
       "applicationFee": {
         "title": "Application Fee",
@@ -852,7 +846,7 @@
         "subtitleTransfer": "Todos os custos envolvidos no processo de Transfer",
         "optional": "Opcional",
         "total": "Total",
-        "promoMarch": "Promoção para Março: 50% de desconto"
+        "variable": "Variável"
       }
     }
   }

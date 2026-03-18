@@ -1,0 +1,10 @@
+﻿ab366e0 feat: Implement Initial, Transfer, and COS process pages with dedicated components for funds, values, steps, and internationalization support.
+df533a8 feat: Implement authenticator dashboard for document verification and management, including data fetching, status updates, and authentication actions.
+f28ecef feat: Implement Recent Activity component, enhance Authenticator Dashboard, fix translation linking, and update database typings and internationalization.
+27adc11 feat: Implement authenticator dashboard with document approval/rejection, internationalization, and enhanced UI for document management.
+6af7f85 feat: Introduce Authenticator Dashboard for managing and authenticating documents, including data merging and workflow modals.
+8dcc6a3 feat: update contact notification email template and subject for clarity
+58c5949 feat: update UploadDocument component with localized text for improved user experience
+e3373f7 feat: enhance TranslatedDocuments page with new UI elements and document details modal
+331c429 feat: improve administrative, finance and authenticator dashboards UI
+9c93ffa feat: implement premium visual refactoring for Costumer Dashboard

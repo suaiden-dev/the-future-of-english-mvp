@@ -1,4 +1,4 @@
-import { Check, AlertCircle } from "lucide-react";
+import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const ValuesSummary = () => {
@@ -7,11 +7,11 @@ const ValuesSummary = () => {
   const values = [
     { label: t("processes.initial.step1.title"), price: 400, included: true },
     { label: t("processes.shared.applicationFee.title"), price: 350, included: true },
-    { label: t("processes.shared.placementFee.title"), price: 100, isVariable: true, included: true },
+    { label: t("processes.shared.placementFee.title"), price: 0, isVariable: true, included: true },
     { label: t("processes.shared.legalFees.title"), price: 1800, included: true },
   ];
 
-  const totalRequired = 400 + 350 + 100 + 1800; // Using minimum placement fee for display
+  const totalRequired = 400 + 350 + 1800; // Total fixed costs
 
   return (
     <section className="py-16 md:py-24 bg-background">
@@ -23,11 +23,6 @@ const ValuesSummary = () => {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             {t("processes.shared.values.subtitleInitial")}
           </p>
-          
-          <div className="mt-4 inline-flex items-center gap-2 bg-accent/10 border border-accent/20 text-accent px-4 py-2 rounded-full font-medium">
-            <AlertCircle className="w-5 h-5" />
-            {t("processes.shared.values.promoMarch")}
-          </div>
         </div>
 
         <div className="max-w-2xl mx-auto">
@@ -53,16 +48,10 @@ const ValuesSummary = () => {
                     </div>
                     <span className="text-foreground">
                       {item.label}
-                      {item.isVariable && (
-                        <span className="ml-2 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                          Variable
-                        </span>
-                      )}
                     </span>
                   </div>
                   <span className="font-bold text-foreground">
-                    ${item.price.toLocaleString()}
-                    {item.isVariable && "+"}
+                    {item.isVariable ? t("processes.shared.values.variable") : `$${item.price.toLocaleString()}`}
                   </span>
                 </div>
               ))}
@@ -73,7 +62,7 @@ const ValuesSummary = () => {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">{t("processes.shared.values.total")}:</span>
                 <span className="text-2xl font-bold text-gradient">
-                  A partir de ${totalRequired.toLocaleString()}
+                  ${totalRequired.toLocaleString()} + {t("processes.shared.values.variable")}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-2 text-center italic">

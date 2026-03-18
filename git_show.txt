@@ -1,0 +1,26 @@
+﻿commit ab366e0bf1bcbcd699220ffb4fbcfa7c6800578c
+Author: victuribdev <victuribdev@gmail.com>
+Date:   Fri Mar 13 14:31:58 2026 -0300
+
+    feat: Implement Initial, Transfer, and COS process pages with dedicated components for funds, values, steps, and internationalization support.
+
+DOCUMENTACAO_CORRECAO_DASHBOARD_AUTENTICADOR.md
+RELATORIO_TECNICO_03_02_2026.md
+package-lock.json
+src/components/cos/FundsSummary.tsx
+src/components/cos/ProcessStep.tsx
+src/components/cos/ProcessSteps.tsx
+src/components/cos/ValuesSummary.tsx
+src/components/initial/FundsSummary.tsx
+src/components/initial/ProcessSteps.tsx
+src/components/initial/ValuesSummary.tsx
+src/components/shared/PlacementFeeModal.tsx
+src/components/transfer/FundsSummary.tsx
+src/components/transfer/ProcessSteps.tsx
+src/components/transfer/ValuesSummary.tsx
+src/locales/en.json
+src/locales/es.json
+src/locales/pt.json
+src/pages/Cos.tsx
+src/pages/Initial.tsx
+src/pages/Transfer.tsx

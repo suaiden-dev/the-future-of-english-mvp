@@ -813,13 +813,7 @@
           "Value varies according to annual Tuition",
           "Tuition savings cover the fee",
           "Support throughout the enrollment process"
-        ],
-        "viewTable": "View Value Table",
-        "modalTitle": "Placement Fee Table",
-        "modalSubtitle": "The fee amount is defined based on the annual tuition of the scholarship won.",
-        "tuitionLabel": "Annual Tuition",
-        "feeLabel": "Placement Fee",
-        "marchPromo": "March Promo: 50% discount"
+        ]
       },
       "applicationFee": {
         "title": "Application Fee",
@@ -865,7 +859,7 @@
         "subtitleTransfer": "All costs involved in the Transfer process",
         "optional": "Optional",
         "total": "Total",
-        "promoMarch": "March Promotion: 50% discount"
+        "variable": "Variable"
       }
     }
   }

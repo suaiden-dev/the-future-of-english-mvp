@@ -1,12 +1,8 @@
-import { FileText, Shield, Scale, Receipt, Info } from "lucide-react";
+import { FileText, Shield, Scale, Receipt } from "lucide-react";
 import ProcessStep from "../cos/ProcessStep";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
-import PlacementFeeModal from "../shared/PlacementFeeModal";
-
 const ProcessSteps = () => {
   const { t } = useTranslation();
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const steps = [
     {
@@ -35,16 +31,6 @@ const ProcessSteps = () => {
       items: t("processes.shared.placementFee.items", { returnObjects: true }) as string[],
       colorClass: "bg-gold",
       icon: <Shield className="w-6 h-6" />,
-      actionButton: (
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="p-1.5 rounded-full bg-white text-foreground shadow-lg hover:bg-white/90 transition-all flex items-center gap-1.5 px-4 transform hover:scale-105 active:scale-95"
-          title={t("processes.shared.placementFee.viewTable")}
-        >
-          <Info className="w-4 h-4 text-accent" />
-          <span className="text-xs font-bold uppercase tracking-wider">{t("processes.shared.placementFee.viewTable")}</span>
-        </button>
-      )
     },
     {
       step: 4,
@@ -81,7 +67,6 @@ const ProcessSteps = () => {
           ))}
         </div>
       </div>
-      <PlacementFeeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </section>
   );
 };

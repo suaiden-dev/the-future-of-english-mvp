@@ -799,13 +799,7 @@
           "El valor varía según la Tuition anual",
           "El ahorro en la matrícula paga la cuota",
           "Apoyo en todo el proceso de inscripción"
-        ],
-        "viewTable": "Ver Tabla de Valores",
-        "modalTitle": "Tabla de Cuota de Colocación",
-        "modalSubtitle": "El monto de la cuota se define en función de la matrícula (tuition) anual de la beca obtenida.",
-        "tuitionLabel": "Tuition Anual",
-        "feeLabel": "Cuota de Colocación",
-        "marchPromo": "Promo Março: 50% de descuento"
+        ]
       },
       "applicationFee": {
         "title": "Application Fee",
@@ -851,7 +845,7 @@
         "subtitleTransfer": "Todos los costos involucrados en el proceso de Transfer",
         "optional": "Opcional",
         "total": "Total",
-        "promoMarch": "Promoción de Marzo: 50% de descuento"
+        "variable": "Variable"
       }
     }
   }
