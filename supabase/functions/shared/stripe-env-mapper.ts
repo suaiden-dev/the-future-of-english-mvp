@@ -12,17 +12,26 @@ export interface StripeEnvironmentVariables {
  * Usa sufixo _PROD para produção e _TEST para teste
  */
 export function getStripeEnvironmentVariables(envInfo: EnvironmentInfo): StripeEnvironmentVariables {
-  let suffix: string;
+  let secretKey: string | undefined;
+  let webhookSecret: string | undefined;
+  let publishableKey: string | undefined;
+
   if (envInfo.isProduction) {
-    suffix = 'PROD';
+    // Produção usa as chaves principais (live) ou explícitas _PROD
+    secretKey = Deno.env.get('STRIPE_SECRET_KEY_PROD') || Deno.env.get('STRIPE_SECRET_KEY');
+    webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET_PROD') || Deno.env.get('STRIPE_WEBHOOK_SECRET');
+    publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY_PROD') || Deno.env.get('STRIPE_PUBLISHABLE_KEY');
   } else {
-    suffix = 'TEST';
+    // Teste usa explicitamente _TEST
+    secretKey = Deno.env.get('STRIPE_SECRET_KEY_TEST');
+    webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET_TEST');
+    publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY_TEST');
   }
 
   const config = {
-    secretKey: Deno.env.get(`STRIPE_SECRET_KEY_${suffix}`) || '',
-    webhookSecret: Deno.env.get(`STRIPE_WEBHOOK_SECRET_${suffix}`) || '',
-    publishableKey: Deno.env.get(`STRIPE_PUBLISHABLE_KEY_${suffix}`) || ''
+    secretKey: secretKey || '',
+    webhookSecret: webhookSecret || '',
+    publishableKey: publishableKey || ''
   };
 
   console.log(`🔑 Stripe Config (${envInfo.environment}):`, {
