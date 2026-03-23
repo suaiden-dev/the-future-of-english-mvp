@@ -2,6 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { calculateCardAmountWithFees, calculateCardFee } from '../shared/stripe-fee-calculator.ts';
+import { detectEnvironment } from '../shared/environment-detector.ts';
+import { getStripeEnvironmentVariables } from '../shared/stripe-env-mapper.ts';
 
 // Definição dos cabeçalhos CORS para reutilização
 const corsHeaders = {
@@ -116,13 +118,17 @@ Deno.serve(async (req: Request) => {
       throw new Error('ID ou caminho do arquivo é obrigatório');
     }
     
+    // Detectar ambiente e obter chaves do Stripe apropriadas
+    const envInfo = detectEnvironment(req);
+    const stripeConfig = getStripeEnvironmentVariables(envInfo);
+    const stripeSecretKey = stripeConfig.secretKey;
+    
     // Obter chaves de API das variáveis de ambiente com validação
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!stripeSecretKey) {
-      throw new Error('STRIPE_SECRET_KEY não configurada');
+      throw new Error(`STRIPE_SECRET_KEY_${envInfo.isProduction ? 'PROD' : 'TEST'} não configurada`);
     }
     if (!supabaseUrl || !supabaseServiceKey) {
       console.warn('Variáveis de ambiente do Supabase não configuradas. A sessão não será salva no banco de dados.');

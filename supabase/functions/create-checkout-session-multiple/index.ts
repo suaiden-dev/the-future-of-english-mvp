@@ -2,6 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.21.0';
 import { calculateCardAmountWithFees, calculateCardFee } from '../shared/stripe-fee-calculator.ts';
+import { detectEnvironment } from '../shared/environment-detector.ts';
+import { getStripeEnvironmentVariables } from '../shared/stripe-env-mapper.ts';
 
 // Definição dos cabeçalhos CORS para reutilização
 const corsHeaders = {
@@ -56,100 +58,7 @@ function generateServiceDescription(pages: number, isNotarized: boolean, isBankS
   return `Document Translation - ${pages} page${pages > 1 ? 's' : ''}${serviceText}`;
 }
 
-// Interface para informações do ambiente
-interface EnvironmentInfo {
-  environment: 'production' | 'test';
-  isProduction: boolean;
-  isTest: boolean;
-  referer: string;
-  origin: string;
-  host: string;
-  userAgent: string;
-}
 
-/**
- * Detecta o ambiente baseado nos headers HTTP da requisição
- * Produção: quando o header contém 'lushamerica.com'
- * Teste: qualquer outro caso (localhost, outros domínios, etc.)
- */
-function detectEnvironment(req: Request): EnvironmentInfo {
-  const referer = req.headers.get('referer') || '';
-  const origin = req.headers.get('origin') || '';
-  const host = req.headers.get('host') || '';
-  const userAgent = req.headers.get('user-agent') || '';
-
-  // Detect production: if any header contains lushamerica.com
-  const isProductionDomain = 
-    referer.includes('lushamerica.com') ||
-    origin.includes('lushamerica.com') ||
-    host.includes('lushamerica.com');
-
-  // Determine environment: production > test
-  let environment: 'production' | 'test';
-  if (isProductionDomain) {
-    environment = 'production';
-  } else {
-    environment = 'test';
-  }
-
-  const envInfo: EnvironmentInfo = {
-    environment,
-    isProduction: isProductionDomain,
-    isTest: !isProductionDomain,
-    referer,
-    origin,
-    host,
-    userAgent
-  };
-
-  // Log environment detection for debugging
-  console.log('🔍 Environment Detection:', {
-    referer,
-    origin,
-    host,
-    environment,
-    userAgent: userAgent.substring(0, 100) + '...', // Truncate for readability
-    isProductionDomain
-  });
-  console.log(`🎯 Environment detected: ${environment.toUpperCase()}`);
-
-  return envInfo;
-}
-
-/**
- * Obtém as variáveis de ambiente do Stripe baseado no ambiente detectado
- * Produção: tenta STRIPE_SECRET_KEY_PROD, se não existir usa STRIPE_SECRET_KEY
- * Teste: usa STRIPE_SECRET_KEY_TEST
- */
-function getStripeEnvironmentVariables(envInfo: EnvironmentInfo): { secretKey: string } {
-  let secretKey = '';
-
-  if (envInfo.isProduction) {
-    // Produção: tenta PROD primeiro, depois fallback para STRIPE_SECRET_KEY
-    secretKey = Deno.env.get('STRIPE_SECRET_KEY_PROD') || Deno.env.get('STRIPE_SECRET_KEY') || '';
-    console.log('🔍 Ambiente: PRODUCTION');
-  } else {
-    // Teste: usa STRIPE_SECRET_KEY_TEST
-    secretKey = Deno.env.get('STRIPE_SECRET_KEY_TEST') || '';
-    console.log('🔍 Ambiente: TEST');
-  }
-
-  console.log(`🔑 Stripe Config (${envInfo.environment}):`, {
-    secretKey: secretKey ? `${secretKey.substring(0, 20)}...` : '❌ Não configurada',
-    source: envInfo.isProduction 
-      ? (Deno.env.get('STRIPE_SECRET_KEY_PROD') ? 'STRIPE_SECRET_KEY_PROD' : 'STRIPE_SECRET_KEY')
-      : 'STRIPE_SECRET_KEY_TEST'
-  });
-
-  if (!secretKey) {
-    const expectedVar = envInfo.isProduction 
-      ? 'STRIPE_SECRET_KEY_PROD ou STRIPE_SECRET_KEY'
-      : 'STRIPE_SECRET_KEY_TEST';
-    throw new Error(`${expectedVar} não configurada`);
-  }
-
-  return { secretKey };
-}
 
 Deno.serve(async (req: Request) => {
   // O manuseio de preflight (OPTIONS) deve ser a primeira coisa na função
@@ -199,6 +108,8 @@ Deno.serve(async (req: Request) => {
     const envInfo = detectEnvironment(req);
     const stripeConfig = getStripeEnvironmentVariables(envInfo);
     const stripeSecretKey = stripeConfig.secretKey;
+    
+    // Já obtido acima através do detector compartilhado
     
     // Obter variáveis do Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL');

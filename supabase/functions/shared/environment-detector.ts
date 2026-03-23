@@ -32,14 +32,19 @@ export function detectEnvironment(req: Request): EnvironmentInfo {
   const isProductionDomain = 
     referer.includes('lushamerica.com') ||
     origin.includes('lushamerica.com') ||
-    host.includes('lushamerica.com');
+    host.includes('lushamerica.com') ||
+    referer.includes('thefutureofenglish.com') ||
+    origin.includes('thefutureofenglish.com') ||
+    host.includes('thefutureofenglish.com') ||
+    referer.includes('tfoe-mvp.netlify.app') ||
+    origin.includes('tfoe-mvp.netlify.app') ||
+    host.includes('tfoe-mvp.netlify.app');
 
   // For Stripe webhooks, we need to determine environment differently
   // Check if we have production environment variables available
-  const hasProdKeys = Deno.env.get('STRIPE_SECRET_KEY_PROD') && 
-                     Deno.env.get('STRIPE_WEBHOOK_SECRET_PROD');
+  const hasProdKeys = Deno.env.get('STRIPE_SECRET_KEY_PROD') || Deno.env.get('STRIPE_SECRET_KEY');
 
-  const isProduction = isProductionDomain || (isStripeWebhook && hasProdKeys);
+  const isProduction = isProductionDomain || (isStripeWebhook && !!hasProdKeys);
 
   // Determine environment: production > test
   let environment: 'production' | 'test';
