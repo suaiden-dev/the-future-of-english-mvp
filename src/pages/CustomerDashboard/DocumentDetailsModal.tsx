@@ -286,7 +286,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
               </h4>
               <p className="text-sm text-green-800">
                 Your certified translation is ready for download. The document includes
-                official authentication and is accepted by USCIS.
+                official authentication and is accepted by US authorities.
               </p>
               <div className="flex gap-2 mt-3">
                 {translatedInfo?.translated_file_url ? (

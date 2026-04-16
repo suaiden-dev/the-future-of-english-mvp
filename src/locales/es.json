@@ -156,7 +156,7 @@
       "features": {
         "title": "Lo que obtienes:",
         "list": {
-          "uscisAccepted": "Traducciones aceptadas por USCIS",
+          "uscisAccepted": "Traducciones certificadas",
           "officialCertification": "Certificación oficial y autenticación",
           "digitalVerification": "Sistema de verificación digital",
           "support": "Soporte al cliente 24/7"
@@ -175,7 +175,7 @@
     "pendingDocuments": "Documentos Pendientes",
     "completedDocuments": "Documentos Completados",
     "processingDocuments": "Documentos en Procesamiento",
-    "uploadDescription": "Sube tus documentos para servicios de traducción profesional. Todas las traducciones están certificadas y son aceptadas por USCIS y autoridades de EE.UU.",
+    "uploadDescription": "Sube tus documentos para servicios de traducción profesional. Todas las traducciones están certificadas y son aceptadas por autoridades de EE.UU.",
     "notifications": {
       "translationReady": "¡Tu traducción está lista!",
       "download": "Descargar",
@@ -260,7 +260,7 @@
     "fastResults": "Resultados Rápidos"
   },
   "stats": {
-    "uscisAcceptance": "Aceptación USCIS",
+    "uscisAcceptance": "Tasa de Aceptación",
     "avgTurnaround": "Tiempo Promedio",
     "documentsTranslated": "Documentos Traducidos",
     "languagesSupported": "Idiomas Soportados"
@@ -280,7 +280,6 @@
         "turnaround": "Plazo de 24-48 horas",
         "notarization": "Notarización oficial",
         "authentication": "Autenticación legal",
-        "uscis": "Aceptado por USCIS",
         "verification": "Código de verificación digital",
         "delivery": "Entrega por correo electrónico",
         "support": "Soporte prioritario"
@@ -293,7 +292,6 @@
         "turnaround": "Plazo de 24-48 horas",
         "expertise": "Experiencia en documentos financieros",
         "verification": "Proceso de verificación mejorado",
-        "uscis": "Aceptado por USCIS",
         "digitalCode": "Código de verificación digital",
         "delivery": "Entrega por correo electrónico",
         "support": "Soporte prioritario"
@@ -327,7 +325,7 @@
     "description": "Calidad profesional con aceptación garantizada por las autoridades estadounidenses",
     "certified": {
       "title": "Certificado",
-      "description": "Todas las traducciones están certificadas por profesionales licenciados y autenticadas con sellos y firmas oficiales. Tasa de aceptación del USCIS del 99.9%."
+      "description": "Todas las traducciones están certificadas por profesionales licenciados y autenticadas con sellos y firmas oficiales."
     },
     "fastTurnaround": {
       "title": "Entrega Rápida",
@@ -341,7 +339,7 @@
       "0": {
         "name": "David Thompson",
         "location": "Canadá → Nueva York",
-        "text": "Servicio rápido y profesional. Mi traducción de certificado de nacimiento fue aceptada por USCIS sin problemas.",
+        "text": "Servicio rápido y profesional. Mi traducción de certificado de nacimiento fue aceptada por autoridades americanas sin problemas.",
         "document": "Certificado de Nacimiento"
       },
       "1": {
@@ -404,8 +402,8 @@
         "answer": "Las traducciones estándar se completan en 24-48 horas. Los servicios urgentes están disponibles para documentos urgentes (4-8 horas) con tarifa adicional."
       },
       "1": {
-        "question": "¿Son aceptadas sus traducciones por USCIS?",
-        "answer": "Sí, todas nuestras traducciones están certificadas y autenticadas, cumpliendo los requisitos de USCIS. Incluyen declaraciones de certificación oficial y son aceptadas por todas las autoridades de inmigración estadounidenses."
+        "question": "¿Sus traducciones están oficialmente certificadas?",
+        "answer": "Sí, todas nuestras traducciones están certificadas y autenticadas por profesionales licenciados. Incluyen declaraciones de certificación oficial y son aceptadas por todas las autoridades de inmigración estadounidenses."
       },
       "2": {
         "question": "¿Qué documentos pueden traducir?",
@@ -421,7 +419,7 @@
       },
       "5": {
         "question": "¿Qué idiomas soportan?",
-        "answer": "Soportamos Portugués, Portugués (Portugal), Español, Alemán, Árabe, Hebreo, Japonés y Coreano. Todos los documentos se traducen al inglés para los requisitos de USCIS y autoridades estadounidenses."
+        "answer": "Soportamos Portugués, Portugués (Portugal), Español, Alemán, Árabe, Hebreo, Japonés y Coreano. Todos los documentos se traducen al inglés para los requisitos de las autoridades estadounidenses."
       }
     }
   },
@@ -435,7 +433,7 @@
     "hebrew": "Hebreo",
     "japanese": "Japonés",
     "korean": "Coreano",
-    "description": "Todos los documentos son traducidos al inglés para requisitos del USCIS y autoridades americanas."
+    "description": "Todos los documentos son traducidos al inglés para requisitos de las autoridades americanas."
   },
   "footer": {
     "description": "Transformando sueños en realidad a través de mentoría especializada para becas de estudio en Estados Unidos.",
@@ -552,7 +550,7 @@
       },
       "guarantees": {
         "title": "Nuestras Garantías",
-        "uscisAccepted": "Aceptado por USCIS",
+        "uscisAccepted": "Aceptado por el Gobierno",
         "certifiedTranslation": "Traducción Certificada",
         "fastDelivery": "Entrega Rápida",
         "moneyBack": "Garantía de Devolución"
@@ -580,7 +578,7 @@
           "description": "Traducción estándar con certificación oficial para uso general, inmigración y propósitos legales.",
           "features": [
             "Sello de certificación oficial",
-            "Aceptado por USCIS",
+            "Aceptado por el gobierno",
             "Código de verificación digital",
             "Entrega en 24-48 horas"
           ]
@@ -627,12 +625,12 @@
           "Hebreo",
           "Coreano"
         ],
-        "note": "Todos los documentos son traducidos al inglés para requisitos de USCIS y autoridades estadounidenses."
+        "note": "Todos los documentos son traducidos al inglés para requisitos de las autoridades estadounidenses."
       },
       "serviceFeatures": {
         "title": "Características del Servicio",
         "features": [
-          "Aceptado por USCIS y Gobierno",
+          "Aceptado por el Gobierno",
           "Certificación Oficial",
           "Sistema de Verificación Digital",
           "Entrega en 24-48 Horas",
@@ -755,7 +753,7 @@
       }
     },
     "cos": {
-      "promise": "Cambiar su estatus dentro de los EE.UU. no tiene por qué ser un labirinto. Aquí encontrará una guía completa con todas las etapas, todos los valores y el soporte necesario para realizar su COS con seguridad, planificación financiera y acompañamiento jurídico hasta la respuesta del USCIS.",
+      "promise": "Cambiar su estatus dentro de los EE.UU. no tiene por qué ser un labirinto. Aquí encontrará una guía completa con todas las etapas, todos los valores y el soporte necesario para realizar su COS con seguridad, planificación financiera y acompañamiento jurídico hasta la respuesta final.",
       "subtitle": "Conozca todas las etapas necesarias para realizar el cambio de su estatus de visa",
       "step1": {
         "title": "Proceso de Selección",

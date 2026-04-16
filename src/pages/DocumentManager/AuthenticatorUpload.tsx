@@ -973,10 +973,6 @@ export default function AuthenticatorUpload() {
                 <ul className="relative text-xs text-gray-700 space-y-2">
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span className="font-medium">USCIS accepted translations</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                     <span className="font-medium">Official certification & authentication</span>
                   </li>
                   <li className="flex items-center gap-2">
@@ -1015,7 +1011,7 @@ export default function AuthenticatorUpload() {
                         </p>
                         <ul className="text-xs text-gray-500 space-y-1">
                           <li>• {t('upload.serviceInfo.translationTypes.certified.features.0', 'Official certification stamp')}</li>
-                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.1', 'USCIS accepted')}</li>
+                          <li>• {t('upload.serviceInfo.translationTypes.certified.features.1', 'Government accepted')}</li>
                           <li>• {t('upload.serviceInfo.translationTypes.certified.features.2', 'Digital verification code')}</li>
                           <li>• {t('upload.serviceInfo.translationTypes.certified.features.3', '24-48 hour turnaround')}</li>
                         </ul>

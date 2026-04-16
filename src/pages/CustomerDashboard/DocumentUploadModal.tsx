@@ -743,7 +743,6 @@ export function DocumentUploadModal({ isOpen, onClose, userId, userEmail, curren
                     {translationTypes.find(t => t.value === tipoTrad)?.label} ${tipoTrad === 'Notarized' ? '20' : '15'}{isExtrato ? ' + $10' : ''} per page × {pages} page{pages !== 1 ? 's' : ''}
                   </p>
                   <ul className="text-xs text-tfe-blue-950/70 list-disc pl-4 space-y-1">
-                    <li>USCIS accepted translations</li>
                     <li>Official certification & authentication</li>
                     <li>Digital verification system</li>
                     <li>24/7 customer support</li>

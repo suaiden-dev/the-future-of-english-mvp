@@ -38,10 +38,6 @@ export function Translations() {
       answer: "Standard translations are completed within 24-48 hours. Rush services are available for urgent documents (4-8 hours) at an additional fee."
     },
     {
-      question: "Are your translations accepted by USCIS?",
-      answer: "Yes, all our translations are certified and notarized, meeting USCIS requirements. They include official certification statements and are accepted by all US immigration authorities."
-    },
-    {
       question: "What documents can you translate?",
       answer: "We translate all immigration documents including birth certificates, marriage certificates, academic transcripts, medical records, police clearances, and more. Contact us for specific document types."
     },
@@ -55,7 +51,7 @@ export function Translations() {
     },
     {
       question: "What languages do you support?",
-      answer: "We support Portuguese, Portuguese (Portugal), Spanish, German, Arabic, Hebrew, Japanese, and Korean. All documents are translated to English for USCIS and US authority requirements."
+      answer: "We support Portuguese, Portuguese (Portugal), Spanish, German, Arabic, Hebrew, Japanese, and Korean. All documents are translated to English for US authority requirements."
     }
   ];
 
@@ -64,7 +60,7 @@ export function Translations() {
       name: "David Thompson",
       location: "Canada → New York",
       image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      text: "Fast and professional service. My birth certificate translation was accepted by USCIS without any issues.",
+      text: "Fast and professional service. My birth certificate translation was accepted by US authorities without any issues.",
       rating: 5,
       document: "Birth Certificate"
     },
@@ -95,7 +91,6 @@ export function Translations() {
       features: [
         "24-48 hour turnaround",
         "Official certification stamp",
-        "USCIS accepted",
         "Digital verification code",
         "Email delivery",
         "Standard support"
@@ -111,7 +106,6 @@ export function Translations() {
         "24-48 hour turnaround",
         "Official notarization",
         "Legal notarization",
-        "USCIS accepted",
         "Digital verification code",
         "Email delivery",
         "Priority support"
@@ -128,7 +122,6 @@ export function Translations() {
         "Enhanced verification process",
         "Financial document formatting",
         "Additional security measures",
-        "USCIS accepted",
         "Digital verification code",
         "Email delivery"
       ],
@@ -235,15 +228,6 @@ export function Translations() {
                 <div className="flex flex-col items-center gap-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Trusted & Certified</h3>
                   
-                  {/* USCIS Logo */}
-                  <div className="flex items-center justify-center">
-                    <img 
-                      src="/USCIS_Signature_Preferred_FC.png" 
-                      alt="USCIS Preferred Signature" 
-                      className="h-20 w-auto object-contain"
-                    />
-                  </div>
-                  
                   {/* ATA Logo */}
                   <div className="flex items-center justify-center">
                     <img 
@@ -257,7 +241,7 @@ export function Translations() {
                   {/* Trust Badge */}
                   <div className="flex items-center gap-2 mt-2">
                     <i className="far fa-check-circle text-green-600"></i>
-                    <span className="text-sm font-semibold text-gray-900">100% Accepted by USCIS</span>
+                    <span className="text-sm font-semibold text-gray-900">100% Officially Certified</span>
                   </div>
                 </div>
               </div>
@@ -383,7 +367,7 @@ export function Translations() {
                 icon: "fa-medal",
                 iconStyle: "fas",
                 title: "Certified & Notarized",
-                description: "All translations are certified by licensed professionals. 99.9% USCIS acceptance rate.",
+                description: "All translations are certified by licensed professionals with official seals and signatures.",
                 color: "bg-tfe-blue-600"
               },
               {
@@ -396,8 +380,8 @@ export function Translations() {
               {
                 icon: "fa-file-alt",
                 iconStyle: "far",
-                title: "USCIS Compliant",
-                description: "All translations meet USCIS requirements and are accepted worldwide.",
+                title: "Globally Accepted",
+                description: "All translations meet international standards and are accepted by authorities worldwide.",
                 color: "bg-tfe-blue-600"
               }
             ].map((feature, index) => {

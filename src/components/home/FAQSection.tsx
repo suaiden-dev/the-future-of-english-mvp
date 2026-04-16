@@ -69,7 +69,7 @@ export function FAQSection() {
               Legal Disclaimer
             </h4>
             <p className="text-amber-800 text-sm md:text-base italic leading-relaxed">
-              Notice: The Future of English is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational.
+              Notice: The Future of English is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates. Human support is only operational.
             </p>
           </div>
         </div>

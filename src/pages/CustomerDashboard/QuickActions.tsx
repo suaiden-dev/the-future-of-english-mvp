@@ -140,7 +140,6 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
       <div className="space-y-3">
         <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3">{t('dashboard.quickActions.features.title')}</h4>
         {[
-          t('dashboard.quickActions.features.list.uscisAccepted'),
           t('dashboard.quickActions.features.list.officialCertification'),
           t('dashboard.quickActions.features.list.digitalVerification'),
           t('dashboard.quickActions.features.list.support')

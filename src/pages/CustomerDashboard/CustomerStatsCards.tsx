@@ -95,7 +95,7 @@ export function CustomerStatsCards({ documents }: CustomerStatsCardsProps) {
             <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.turnaround')}</div>
           </div>
           <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
-            <div className="text-3xl font-black text-purple-600">USCIS</div>
+            <div className="text-3xl font-black text-purple-600">100%</div>
             <div className="text-base font-medium text-gray-600">{t('dashboard.statistics.features.accepted')}</div>
           </div>
           <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-xl border border-gray-200">

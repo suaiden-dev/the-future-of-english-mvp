@@ -156,7 +156,7 @@
       "features": {
         "title": "What you get:",
         "list": {
-          "uscisAccepted": "USCIS accepted translations",
+          "uscisAccepted": "Certified translations",
           "officialCertification": "Official certification & authentication",
           "digitalVerification": "Digital verification system",
           "support": "24/7 customer support"
@@ -175,7 +175,7 @@
     "pendingDocuments": "Pending Documents",
     "completedDocuments": "Completed Documents",
     "processingDocuments": "Processing Documents",
-    "uploadDescription": "Upload your documents for professional translation services. All translations are certified and accepted by USCIS and US authorities.",
+    "uploadDescription": "Upload your documents for professional translation services. All translations are certified and accepted by US authorities.",
     "notifications": {
       "translationReady": "Your translation is ready!",
       "download": "Download",
@@ -260,7 +260,7 @@
     "fastResults": "Fast Results"
   },
   "stats": {
-    "uscisAcceptance": "USCIS Acceptance",
+    "uscisAcceptance": "Acceptance Rate",
     "avgTurnaround": "Avg. Turnaround",
     "documentsTranslated": "Documents Translated",
     "languagesSupported": "Languages Supported"
@@ -280,7 +280,6 @@
         "turnaround": "24-48 hour turnaround",
         "notarization": "Official notarization",
         "authentication": "Legal authentication",
-        "uscis": "USCIS accepted",
         "verification": "Digital verification code",
         "delivery": "Email delivery",
         "support": "Priority support"
@@ -293,7 +292,6 @@
         "turnaround": "24-48 hour turnaround",
         "expertise": "Financial document expertise",
         "verification": "Enhanced verification process",
-        "uscis": "USCIS accepted",
         "digitalCode": "Digital verification code",
         "delivery": "Email delivery",
         "support": "Priority support"
@@ -327,7 +325,7 @@
     "description": "Professional quality with guaranteed acceptance by US authorities",
     "certified": {
       "title": "Certified",
-      "description": "All translations are certified by licensed professionals and authenticated with official seals and signatures. 99.9% USCIS acceptance rate."
+      "description": "All translations are certified by licensed professionals and authenticated with official seals and signatures."
     },
     "fastTurnaround": {
       "title": "Fast Turnaround",
@@ -341,7 +339,7 @@
       "0": {
         "name": "David Thompson",
         "location": "Canada → New York",
-        "text": "Fast and professional service. My birth certificate translation was accepted by USCIS without any issues.",
+        "text": "Fast and professional service. My birth certificate translation was accepted by US authorities without any issues.",
         "document": "Birth Certificate"
       },
       "1": {
@@ -404,8 +402,8 @@
         "answer": "Standard translations are completed within 24-48 hours. Rush services are available for urgent documents (4-8 hours) at an additional fee."
       },
       "1": {
-        "question": "Are your translations accepted by USCIS?",
-        "answer": "Yes, all our translations are certified and authenticated, meeting USCIS requirements. They include official certification statements and are accepted by all US immigration authorities."
+        "question": "Are your translations officially certified?",
+        "answer": "Yes, all our translations are certified and authenticated by licensed professionals. They include official certification statements and are accepted by all US immigration authorities."
       },
       "2": {
         "question": "What documents can you translate?",
@@ -421,7 +419,7 @@
       },
       "5": {
         "question": "What languages do you support?",
-        "answer": "We support Portuguese, Portuguese (Portugal), Spanish, German, Arabic, Hebrew, Japanese, and Korean. All documents are translated to English for USCIS and US authority requirements."
+        "answer": "We support Portuguese, Portuguese (Portugal), Spanish, German, Arabic, Hebrew, Japanese, and Korean. All documents are translated to English for US authority requirements."
       }
     }
   },
@@ -435,7 +433,7 @@
     "hebrew": "Hebrew",
     "japanese": "Japanese",
     "korean": "Korean",
-    "description": "All documents are translated to English for USCIS and American authorities requirements."
+    "description": "All documents are translated to English for American authorities requirements."
   },
   "footer": {
     "description": "Transforming dreams into reality through specialized mentoring for scholarships in the United States.",
@@ -562,7 +560,7 @@
       },
       "guarantees": {
         "title": "Our Guarantees",
-        "uscisAccepted": "USCIS Accepted",
+        "uscisAccepted": "Gov. Accepted",
         "certifiedTranslation": "Certified Translation",
         "fastDelivery": "Fast Delivery",
         "moneyBack": "Money Back Guarantee"
@@ -570,7 +568,7 @@
       "processPayment": "Process Payment"
     },
     "badges": {
-      "uscisAccepted": "USCIS Accepted",
+      "uscisAccepted": "Certified",
       "fastDelivery": "Fast Delivery"
     },
     "errors": {
@@ -594,7 +592,7 @@
           "description": "Standard translation with official certification for general use, immigration, and legal purposes.",
           "features": [
             "Official certification stamp",
-            "USCIS accepted",
+            "Government accepted",
             "Digital verification code",
             "24-48 hour turnaround"
           ]
@@ -641,12 +639,12 @@
           "Hebrew",
           "Korean"
         ],
-        "note": "All documents are translated to English for USCIS and US authority requirements."
+        "note": "All documents are translated to English for US authority requirements."
       },
       "serviceFeatures": {
         "title": "Service Features",
         "features": [
-          "USCIS & Government Accepted",
+          "Government Accepted",
           "Official Certification",
           "Digital Verification System",
           "24-48 Hour Turnaround",
@@ -769,7 +767,7 @@
       }
     },
     "cos": {
-      "promise": "Changing your status within the USA doesn't have to be a maze. Here you find a complete guide with all the steps, all the values, and the necessary support to do your COS with safety, financial planning, and legal monitoring until the USCIS response.",
+      "promise": "Changing your status within the USA doesn't have to be a maze. Here you find a complete guide with all the steps, all the values, and the necessary support to do your COS with safety, financial planning, and legal monitoring until the final response.",
       "subtitle": "Know all the steps necessary to carry out your visa status change",
       "step1": {
         "title": "Selection Process",
