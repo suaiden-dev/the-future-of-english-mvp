@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useDocuments, useAllDocuments } from './hooks/useDocuments';
 import { useFolders } from './hooks/useFolders';
@@ -32,9 +32,6 @@ import { ZelleCheckout } from './pages/ZelleCheckout';
 import { AffiliatesRegister } from './pages/AffiliatesRegister';
 import { AffiliatesLogin } from './pages/AffiliatesLogin';
 import { AffiliateDashboard } from './pages/AffiliateDashboard';
-import Initial from './pages/Initial';
-import Transfer from './pages/Transfer';
-import Cos from './pages/Cos';
 import { Home as HomeIcon, FileText, Search, User as UserIcon, Shield, LogIn, UserPlus, Upload as UploadIcon, Menu, X, Users, UserCheck, Folder, User, DollarSign, Activity, MessageSquare, ShieldCheck } from 'lucide-react';
 
 import { Page } from './types/Page';
@@ -177,9 +174,6 @@ function App() {
     const baseItems = [
       { id: 'home', label: 'Home', page: '/' as Page },
       { id: 'translations', label: 'Translations', page: 'translations' as Page },
-      { id: 'initial', label: 'Initial', page: 'initial' as Page },
-      { id: 'transfer', label: 'Transfer', page: 'transfer' as Page },
-      { id: 'cos', label: 'COS', page: 'cos' as Page },
       { id: 'verify', label: 'Verify Document', page: 'verify' as Page },
     ];
 
@@ -341,7 +335,7 @@ function App() {
       <MobileMenu />
       
       {/* Renderiza Header apenas em rotas públicas */}
-      {(['/', '/translations', '/verify', '/login', '/register', '/affiliates/register', '/affiliates/login', '/initial', '/transfer', '/cos'].includes(location.pathname) || 
+      {(['/', '/translations', '/verify', '/login', '/register', '/affiliates/register', '/affiliates/login'].includes(location.pathname) || 
         (location.pathname.startsWith('/affiliates') && !location.pathname.startsWith('/affiliates/dashboard'))) && (
         <Header 
           user={user} 
@@ -353,9 +347,6 @@ function App() {
       <AuthRedirect>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/initial" element={<Initial />} />
-          <Route path="/transfer" element={<Transfer />} />
-          <Route path="/cos" element={<Cos />} />
           <Route path="/translations" element={<Translations />} />
 
           <Route path="/verify" element={<DocumentVerification />} />

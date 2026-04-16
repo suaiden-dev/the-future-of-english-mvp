@@ -8,8 +8,7 @@ export function AboutSection() {
   const stats = [
     { number: "$2M+", label: t('about.scholarshipsSecured'), icon: Money },
     { number: "50+", label: t('about.partnerSchools'), icon: Buildings },
-    { number: "70+", label: t('about.countriesServed'), icon: Flag },
-    { number: "3-6", label: t('about.monthsAverage'), icon: Clock }
+    { number: "70+", label: t('about.countriesServed'), icon: Flag }
   ];
 
   return (
@@ -39,7 +38,7 @@ export function AboutSection() {
           </div>
 
           {/* Estatísticas - Agora com informações únicas */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
             {stats.map((stat, index) => (
               <div key={index} className="text-center group">
                 <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
@@ -53,45 +52,7 @@ export function AboutSection() {
             ))}
           </div>
 
-          {/* Cards de características - Focando em aspectos únicos */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            {[
-              {
-                icon: Globe,
-                title: t('about.features.globalNetwork.title'),
-                description: t('about.features.globalNetwork.description'),
-                color: "bg-tfe-blue-500"
-              },
-              {
-                icon: Certificate,
-                title: t('about.features.expertGuidance.title'),
-                description: t('about.features.expertGuidance.description'),
-                color: "bg-tfe-red-500"
-              },
-              {
-                icon: CheckCircle,
-                title: t('about.features.endToEndSupport.title'),
-                description: t('about.features.endToEndSupport.description'),
-                color: "bg-tfe-blue-600"
-              }
-            ].map((feature, index) => (
-              <div key={index} className="group cursor-pointer transition-all duration-500 hover:scale-105">
-                <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 group-hover:border-blue-200">
-                  <div className={`w-16 h-16 rounded-xl ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                    <feature.icon className="w-8 h-8 text-white" weight="fill" />
-                  </div>
-                  
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 group-hover:text-tfe-blue-600 transition-colors">
-                    {feature.title}
-                  </h3>
-                  
-                  <p className="text-gray-600 leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+
 
           {/* Seção de valores */}
           <div className="bg-gray-50 rounded-3xl p-8 md:p-12 relative overflow-hidden">

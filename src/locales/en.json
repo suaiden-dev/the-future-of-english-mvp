@@ -250,10 +250,10 @@
   "hero": {
     "title1": "Transform Your",
     "title2": "Future with",
-    "description": "Specialized mentorship to find the best school and secure your scholarship opportunity with our proven",
+    "description": "Specialized mentorship to find the best school and secure your scholarship opportunity.",
     "startTranslation": "Start Translation",
     "verifyDocument": "Verify Document",
-    "successRate": "95% success rate.",
+    "successRate": "",
     "startNow": "I Want to Start Now",
     "talkToSpecialist": "Talk to a Specialist",
     "personalized": "100% Personalized",
@@ -449,7 +449,7 @@
       "title": "Contact",
       "location": "United States"
     },
-    "copyright": "© 2025 The Future of English. All rights reserved.",
+    "copyright": "© 2026 The Future of English. All rights reserved.",
     "links": {
       "privacy": "Privacy Policy",
       "terms": "Terms of Use",
@@ -459,7 +459,7 @@
   "about": {
     "title": "About",
     "titleUs": "Us",
-    "description": "At The Future of English, we help international students realize their dream of studying in the United States. We offer complete guidance, from school selection to securing the ideal scholarship — with excellence, transparency and proven results.",
+    "description": "At The Future of English, we help international students realize their dream of studying in the United States. From school selection to securing the ideal scholarship — with excellence and transparency.",
     "scholarshipsSecured": "Scholarships Secured",
     "partnerSchools": "Partner Schools",
     "countriesServed": "Countries Served",

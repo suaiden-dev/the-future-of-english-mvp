@@ -251,10 +251,10 @@
   "hero": {
     "title1": "Transforme Seu",
     "title2": "Futuro com",
-    "description": "Mentoria especializada para encontrar a melhor escola e garantir sua oportunidade de bolsa de estudos com nossa comprovada taxa de sucesso de 95%.",
+    "description": "Mentoria especializada para encontrar a melhor escola e garantir sua oportunidade de bolsa de estudos.",
     "startTranslation": "Iniciar Tradução",
     "verifyDocument": "Verificar Documento",
-    "successRate": "taxa de sucesso de 95%",
+    "successRate": "",
     "startNow": "Quero Começar Agora",
     "talkToSpecialist": "Falar com Especialista",
     "personalized": "100% Personalizado",
@@ -450,7 +450,7 @@
       "title": "Contato",
       "location": "Estados Unidos"
     },
-    "copyright": "© 2025 The Future of English. Todos os direitos reservados.",
+    "copyright": "© 2026 The Future of English. Todos os direitos reservados.",
     "links": {
       "privacy": "Política de Privacidade",
       "terms": "Termos de Uso",
@@ -460,7 +460,7 @@
   "about": {
     "title": "Sobre",
     "titleUs": "Nós",
-    "description": "Na The Future of English, ajudamos estudantes internacionais a realizar seu sonho de estudar nos Estados Unidos. Oferecemos orientação completa, desde a seleção da escola até a obtenção da bolsa ideal — com excelência, transparência e resultados comprovados.",
+    "description": "Na The Future of English, ajudamos estudantes internacionais a realizar seu sonho de estudar nos Estados Unidos. Desde a seleção da escola até a obtenção da bolsa ideal — com excelência e transparência.",
     "scholarshipsSecured": "Bolsas Conquistadas",
     "partnerSchools": "Escolas Parceiras",
     "countriesServed": "Países Atendidos",

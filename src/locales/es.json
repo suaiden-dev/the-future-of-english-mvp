@@ -250,10 +250,10 @@
   "hero": {
     "title1": "Transforma Tu",
     "title2": "Futuro con",
-    "description": "Mentoría especializada para encontrar la mejor escuela y asegurar tu oportunidad de beca con nuestra comprobada tasa de éxito del 95%.",
+    "description": "Mentoría especializada para encontrar la mejor escuela y asegurar tu oportunidad de beca.",
     "startTranslation": "Iniciar Traducción",
     "verifyDocument": "Verificar Documento",
-    "successRate": "tasa de éxito del 95%",
+    "successRate": "",
     "startNow": "Quiero Empezar Ahora",
     "talkToSpecialist": "Hablar con Especialista",
     "personalized": "100% Personalizado",
@@ -449,7 +449,7 @@
       "title": "Contacto",
       "location": "Estados Unidos"
     },
-    "copyright": "© 2025 The Future of English. Todos los derechos reservados.",
+    "copyright": "© 2026 The Future of English. Todos los derechos reservados.",
     "links": {
       "privacy": "Política de Privacidad",
       "terms": "Términos de Uso",
@@ -459,7 +459,7 @@
   "about": {
     "title": "Sobre",
     "titleUs": "Nosotros",
-    "description": "En The Future of English, ayudamos a estudiantes internacionales a realizar su sueño de estudiar en los Estados Unidos. Ofrecemos orientación completa, desde la selección de la escuela hasta la obtención de la beca ideal — con excelencia, transparencia y resultados comprobados.",
+    "description": "En The Future of English, ayudamos a estudiantes internacionales a realizar su sueño de estudiar en los Estados Unidos. Desde la selección de la escuela hasta la obtención de la beca ideal — con excelencia y transparencia.",
     "scholarshipsSecured": "Becas Obtenidas",
     "partnerSchools": "Escuelas Asociadas",
     "countriesServed": "Países Atendidos",

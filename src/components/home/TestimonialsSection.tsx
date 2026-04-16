@@ -74,7 +74,6 @@ export function TestimonialsSection() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
             {[
               { number: '500+', label: 'Students Approved', icon: Users },
-              { number: '95%', label: 'Success Rate', icon: Trophy },
               { number: '70%', label: 'Average Scholarship', icon: Money },
               { number: '4.9', label: 'Average Rating', icon: Star }
             ].map((stat, index) => (

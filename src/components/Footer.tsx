@@ -1,4 +1,4 @@
-﻿import { Envelope, MapPin } from '@phosphor-icons/react';
+import { Envelope, MapPin } from '@phosphor-icons/react';
 import { useI18n } from '../contexts/I18nContext';
 
 export function Footer() {
@@ -79,17 +79,7 @@ export function Footer() {
               {t('footer.copyright')}
             </div>
             
-            <div className="flex gap-6 text-sm">
-              <a href="/privacy" className="text-gray-400 hover:text-white transition-colors">
-                {t('footer.links.privacy')}
-              </a>
-              <a href="/terms" className="text-gray-400 hover:text-white transition-colors">
-                {t('footer.links.terms')}
-              </a>
-              <a href="/cookies" className="text-gray-400 hover:text-white transition-colors">
-                {t('footer.links.cookies')}
-              </a>
-            </div>
+
           </div>
         </div>
       </div>

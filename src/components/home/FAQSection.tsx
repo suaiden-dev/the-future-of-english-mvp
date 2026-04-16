@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CaretDown, CaretUp } from '@phosphor-icons/react';
+import { CaretDown, CaretUp, Info } from '@phosphor-icons/react';
 
 export function FAQSection() {
   const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
@@ -11,20 +11,17 @@ export function FAQSection() {
     },
     {
       question: "What are the costs involved?",
-      answer: "Costs vary based on your profile and chosen services. We offer transparent pricing with no hidden fees. Each stage has specific costs that we clearly explain during your initial guidance session."
+      answer: "Costs vary based on your profile and chosen services. We offer transparent pricing with no hidden fees. Each stage has specific costs that we clearly explain during your initial session."
     },
     {
       question: "Do you guarantee scholarship approval?",
-      answer: "While we can't guarantee approval, we have a 95% success rate. Our expertise in profile matching and school selection significantly increases your chances of securing scholarships."
+      answer: "Our expertise in profile matching and school selection significantly increases your chances of securing scholarships."
     },
     {
       question: "What documents do I need to start?",
-      answer: "Basic requirements include passport, educational certificates, financial statements, and English proficiency proof. We'll provide a complete checklist during pre-qualification."
+      answer: "We'll provide a complete checklist during pre-qualification."
     },
-    {
-      question: "Can I work while studying?",
-      answer: "Yes, international students can work on-campus up to 20 hours per week during the academic year and full-time during breaks. We'll guide you through work authorization processes."
-    }
+
   ];
 
   return (
@@ -61,7 +58,23 @@ export function FAQSection() {
             </div>
           ))}
         </div>
+
+        {/* Legal Disclaimer */}
+        <div className="mt-12 bg-amber-50 rounded-2xl p-6 md:p-8 border-l-4 border-amber-500 flex gap-4 md:gap-6 items-start">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-amber-500 rounded-full flex-shrink-0 flex items-center justify-center">
+            <Info className="w-5 h-5 md:w-6 md:h-6 text-white" weight="fill" />
+          </div>
+          <div>
+            <h4 className="text-amber-900 font-bold uppercase tracking-wider mb-2 text-sm md:text-base">
+              Legal Disclaimer
+            </h4>
+            <p className="text-amber-800 text-sm md:text-base italic leading-relaxed">
+              Notice: The Future of English is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   );
-} 
+}
+ 

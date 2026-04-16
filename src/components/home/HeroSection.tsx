@@ -42,7 +42,6 @@ export function HeroSection() {
 
             <p className="text-lg sm:text-xl mb-6 sm:mb-8 text-gray-600 max-w-xl leading-relaxed">
               {t('hero.description')}
-              <span className="font-semibold text-tfe-red-600"> {t('hero.successRate')}</span>
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
@@ -54,14 +53,6 @@ export function HeroSection() {
                   {t('hero.startNow')}
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
-              </button>
-
-              <button
-                onClick={() => window.open('https://wa.me/13237883117?text=Hello%20The%20Future%20of%20English,%20I%20would%20like%20to%20know%20more%20about%20the%20visa%20consulting%20service.', '_blank')}
-                className="group border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 cursor-pointer whitespace-nowrap flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-              >
-                <ChatCircle className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
-                {t('hero.talkToSpecialist')}
               </button>
             </div>
 
@@ -95,17 +86,7 @@ export function HeroSection() {
                 />
               </div>
               {/* Enhanced Floating Cards - Responsive Positioning */}
-              <div className="absolute -top-4 sm:-top-6 lg:-top-8 -right-4 sm:-right-6 lg:-right-8 bg-white rounded-2xl shadow-2xl p-4 sm:p-6 border border-gray-100 transform hover:scale-105 transition-transform duration-300">
-                <div className="flex items-center gap-2 sm:gap-4">
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 bg-tfe-blue-600 rounded-2xl flex items-center justify-center">
-                    <TrendUp className="w-5 h-5 sm:w-7 sm:h-7 text-white" weight="fill" />
-                  </div>
-                  <div>
-                    <div className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">95%</div>
-                    <div className="text-xs sm:text-sm text-gray-500 font-medium">Success Rate</div>
-                  </div>
-                </div>
-              </div>
+
               <div className="absolute -bottom-4 sm:-bottom-6 lg:-bottom-8 -left-4 sm:-left-6 lg:-left-8 bg-white rounded-2xl shadow-2xl p-4 sm:p-6 border border-gray-100 transform hover:scale-105 transition-transform duration-300">
                 <div className="flex items-center gap-2 sm:gap-4">
                   <div className="w-10 h-10 sm:w-14 sm:h-14 bg-tfe-red-600 rounded-2xl flex items-center justify-center">
