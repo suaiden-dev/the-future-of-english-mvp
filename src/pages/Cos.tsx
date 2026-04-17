@@ -6,7 +6,6 @@ import ValuesSummary from "@/components/cos/ValuesSummary";
 import ClientsSection from "@/components/shared/ClientsSection";
 import ContactForm from "@/components/shared/ContactForm";
 import Footer from "@/components/cos/Footer";
-import ChatBot from "@/components/shared/Chatbot";
 import { useTranslation } from "react-i18next";
 
 const Index = () => {
@@ -23,7 +22,6 @@ const Index = () => {
       <ClientsSection />
       <ContactForm />
       <Footer />
-      <ChatBot />
     </div>
   );
 };

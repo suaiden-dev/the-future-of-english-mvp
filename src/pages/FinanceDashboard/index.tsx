@@ -5,7 +5,6 @@ import { PaymentStatsCards } from './PaymentStatsCards';
 import { FinanceCharts } from './FinanceCharts';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
 import { ZelleReceiptsAdmin } from '../../components/ZelleReceiptsAdmin';
-import { ChatbotHome } from '../../components/ChatbotHome';
 import { Document } from '../../App';
 import { Home, CreditCard, Receipt } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -134,7 +133,6 @@ export function FinanceDashboard({ documents }: FinanceDashboardProps) {
           onClose={handleCloseModal}
         />
       )}
-      <ChatbotHome />
     </div>
   );
 }

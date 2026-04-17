@@ -6,7 +6,6 @@ import ValuesSummary from "@/components/transfer/ValuesSummary";
 import ClientsSection from "@/components/shared/ClientsSection";
 import ContactForm from "@/components/shared/ContactForm";
 import Footer from "@/components/transfer/Footer";
-import ChatBot from "@/components/shared/Chatbot";
 import { useTranslation } from "react-i18next";
 
 const Transfer = () => {
@@ -22,7 +21,6 @@ const Transfer = () => {
       <ValuesSummary />
       <ContactForm />
       <Footer />
-      <ChatBot />
     </div>
   );
 };

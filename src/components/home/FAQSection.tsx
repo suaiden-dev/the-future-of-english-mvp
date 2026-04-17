@@ -6,10 +6,6 @@ export function FAQSection() {
 
   const faqs = [
     {
-      question: "How long does the entire process take?",
-      answer: "The timeline varies by profile. Initial students typically take 3-6 months, COS students 2-4 months, and transfers 1-3 months. We provide detailed timelines during your initial consultation."
-    },
-    {
       question: "What are the costs involved?",
       answer: "Costs vary based on your profile and chosen services. We offer transparent pricing with no hidden fees. Each stage has specific costs that we clearly explain during your initial session."
     },
@@ -69,7 +65,7 @@ export function FAQSection() {
               Legal Disclaimer
             </h4>
             <p className="text-amber-800 text-sm md:text-base italic leading-relaxed">
-              Notice: The Future of English is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational.
+              Notice: The Future of English is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational. We offer educational consulting and school application assistance only.
             </p>
           </div>
         </div>

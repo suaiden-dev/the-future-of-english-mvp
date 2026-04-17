@@ -6,7 +6,6 @@ import { QuickActions } from './QuickActions';
 import { DocumentUploadModal } from './DocumentUploadModal';
 import { DocumentsList } from './DocumentsList';
 import { DocumentDetailsModal } from './DocumentDetailsModal';
-import { ChatbotHome } from '../../components/ChatbotHome';
 import { DocumentUploadRetry } from '../../components/DocumentUploadRetry/DocumentUploadRetry';
 // import { DocumentManager } from './DocumentManager';
 import { Document, Folder } from '../../App';
@@ -172,7 +171,6 @@ export function CustomerDashboard({
           onClose={handleCloseDetailsModal}
         />
       </div>
-      <ChatbotHome />
     </div>
   );
 }

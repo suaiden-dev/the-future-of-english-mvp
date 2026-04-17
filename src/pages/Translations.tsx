@@ -1,7 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Footer } from '../components/Footer';
-import { ChatbotHome } from '../components/ChatbotHome';
 
 export function Translations() {
   const navigate = useNavigate();
@@ -39,7 +38,7 @@ export function Translations() {
     },
     {
       question: "What documents can you translate?",
-      answer: "We translate all immigration documents including birth certificates, marriage certificates, academic transcripts, medical records, police clearances, and more. Contact us for specific document types."
+      answer: "We translate all documents including birth certificates, marriage certificates, academic transcripts, medical records, and more. Contact us for specific document types."
     },
     {
       question: "How do I verify my translation is authentic?",
@@ -51,34 +50,7 @@ export function Translations() {
     },
     {
       question: "What languages do you support?",
-      answer: "We support Portuguese, Portuguese (Portugal), Spanish, German, Arabic, Hebrew, Japanese, and Korean. All documents are translated to English for US authority requirements."
-    }
-  ];
-
-  const testimonials = [
-    {
-      name: "David Thompson",
-      location: "Canada → New York",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      text: "Fast and professional service. My birth certificate translation was accepted by US authorities without any issues.",
-      rating: 5,
-      document: "Birth Certificate"
-    },
-    {
-      name: "Jessica Martinez",
-      location: "Mexico → Texas",
-      image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-      text: "Excellent quality and quick turnaround. The verification system gave me peace of mind.",
-      rating: 5,
-      document: "Academic Transcript"
-    },
-    {
-      name: "Ryan Anderson",
-      location: "Brazil → California",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-      text: "Professional service with competitive pricing. My marriage certificate translation was perfect.",
-      rating: 5,
-      document: "Marriage Certificate"
+      answer: "We support Portuguese, Portuguese (Portugal), Spanish, German, Arabic, Hebrew, Japanese, and Korean. All documents are translated to English."
     }
   ];
 
@@ -101,11 +73,9 @@ export function Translations() {
       name: "Notarized Translation",
       price: "$20.00",
       period: "per page",
-      description: "Official notarized translation with legal notarization",
+      description: "Official notarized translation",
       features: [
         "24-48 hour turnaround",
-        "Official notarization",
-        "Legal notarization",
         "Digital verification code",
         "Email delivery",
         "Priority support"
@@ -167,7 +137,7 @@ export function Translations() {
                 <span className="text-tfe-red-600">Document Translation</span>
               </h1>
               <p className="text-xl sm:text-2xl text-gray-200 mb-10 max-w-2xl leading-relaxed">
-                Certified translation services for immigration documents with official authentication and verification
+                Certified translation services for documents with official authentication and verification
               </p>
 
               {/* Main CTA Button */}
@@ -367,7 +337,7 @@ export function Translations() {
                 icon: "fa-medal",
                 iconStyle: "fas",
                 title: "Certified & Notarized",
-                description: "All translations are certified by licensed professionals with official seals and signatures.",
+                description: "All translations are certified.",
                 color: "bg-tfe-blue-600"
               },
               {
@@ -381,7 +351,7 @@ export function Translations() {
                 icon: "fa-file-alt",
                 iconStyle: "far",
                 title: "Globally Accepted",
-                description: "All translations meet international standards and are accepted by authorities worldwide.",
+                description: "All translations meet international standards and are accepted worldwide.",
                 color: "bg-tfe-blue-600"
               }
             ].map((feature, index) => {
@@ -519,7 +489,7 @@ export function Translations() {
             <div className="bg-white p-8 rounded-xl border border-gray-200">
               <h3 className="text-xl font-semibold text-gray-900 mb-6">Common Documents</h3>
               <div className="space-y-3">
-                {["Birth Certificates", "Marriage Certificates", "Academic Transcripts", "Bank Statements", "Medical Records", "Legal Documents"].map((doc, idx) => (
+                {["Birth Certificates", "Marriage Certificates", "Academic Transcripts", "Bank Statements", "Medical Records"].map((doc, idx) => (
                   <div key={idx} className="flex items-center space-x-2">
                     <i className="far fa-check-circle text-green-600 flex-shrink-0"></i>
                     <span className="text-gray-700">{doc}</span>
@@ -531,7 +501,7 @@ export function Translations() {
             <div className="bg-white p-8 rounded-xl border border-gray-200">
               <h3 className="text-xl font-semibold text-gray-900 mb-6">And More</h3>
               <div className="space-y-3">
-                {["Business Contracts", "Technical Manuals", "Website Content", "Marketing Materials", "Any Official Document"].map((doc, idx) => (
+                {["Business Contracts", "Technical Manuals", "Website Content", "Marketing Materials", "Any Document"].map((doc, idx) => (
                   <div key={idx} className="flex items-center space-x-2">
                     <i className="far fa-check-circle text-green-600 flex-shrink-0"></i>
                     <span className="text-gray-700">{doc}</span>
@@ -551,43 +521,6 @@ export function Translations() {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-              What Our Clients Say
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Real feedback from satisfied clients
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex items-center mb-4">
-                  <img src={testimonial.image} alt={testimonial.name} className="w-12 h-12 rounded-full object-cover mr-3" />
-                  <div>
-                    <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
-                    <p className="text-xs text-gray-600">{testimonial.location}</p>
-                    <div className="flex items-center mt-1">
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <i key={i} className="fas fa-star text-yellow-400"></i>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-700 text-sm mb-3 italic">"{testimonial.text}"</p>
-                <div className="inline-block bg-tfe-blue-50 text-tfe-blue-700 px-3 py-1 rounded-full text-xs font-medium">
-                  {testimonial.document}
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -635,15 +568,7 @@ export function Translations() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-xl border border-gray-200 text-center hover:shadow-md transition-all duration-300 cursor-pointer" onClick={() => window.location.href = 'tel:+13237883117'}>
-              <div className="w-12 h-12 flex items-center justify-center mx-auto mb-4">
-                <i className="far fa-phone text-xl" style={{ color: '#1e40af' }}></i>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Phone</h3>
-              <p className="text-gray-600 text-sm">(323) 788-3117</p>
-            </div>
-            
+          <div className="flex justify-center">
             <div className="bg-white p-6 rounded-xl border border-gray-200 text-center">
               <div className="w-12 h-12 flex items-center justify-center mx-auto mb-4">
                 <i className="far fa-envelope text-xl" style={{ color: '#dc2626' }}></i>
@@ -651,21 +576,12 @@ export function Translations() {
               <h3 className="font-semibold text-gray-900 mb-2">Email</h3>
               <p className="text-gray-600 text-sm">translations@thefutureofenglish.com</p>
             </div>
-            
-            <div className="bg-white p-6 rounded-xl border border-gray-200 text-center hover:shadow-md transition-all duration-300 cursor-pointer" onClick={() => window.open('https://wa.me/13237883117?text=Hello%20The%20Future%20of%20English,%20I%20would%20like%20to%20know%20more%20about%20the%20visa%20consulting%20service.', '_blank')}>
-              <div className="w-12 h-12 flex items-center justify-center mx-auto mb-4">
-                <i className="fab fa-whatsapp text-xl" style={{ color: '#1e40af' }}></i>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">WhatsApp</h3>
-              <p className="text-gray-600 text-sm">(323) 788-3117</p>
-            </div>
           </div>
         </div>
       </section>
 
       
       <Footer />
-      <ChatbotHome />
     </div>
   );
 }

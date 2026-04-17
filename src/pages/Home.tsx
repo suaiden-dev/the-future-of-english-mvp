@@ -5,7 +5,6 @@ import { TestimonialsSection } from '../components/home/TestimonialsSection';
 import { FAQSection } from '../components/home/FAQSection';
 import { ContactSection } from '../components/home/ContactSection';
 import { Footer } from '../components/Footer';
-import { ChatbotHome } from '../components/ChatbotHome';
 import { useAffiliateRef } from '../hooks/useAffiliateRef';
 
 
@@ -23,7 +22,6 @@ export function Mentorship() {
       <FAQSection />
       <ContactSection />
       <Footer />
-      <ChatbotHome />
     </div>
   );
 }

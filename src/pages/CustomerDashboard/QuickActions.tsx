@@ -151,34 +151,6 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
         ))}
       </div>
       
-      {/* Help Section */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <div className="flex items-start space-x-3">
-          <div className="bg-gray-100 backdrop-blur-sm p-2 rounded-lg border border-gray-200">
-            <HelpCircle className="w-4 h-4 text-gray-600" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-gray-900 mb-1">{t('dashboard.quickActions.help.title')}</p>
-            <p className="text-xs text-gray-600 mb-3">
-              {t('dashboard.quickActions.help.description')}
-            </p>
-            <div className="flex space-x-2">
-              <button className="text-xs bg-gray-100 hover:bg-gray-200 backdrop-blur-sm text-gray-700 px-3 py-1 rounded-md transition-colors border border-gray-200">
-                {t('dashboard.quickActions.help.buttons.viewFaq')}
-              </button>
-              <button 
-                onClick={() => {
-                  // Placeholder for contact support
-                  console.log('Contact support clicked');
-                }}
-                className="text-xs bg-[#C71B2D]/10 hover:bg-[#C71B2D]/20 backdrop-blur-sm text-[#C71B2D] px-3 py-1 rounded-md transition-colors border border-[#C71B2D]/20"
-              >
-                {t('dashboard.quickActions.help.buttons.contactSupport')}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

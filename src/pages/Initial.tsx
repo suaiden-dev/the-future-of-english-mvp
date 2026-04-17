@@ -6,7 +6,6 @@ import ValuesSummary from "@/components/initial/ValuesSummary";
 import ClientsSection from "@/components/shared/ClientsSection";
 import ContactForm from "@/components/shared/ContactForm";
 import Footer from "@/components/initial/Footer";
-import ChatBot from "@/components/shared/Chatbot";
 import { useTranslation } from "react-i18next";
 
 const Initial = () => {
@@ -22,7 +21,6 @@ const Initial = () => {
       <ValuesSummary />
       <ContactForm />
       <Footer />
-      <ChatBot />
     </div>
   );
 };
