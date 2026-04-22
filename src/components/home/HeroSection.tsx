@@ -44,17 +44,7 @@ export function HeroSection() {
               {t('hero.description')}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
-              <button
-                onClick={() => navigate('/register')}
-                className="group bg-tfe-blue-600 hover:bg-tfe-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 cursor-pointer whitespace-nowrap shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-              >
-                <span className="flex items-center gap-2">
-                  {t('hero.startNow')}
-                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </button>
-            </div>
+            {/* Start Now button removed as requested */}
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 text-gray-600">
               <div className="flex items-center gap-2">

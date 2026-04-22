@@ -172,17 +172,13 @@ function App() {
   const getNavItems = () => {
 
     const baseItems = [
-      { id: 'home', label: 'Home', page: '/' as Page },
-      { id: 'translations', label: 'Translations', page: 'translations' as Page },
       { id: 'verify', label: 'Verify Document', page: 'verify' as Page },
     ];
 
-    // Se nÃ£o estÃ¡ logado, retorna itens bÃ¡sicos + login/register
+    // Se não está logado, retorna itens básicos sem login/register (escondidos a pedido)
     if (!user) {
       const result = [
         ...baseItems,
-        { id: 'login', label: 'Login', page: 'login' as Page },
-        { id: 'register', label: 'Register', page: 'register' as Page },
       ];
       return result;
     }

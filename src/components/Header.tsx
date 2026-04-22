@@ -55,30 +55,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
 
           {/* Navigation - Hidden on mobile and small tablets */}
           <nav className="hidden lg:flex pl-2 items-center space-x-3 xl:space-x-6 flex-1 justify-center">
-            <button
-              onClick={() => navigate('/')}
-              className={`flex items-center space-x-1 pl-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                currentPage === 'mentorship' 
-                  ? 'bg-tfe-blue-50 text-tfe-blue-950' 
-                  : 'text-gray-600 hover:text-tfe-blue-950'
-              }`}
-            >
-              <span>Home</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/translations')}
-              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                currentPage === 'translations' 
-                  ? 'bg-tfe-blue-50 text-tfe-blue-950' 
-                  : 'text-gray-600 hover:text-tfe-blue-950'
-              }`}
-            >
-              <span>Translations</span>
-            </button>
-            
-
-            
+            {/* Home button removed as requested */}
           </nav>
 
           {/* User Actions - Desktop only */}
@@ -112,19 +89,8 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                                  <LanguageSelector />
-                  <button
-                    onClick={() => navigate('/login')}
-                    className="px-3 xl:px-4 py-2 text-sm font-medium text-tfe-blue-950 hover:text-tfe-blue-700 transition-colors"
-                  >
-                    {t('navigation.login')}
-                  </button>
-                  <button
-                    onClick={() => navigate('/register')}
-                    className="px-3 xl:px-4 py-2 text-sm font-medium text-white bg-tfe-blue-950 hover:bg-tfe-blue-800 rounded-md transition-colors"
-                  >
-                    {t('navigation.register')}
-                  </button>
+                  <LanguageSelector />
+                  {/* Login and Register hidden as requested */}
               </div>
             )}
           </div>
