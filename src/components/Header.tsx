@@ -20,7 +20,7 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
         <div className="flex justify-between items-center h-14 sm:h-16">
-          {/* Logo - Visible on all screen sizes */}
+          {/* Logo - Increased size and centered on mobile since menu is hidden */}
           <div className="flex items-center min-w-0 flex-shrink-0">
             <button
               onClick={() => navigate('/')}
@@ -29,13 +29,13 @@ export function Header({ user, onLogout, currentPage, onMobileMenuOpen }: Header
                 <img 
                   src="/logo_tfoe.png" 
                   alt="TFOE Logo" 
-                  className="h-8 sm:h-10 w-auto object-contain" 
+                  className="h-10 sm:h-12 lg:h-14 w-auto object-contain" 
                 />
             </button>
           </div>
 
-          {/* Mobile Menu Button - Always visible on mobile */}
-          <div className="flex items-center lg:hidden flex-shrink-0">
+          {/* Mobile Menu Button - Hidden as requested */}
+          <div className="hidden">
             <button
               onClick={() => {
                 console.log('[Header] Mobile menu button clicked');
