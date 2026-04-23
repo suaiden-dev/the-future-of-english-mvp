@@ -81,24 +81,55 @@ export function getDocumentProxyUrl(bucket: string, path: string): string {
  * @param publicUrl URL pública do Supabase Storage
  * @returns { bucket, path } ou null se não for URL do Supabase
  */
-export function parseStorageUrl(publicUrl: string): { bucket: string; path: string } | null {
+export function parseStorageUrl(urlStr: string): { bucket: string; path: string } | null {
+    if (!urlStr) return null;
+    
     try {
-        const url = new URL(publicUrl);
-        const pathParts = url.pathname.split('/storage/v1/object/public/');
+        // Se já for uma URL de proxy, não precisa parsear de novo para converter
+        if (urlStr.includes('/functions/v1/document-proxy')) return null;
+
+        const url = new URL(urlStr);
+        
+        // Padrão 1: URL Pública (/storage/v1/object/public/bucket/path)
+        let pathParts = url.pathname.split('/storage/v1/object/public/');
+        
+        // Padrão 2: URL Autenticada ou Assinada (/storage/v1/object/authenticated/bucket/path ou /sign/)
+        if (pathParts.length < 2) {
+            pathParts = url.pathname.split('/storage/v1/object/authenticated/');
+        }
+        if (pathParts.length < 2) {
+            pathParts = url.pathname.split('/storage/v1/object/sign/');
+        }
 
         if (pathParts.length === 2) {
-            const [bucketName, ...filePath] = pathParts[1].split('/');
-            return {
-                bucket: bucketName,
-                path: filePath.join('/'),
-            };
+            const parts = pathParts[1].split('/');
+            const bucketName = parts[0];
+            const filePath = parts.slice(1).join('/');
+            
+            if (bucketName && filePath) {
+                return {
+                    bucket: bucketName,
+                    path: filePath,
+                };
+            }
         }
 
         return null;
     } catch {
+        // Se não for uma URL válida, pode ser apenas o path direto (ex: "bucket/path")
+        if (urlStr.includes('/')) {
+            const parts = urlStr.split('/');
+            if (parts.length >= 2) {
+                return {
+                    bucket: parts[0],
+                    path: parts.slice(1).join('/')
+                };
+            }
+        }
         return null;
     }
 }
+
 
 /**
  * Converte URL pública para URL segura via proxy.

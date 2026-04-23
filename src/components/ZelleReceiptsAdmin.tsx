@@ -9,13 +9,17 @@ import {
   DollarSign,
   Calendar,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import PostgreSQLService from '../lib/postgresql-edge';
 import { notifyAuthenticatorsPendingDocuments } from '../utils/webhookNotifications';
 import { Logger } from '../lib/loggingHelpers';
 import { ActionTypes } from '../types/actionTypes';
+import { convertPublicToSecure } from '../lib/storage';
+
 
 interface ZellePayment {
   id: string;
@@ -72,6 +76,8 @@ export function ZelleReceiptsAdmin() {
   const [confirmationCode, setConfirmationCode] = useState<string>('');
   const [savingConfirmationCode, setSavingConfirmationCode] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
 
   useEffect(() => {
@@ -165,7 +171,29 @@ export function ZelleReceiptsAdmin() {
     }
   };
 
+  const handleViewReceipt = async (payment: ZellePayment) => {
+    try {
+      setImageError(false);
+      setImageLoading(true);
+      setSelectedReceipt(payment); // Abrir o modal imediatamente com os dados originais
+      
+      if (payment.receipt_url) {
+        console.log('🔒 Securing receipt URL:', payment.receipt_url);
+        const secureUrl = await convertPublicToSecure(payment.receipt_url);
+        setSelectedReceipt({ ...payment, receipt_url: secureUrl });
+      } else {
+        setImageLoading(false);
+      }
+    } catch (err) {
+      console.error('Error securing receipt URL:', err);
+      setImageLoading(false);
+      setImageError(true);
+    }
+  };
+
+
   const openRejectionModal = (payment: ZellePayment) => {
+
     setRejectionModal({ isOpen: true, payment });
     setRejectionReason('');
     setCustomReason('');
@@ -880,7 +908,8 @@ export function ZelleReceiptsAdmin() {
                   {/* Actions */}
                   <div className="flex items-center space-x-2 ml-4">
                     <button
-                      onClick={() => setSelectedReceipt(payment)}
+                      onClick={() => handleViewReceipt(payment)}
+
                       className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                     >
                       <Eye className="w-4 h-4 mr-1" />
@@ -928,10 +957,8 @@ export function ZelleReceiptsAdmin() {
               src={selectedReceipt.receipt_url}
               alt="Payment Receipt Zoomed"
               className="max-w-none shadow-2xl"
-              style={{ minWidth: '50vw' }} // Ensure it's large enough to see
-              onClick={(e) => e.stopPropagation()} // Allow clicking image without closing? No, user wants to inspect. 
-              // Actually, user wants zoom. Let's make it simple: Click anywhere to close is fine, 
-              // but if the image is huge, scrolling is needed.
+              style={{ minWidth: '50vw' }}
+              onClick={(e) => e.stopPropagation()} 
             />
           </div>
           <button 
@@ -969,38 +996,77 @@ export function ZelleReceiptsAdmin() {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 overflow-auto flex-1 bg-gray-50 flex items-center justify-center">
-              <div className="relative group cursor-zoom-in" onClick={() => setIsZoomed(true)}>
-                <img
-                  src={selectedReceipt.receipt_url}
-                  alt="Payment Receipt"
-                  className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center p-8 text-gray-500 cursor-default">
-                          <FileText class="w-12 h-12 mb-4" />
-                          <p>Unable to display receipt image</p>
-                          <a href="${selectedReceipt.receipt_url}" target="_blank" class="text-blue-600 hover:underline mt-2">
-                            View Original File
-                          </a>
-                        </div>
-                      `;
-                      parent.removeAttribute('onClick');
-                      parent.classList.remove('cursor-zoom-in');
-                    }
-                  }}
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
-                  <span className="opacity-0 group-hover:opacity-100 bg-black bg-opacity-75 text-white text-sm px-3 py-1 rounded-full transition-opacity">
-                    Click to zoom
-                  </span>
+            <div className="p-6 overflow-auto flex-1 bg-gray-50 flex items-center justify-center min-h-[400px]">
+              {imageLoading && (
+                <div className="flex flex-col items-center">
+                  <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                  <p className="text-gray-500 font-medium">Carregando comprovante...</p>
                 </div>
-              </div>
+              )}
+
+              {!imageError && selectedReceipt?.receipt_url && (
+                <div 
+                  className={`relative group cursor-zoom-in transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`} 
+                  onClick={() => setIsZoomed(true)}
+                >
+                  <img
+                    src={selectedReceipt.receipt_url}
+                    alt="Payment Receipt"
+                    className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl border border-gray-200"
+                    onLoad={() => setImageLoading(false)}
+                    onError={() => {
+                      console.error('❌ Failed to load image even with secure URL');
+                      setImageLoading(false);
+                      setImageError(true);
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center rounded-lg">
+                    <span className="opacity-0 group-hover:opacity-100 bg-black bg-opacity-75 text-white text-sm px-3 py-1 rounded-full transition-opacity">
+                      Click to zoom
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {imageError && (
+                <div className="flex flex-col items-center justify-center p-8 text-center max-w-md">
+                  <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                    <AlertCircle className="w-10 h-10 text-red-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Não foi possível carregar a imagem</h3>
+                  <p className="text-gray-600 mb-8">
+                    Isso pode acontecer devido a restrições de permissão ou se o arquivo foi movido no armazenamento.
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 w-full">
+                    <a 
+                      href={selectedReceipt?.receipt_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex-1 inline-flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-md"
+                    >
+                      <ExternalLink className="w-5 h-5 mr-2" />
+                      Tentar Abrir Direto
+                    </a>
+                    <button 
+                      onClick={() => handleViewReceipt(selectedReceipt!)}
+                      className="flex-1 inline-flex items-center justify-center px-4 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                    >
+                      <RefreshCw className="w-5 h-5 mr-2" />
+                      Tentar Novamente
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!selectedReceipt?.receipt_url && !imageLoading && (
+                <div className="text-center py-12 text-gray-500">
+                  <AlertCircle className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                  <p>Nenhuma imagem de comprovante disponível para este pagamento.</p>
+                </div>
+              )}
             </div>
+
 
             {/* Modal Actions */}
             {selectedReceipt.status === 'pending_verification' && (
