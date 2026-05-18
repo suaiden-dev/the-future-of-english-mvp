@@ -53,15 +53,28 @@ export async function getSecureUrl(bucket: string, path: string): Promise<string
             return signedData.signedUrl;
         }
 
-        // Tentativa 3: Document Proxy (fallback final)
+        // Tentativa 3: Document Proxy com fetch autenticado → Blob URL
         const proxyUrl = getDocumentProxyUrl(bucket, cleanPath);
-        console.log(`[getSecureUrl] Fallback to Proxy: ${bucket}/${cleanPath}`);
-        return proxyUrl;
+        console.log(`[getSecureUrl] Fallback to Proxy (fetch): ${bucket}/${cleanPath}`);
+        const { data: { session } } = await supabase.auth.getSession();
+        const proxyResponse = await fetch(proxyUrl, {
+            headers: session?.access_token
+                ? { Authorization: `Bearer ${session.access_token}` }
+                : {}
+        });
+        if (proxyResponse.ok) {
+            const blob = await proxyResponse.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            console.log(`[getSecureUrl] Success via Proxy Blob: ${bucket}/${cleanPath}`);
+            return blobUrl;
+        }
+
+        console.warn(`[getSecureUrl] All attempts failed for ${bucket}/${cleanPath}`);
+        return '';
 
     } catch (error) {
         console.error(`[getSecureUrl] Error for ${bucket}/${cleanPath}:`, error);
-        // Em caso de erro, retornar URL do proxy como fallback
-        return getDocumentProxyUrl(bucket, cleanPath);
+        return '';
     }
 }
 

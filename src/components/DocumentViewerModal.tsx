@@ -24,6 +24,8 @@ export function DocumentViewerModal({ url, filename, onClose }: DocumentViewerMo
 
     const handleIframeLoad = () => setLoading(false);
     const handleImageLoad = () => setLoading(false);
+    const handleImageError = () => setLoading(false);
+    const handleIframeError = () => setLoading(false);
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[70]">
@@ -76,6 +78,7 @@ export function DocumentViewerModal({ url, filename, onClose }: DocumentViewerMo
                             src={`${url}#toolbar=0`}
                             className="w-full h-full border-0"
                             onLoad={handleIframeLoad}
+                            onError={handleIframeError}
                             title={`PDF Viewer - ${filename}`}
                         />
                     ) : isImage ? (
@@ -87,6 +90,7 @@ export function DocumentViewerModal({ url, filename, onClose }: DocumentViewerMo
                                 src={url}
                                 alt={filename}
                                 onLoad={handleImageLoad}
+                                onError={handleImageError}
                                 style={{
                                     transform: `scale(${scale}) rotate(${rotation}deg)`,
                                     transition: 'transform 0.2s ease-out',
@@ -97,20 +101,7 @@ export function DocumentViewerModal({ url, filename, onClose }: DocumentViewerMo
                                 draggable={false}
                             />
                         </div>
-                    ) : (
-                        <div className="text-center text-white p-8">
-                            <p className="text-xl mb-4">Preview not available for this file type.</p>
-                            <a
-                                href={url}
-                                download={filename}
-                                className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                Download File
-                            </a>
-                        </div>
-                    )}
+                    ) : null}
                 </div>
             </div>
         </div>

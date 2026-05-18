@@ -60,6 +60,12 @@ export default function AuthenticatorDashboard() {
   const getDisplayFilename = (doc: Document): string => {
     return doc.original_filename || doc.filename;
   };
+
+  const getViewFilename = (doc: Document, urlToView: string): string => {
+    const ext = urlToView.split('?')[0].split('.').pop()?.toLowerCase() || '';
+    const base = getDisplayFilename(doc).replace(/\.[^.]+$/, '');
+    return ext ? `${base}.${ext}` : getDisplayFilename(doc);
+  };
   const [uploadStates, setUploadStates] = useState<{ [docId: string]: { file: File | null, uploading: boolean, success: boolean, error: string | null } }>({});
   const [rejectedRows, setRejectedRows] = useState<{ [docId: string]: boolean }>({});
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -926,7 +932,7 @@ export default function AuthenticatorDashboard() {
                             return;
                           }
                           const validUrl = await getValidFileUrl(urlToView);
-                          setDocToView({ url: validUrl, filename: getDisplayFilename(doc) });
+                          setDocToView({ url: validUrl, filename: getViewFilename(doc, urlToView) });
                           setShowDocViewer(true);
                         } catch (error) {
                           console.error('Error opening document:', error);
@@ -949,7 +955,7 @@ export default function AuthenticatorDashboard() {
                               return;
                             }
                             const validUrl = await getValidFileUrl(urlToView);
-                            setDocToView({ url: validUrl, filename: getDisplayFilename(doc) });
+                            setDocToView({ url: validUrl, filename: getViewFilename(doc, urlToView) });
                             setShowDocViewer(true);
                           } catch (error) {
                             console.error('Error opening document:', error);
@@ -980,7 +986,7 @@ export default function AuthenticatorDashboard() {
                             const url = window.URL.createObjectURL(blob);
                             const link = document.createElement('a');
                             link.href = url;
-                            link.download = (getDisplayFilename(doc) ? String(getDisplayFilename(doc)) : 'document.pdf');
+                            link.download = getViewFilename(doc, urlToDownload);
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
@@ -1434,7 +1440,7 @@ export default function AuthenticatorDashboard() {
                       }
 
                       const validUrl = await getValidFileUrl(urlToView);
-                      setDocToView({ url: validUrl, filename: getDisplayFilename(actionDoc) });
+                      setDocToView({ url: validUrl, filename: getViewFilename(actionDoc, urlToView) });
                       setShowDocViewer(true);
                     } catch (error) {
                       console.error('Error opening document:', error);
@@ -1463,7 +1469,7 @@ export default function AuthenticatorDashboard() {
                       const url = window.URL.createObjectURL(blob);
                       const link = document.createElement('a');
                       link.href = url;
-                      link.download = (getDisplayFilename(actionDoc) ? String(getDisplayFilename(actionDoc)) : 'document.pdf');
+                      link.download = getViewFilename(actionDoc, urlToDownload);
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);

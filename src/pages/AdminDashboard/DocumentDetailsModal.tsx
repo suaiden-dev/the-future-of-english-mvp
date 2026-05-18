@@ -72,76 +72,77 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
     setLoadingTranslated(true);
 
     try {
-      // Primeiro, tentar buscar por original_document_id (mais preciso)
+      // 1. Buscar em translated_documents por original_document_id (já autenticado)
       if (documentId) {
-        const { data: byDocId, error: docIdError } = await supabase
+        const { data: byDocId } = await supabase
           .from('translated_documents')
           .select('*')
           .eq('original_document_id', documentId)
           .order('created_at', { ascending: false })
           .limit(1);
 
-        if (!docIdError && byDocId && byDocId.length > 0) {
-          console.log('✅ Documento traduzido encontrado por original_document_id:', byDocId[0]);
+        if (byDocId && byDocId.length > 0) {
+          console.log('✅ Encontrado em translated_documents por original_document_id:', byDocId[0]);
           setTranslatedDoc(byDocId[0]);
           setLoadingTranslated(false);
           return;
         }
       }
 
-      // Fallback: buscar por user_id e filename
-      if (userId && filename) {
-        const { data: byFilename, error: filenameError } = await supabase
-          .from('translated_documents')
+      // 2. Buscar em documents_to_be_verified por original_document_id (aguardando autenticação)
+      if (documentId) {
+        const { data: byVerifId } = await supabase
+          .from('documents_to_be_verified')
           .select('*')
-          .eq('user_id', userId)
-          .ilike('filename', `%${filename.split('.')[0]}%`) // Busca parcial pelo nome
+          .eq('original_document_id', documentId)
           .order('created_at', { ascending: false })
           .limit(1);
 
-        if (!filenameError && byFilename && byFilename.length > 0) {
-          console.log('✅ Documento traduzido encontrado por user_id + filename:', byFilename[0]);
+        if (byVerifId && byVerifId.length > 0) {
+          console.log('✅ Encontrado em documents_to_be_verified por original_document_id:', byVerifId[0]);
+          setTranslatedDoc(byVerifId[0]);
+          setLoadingTranslated(false);
+          return;
+        }
+      }
+
+      // 3. Fallback: buscar em translated_documents por user_id + filename
+      if (userId && filename) {
+        const { data: byFilename } = await supabase
+          .from('translated_documents')
+          .select('*')
+          .eq('user_id', userId)
+          .ilike('filename', `%${filename.split('.')[0]}%`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (byFilename && byFilename.length > 0) {
+          console.log('✅ Encontrado em translated_documents por filename:', byFilename[0]);
           setTranslatedDoc(byFilename[0]);
           setLoadingTranslated(false);
           return;
         }
       }
 
-      // Último fallback: buscar qualquer documento traduzido do usuário mais recente
-      if (userId) {
-        const { data: byUser, error: userError } = await supabase
-          .from('translated_documents')
+      // 4. Fallback: buscar em documents_to_be_verified por user_id + filename
+      if (userId && filename) {
+        const { data: byVerifFilename } = await supabase
+          .from('documents_to_be_verified')
           .select('*')
           .eq('user_id', userId)
+          .ilike('filename', `%${filename.split('.')[0]}%`)
           .order('created_at', { ascending: false })
-          .limit(5); // Pegar os 5 mais recentes para debug
+          .limit(1);
 
-        console.log('📋 Todos os documentos traduzidos do usuário:', byUser);
-
-        if (!userError && byUser && byUser.length > 0) {
-          // Se temos o filename, tentar encontrar uma correspondência
-          if (filename) {
-            const matchingDoc = byUser.find(doc =>
-              doc.filename?.toLowerCase().includes(filename.toLowerCase().split('.')[0]) ||
-              filename.toLowerCase().includes(doc.filename?.toLowerCase().split('.')[0] || '')
-            );
-            if (matchingDoc) {
-              console.log('✅ Documento traduzido encontrado por correspondência de nome:', matchingDoc);
-              setTranslatedDoc(matchingDoc);
-              setLoadingTranslated(false);
-              return;
-            }
-          }
-
-          // Se não encontrou correspondência, pegar o mais recente
-          console.log('⚠️ Nenhuma correspondência exata, usando o mais recente:', byUser[0]);
-          setTranslatedDoc(byUser[0]);
+        if (byVerifFilename && byVerifFilename.length > 0) {
+          console.log('✅ Encontrado em documents_to_be_verified por filename:', byVerifFilename[0]);
+          setTranslatedDoc(byVerifFilename[0]);
           setLoadingTranslated(false);
           return;
         }
       }
 
-      console.log('❌ Nenhum documento traduzido encontrado');
+      console.log('❌ Nenhum documento traduzido encontrado.');
       setTranslatedDoc(null);
     } catch (err) {
       console.error('💥 Erro na busca:', err);
