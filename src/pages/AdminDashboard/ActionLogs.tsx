@@ -85,7 +85,7 @@ export const ActionLogs: React.FC = () => {
             .or(`affected_user_id.eq.${profile.id},performed_by.eq.${profile.id}`)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           return {
             id: profile.id,
