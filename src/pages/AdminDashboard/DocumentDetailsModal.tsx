@@ -181,7 +181,9 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
 
     if (type === 'translated' && translatedDoc?.translated_file_url) {
       rawUrl = translatedDoc.translated_file_url;
-      filename = translatedDoc.filename || 'translated_document.pdf';
+      // n8n always outputs PDF but stores the file using the original filename (e.g. .jpg)
+      const base = (translatedDoc.filename || 'translated_document').replace(/\.[^.]+$/, '');
+      filename = `${base}.pdf`;
     } else {
       rawUrl = (document as any)?.file_url;
       filename = (document as any)?.filename || 'document.pdf';
@@ -324,7 +326,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Total Cost</label>
-                  <p className="text-gray-900 font-semibold">${(document as any).total_cost}.00</p>
+                  <p className="text-gray-900 font-semibold">${Number((document as any).total_cost).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Status</label>
@@ -431,7 +433,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Verification Code</label>
-                <p className="text-gray-900 font-mono text-sm break-all">{document.verification_code}</p>
+                <p className="text-gray-900 font-mono text-sm break-all">{translatedDoc?.is_authenticated && translatedDoc?.verification_code ? translatedDoc.verification_code : '—'}</p>
               </div>
             </div>
 
@@ -480,41 +482,52 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({ docu
                   </div>
                 </div>
               ) : hasTranslatedDoc ? (
-                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                  <div className="flex items-center gap-3 mb-3">
-                    <FileCheck className="w-5 h-5 text-green-600" />
-                    <h4 className="text-md font-semibold text-green-800">Translated Document</h4>
-                    <span className="bg-green-200 text-green-800 text-xs font-medium px-2 py-1 rounded">
-                      ✓ Available
-                    </span>
-                  </div>
-                  {translatedDoc && (
-                    <p className="text-sm text-green-700 mb-3">
-                      Translated file: <span className="font-mono">{translatedDoc.filename}</span>
-                    </p>
-                  )}
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      onClick={() => handleViewFile('translated')}
-                      disabled={loadingViewer}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                    >
-                      {loadingViewer && viewingFileType === 'translated' ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
+                (() => {
+                  const isAuthenticated = translatedDoc?.is_authenticated === true;
+                  return (
+                    <div className={`rounded-lg p-4 border ${isAuthenticated ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+                      <div className="flex items-center gap-3 mb-3 flex-wrap">
+                        <FileCheck className={`w-5 h-5 ${isAuthenticated ? 'text-green-600' : 'text-yellow-600'}`} />
+                        <h4 className={`text-md font-semibold ${isAuthenticated ? 'text-green-800' : 'text-yellow-800'}`}>Translated Document</h4>
+                        {isAuthenticated ? (
+                          <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded border border-green-200">
+                            ✓ Authenticated
+                          </span>
+                        ) : (
+                          <span className="bg-yellow-100 text-yellow-700 text-xs font-medium px-2 py-0.5 rounded border border-yellow-300">
+                            Pending authenticator
+                          </span>
+                        )}
+                      </div>
+                      {translatedDoc && (
+                        <p className={`text-sm mb-3 font-mono ${isAuthenticated ? 'text-green-700' : 'text-yellow-700'}`}>
+                          {translatedDoc.filename}
+                        </p>
                       )}
-                      View Translated
-                    </button>
-                    <button
-                      onClick={() => handleDownload('translated')}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download Translated
-                    </button>
-                  </div>
-                </div>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={() => handleViewFile('translated')}
+                          disabled={loadingViewer}
+                          className={`flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 ${isAuthenticated ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-500 hover:bg-yellow-600'}`}
+                        >
+                          {loadingViewer && viewingFileType === 'translated' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                          View Translated
+                        </button>
+                        <button
+                          onClick={() => handleDownload('translated')}
+                          className={`flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg transition-colors ${isAuthenticated ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-yellow-500 hover:bg-yellow-600'}`}
+                        >
+                          <Download className="w-4 h-4" />
+                          Download Translated
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()
               ) : (
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                   <div className="flex items-center gap-3">

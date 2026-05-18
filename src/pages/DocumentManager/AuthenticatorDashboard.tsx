@@ -341,6 +341,7 @@ export default function AuthenticatorDashboard() {
         .insert({
           user_id: document.user_id,
           filename: document.filename,
+          original_document_id: document.id,
           file_url: document.file_url,
           translated_file_url: document.translated_file_url || document.file_url, // Usar arquivo original se não há tradução
           source_language: document.source_language || (document as any).idioma_raiz || 'Portuguese',
@@ -986,7 +987,9 @@ export default function AuthenticatorDashboard() {
                             const url = window.URL.createObjectURL(blob);
                             const link = document.createElement('a');
                             link.href = url;
-                            link.download = getViewFilename(doc, urlToDownload);
+                            // n8n always outputs PDF — force .pdf extension for translated files
+                            const dlBase = getDisplayFilename(doc).replace(/\.[^.]+$/, '');
+                            link.download = doc.translated_file_url ? `${dlBase}.pdf` : getViewFilename(doc, urlToDownload);
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
@@ -1469,7 +1472,9 @@ export default function AuthenticatorDashboard() {
                       const url = window.URL.createObjectURL(blob);
                       const link = document.createElement('a');
                       link.href = url;
-                      link.download = getViewFilename(actionDoc, urlToDownload);
+                      // n8n always outputs PDF — force .pdf extension for translated files
+                      const dlBase = getDisplayFilename(actionDoc).replace(/\.[^.]+$/, '');
+                      link.download = actionDoc.translated_file_url ? `${dlBase}.pdf` : getViewFilename(actionDoc, urlToDownload);
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
