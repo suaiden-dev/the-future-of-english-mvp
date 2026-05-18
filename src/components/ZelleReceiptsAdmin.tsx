@@ -436,6 +436,20 @@ export function ZelleReceiptsAdmin() {
       // Enviar notificação de rejeição para o usuário
       await sendRejectionNotification(rejectionModal.payment, finalReason);
 
+      // Resetar status dos documentos vinculados para 'pending' para que o usuário possa tentar novamente
+      if (rejectionModal.payment.document_id) {
+        const docIds = rejectionModal.payment.document_id.split(',').map((id: string) => id.trim());
+        await supabase
+          .from('documents')
+          .update({ 
+            status: 'pending',
+            payment_method: null,
+            updated_at: new Date().toISOString()
+          })
+          .in('id', docIds);
+        console.log(`✅ Reset status to 'pending' for ${docIds.length} documents`);
+      }
+
       await loadPayments();
       closeRejectionModal();
       setSelectedReceipt(null);
@@ -916,7 +930,10 @@ export function ZelleReceiptsAdmin() {
                       View Receipt
                     </button>
                     
-                    {(payment.status === 'pending_verification' || payment.status === 'pending_manual_review') && (
+                    {(payment.status === 'pending_verification' || 
+                      payment.status === 'aguardando aprovação de pagamento' || 
+                      payment.status === 'pending_manual_review' || 
+                      payment.status === 'comprovante requer revisão manual') && (
                       <div className="flex space-x-2">
                         <button
                           onClick={() => verifyPayment(payment.id, true)}
@@ -1012,7 +1029,7 @@ export function ZelleReceiptsAdmin() {
                   <img
                     src={selectedReceipt.receipt_url}
                     alt="Payment Receipt"
-                    className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl border border-gray-200"
+                    className="max-w-full max-h-[65vh] md:max-h-[70vh] object-contain rounded-lg shadow-2xl border border-gray-200"
                     onLoad={() => setImageLoading(false)}
                     onError={() => {
                       console.error('❌ Failed to load image even with secure URL');
@@ -1069,8 +1086,11 @@ export function ZelleReceiptsAdmin() {
 
 
             {/* Modal Actions */}
-            {selectedReceipt.status === 'pending_verification' && (
-              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3 shrink-0 bg-white">
+            {(selectedReceipt.status === 'pending_verification' || 
+              selectedReceipt.status === 'aguardando aprovação de pagamento' || 
+              selectedReceipt.status === 'pending_manual_review' || 
+              selectedReceipt.status === 'comprovante requer revisão manual') && (
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3 shrink-0 bg-white z-10">
                 <button
                   onClick={() => openRejectionModal(selectedReceipt)}
                   disabled={processingPaymentId === selectedReceipt.id || sendingToTranslation === selectedReceipt.id}
