@@ -304,7 +304,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
           document_type: doc.hasVerificationRecord ? 'verified' : 'regular',
           translation_status: translationStatus,
           payment_method: paymentInfo?.payment_method || doc.payment_method || 'card',
-          payment_status: paymentInfo?.status || 'completed',
+          payment_status: paymentInfo?.status || null,
           client_name: doc.client_name || null,
           display_name: isAuthenticator && doc.client_name && doc.client_name !== 'Cliente Padrão'
             ? `${doc.client_name} (${userProfile?.name || 'N/A'})`
@@ -689,7 +689,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
           doc.pages?.toString() || 'N/A',
           amountPaid.toFixed(2),
           payment?.payment_method || doc.payment_method || '',
-          payment?.status || 'completed',
+          payment?.status || '',
           doc.source_language || '',
           doc.target_language || '',
           new Date(doc.created_at || '').toLocaleDateString()

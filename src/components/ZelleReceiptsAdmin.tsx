@@ -14,6 +14,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import PostgreSQLService from '../lib/postgresql-edge';
 import { notifyAuthenticatorsPendingDocuments } from '../utils/webhookNotifications';
 import { Logger } from '../lib/loggingHelpers';
@@ -57,7 +58,7 @@ export function ZelleReceiptsAdmin() {
   const [selectedReceipt, setSelectedReceipt] = useState<ZellePayment | null>(null);
   const [processingPaymentId, setProcessingPaymentId] = useState<string | null>(null);
   const [sendingToTranslation, setSendingToTranslation] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending_verification' | 'pending_manual_review' | 'completed' | 'failed'>('pending_verification');
+  const [filter, setFilter] = useState<'all' | 'pending_verification' | 'pending_manual_review' | 'completed' | 'failed'>('pending_manual_review');
   
   // Estados para modal de rejeição
   const [rejectionModal, setRejectionModal] = useState<{
@@ -78,11 +79,19 @@ export function ZelleReceiptsAdmin() {
   const [isZoomed, setIsZoomed] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [realtimeChannel, setRealtimeChannel] = useState<RealtimeChannel | null>(null);
 
 
   useEffect(() => {
     loadPayments();
     initializePostgreSQL();
+    setupRealtime();
+
+    return () => {
+      if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+      }
+    };
   }, [filter]);
 
   const initializePostgreSQL = async () => {
@@ -171,16 +180,43 @@ export function ZelleReceiptsAdmin() {
     }
   };
 
+  const setupRealtime = () => {
+    const channel = supabase
+      .channel('zelle-payments-admin')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'payments',
+          filter: 'payment_method=eq.zelle'
+        },
+        (_payload) => {
+          loadPayments();
+        }
+      )
+      .subscribe();
+
+    setRealtimeChannel(channel);
+  };
+
   const handleViewReceipt = async (payment: ZellePayment) => {
     try {
       setImageError(false);
       setImageLoading(true);
-      setSelectedReceipt(payment); // Abrir o modal imediatamente com os dados originais
-      
+      // Abrir modal sem URL para evitar que o browser tente carregar a URL pública
+      // antes da URL segura estar pronta (race condition que causava imageError prematuro)
+      setSelectedReceipt({ ...payment, receipt_url: '' });
+
       if (payment.receipt_url) {
         console.log('🔒 Securing receipt URL:', payment.receipt_url);
         const secureUrl = await convertPublicToSecure(payment.receipt_url);
-        setSelectedReceipt({ ...payment, receipt_url: secureUrl });
+        if (secureUrl) {
+          setSelectedReceipt({ ...payment, receipt_url: secureUrl });
+        } else {
+          setImageLoading(false);
+          setImageError(true);
+        }
       } else {
         setImageLoading(false);
       }
@@ -806,16 +842,26 @@ export function ZelleReceiptsAdmin() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Zelle Payment Verification</h1>
-        <p className="text-gray-600">Review and verify Zelle payment receipts</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Zelle Payment Verification</h1>
+          <p className="text-gray-600">Review and verify Zelle payment receipts</p>
+        </div>
+        <button
+          onClick={loadPayments}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
       {/* Filter */}
       <div className="mb-6 flex space-x-2">
         {[
-          { key: 'pending_verification', label: 'Pending Verification', count: payments.filter(p => p.status === 'pending_verification' || p.status === 'aguardando aprovação de pagamento').length },
           { key: 'pending_manual_review', label: 'Manual Review', count: payments.filter(p => p.status === 'pending_manual_review' || p.status === 'comprovante requer revisão manual').length },
+          { key: 'pending_verification', label: 'Pending Verification', count: payments.filter(p => p.status === 'pending_verification' || p.status === 'aguardando aprovação de pagamento').length },
           { key: 'completed', label: 'Verified', count: payments.filter(p => p.status === 'completed').length },
           { key: 'failed', label: 'Rejected', count: payments.filter(p => p.status === 'failed').length },
           { key: 'all', label: 'All', count: payments.length }
