@@ -64,11 +64,19 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
   };
 
 
+  // Extrai extensão real da URL e corrige o filename (n8n sempre gera PDF independente do original)
+  const getViewFilename = (filename: string, urlToView: string): string => {
+    const ext = urlToView.split('?')[0].split('.').pop()?.toLowerCase() || '';
+    const base = filename.replace(/\.[^.]+$/, '');
+    return ext ? `${base}.${ext}` : filename;
+  };
+
   // Função para visualizar arquivo
   const handleViewFile = async (url: string, filename: string) => {
     try {
+      const correctedFilename = getViewFilename(filename, url); // usar URL original (tem extensão real)
       const validUrl = await getValidFileUrl(url);
-      setDocToView({ url: validUrl, filename });
+      setDocToView({ url: validUrl, filename: correctedFilename });
       setShowDocViewer(true);
     } catch (error) {
       console.error('Error opening file:', error);
@@ -89,7 +97,7 @@ export function DocumentDetailsModal({ document, onClose }: DocumentDetailsModal
 
       const link = window.document.createElement('a');
       link.href = downloadUrl;
-      link.download = filename;
+      link.download = getViewFilename(filename, url); // usar URL original para extensão correta
       window.document.body.appendChild(link);
       link.click();
       window.document.body.removeChild(link);

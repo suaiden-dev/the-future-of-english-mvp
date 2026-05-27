@@ -101,7 +101,16 @@ export function DocumentViewerModal({ url, filename, onClose }: DocumentViewerMo
                                 draggable={false}
                             />
                         </div>
-                    ) : null}
+                    ) : (
+                        // tipo desconhecido — tenta como iframe e para o loading
+                        <iframe
+                            src={`${url}#toolbar=0`}
+                            className="w-full h-full border-0"
+                            onLoad={handleIframeLoad}
+                            onError={handleIframeError}
+                            title={`Document Viewer - ${filename}`}
+                        />
+                    )}
                 </div>
             </div>
         </div>

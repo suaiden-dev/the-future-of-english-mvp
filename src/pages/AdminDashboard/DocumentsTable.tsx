@@ -304,7 +304,7 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
           document_type: doc.hasVerificationRecord ? 'verified' : 'regular',
           translation_status: translationStatus,
           payment_method: paymentInfo?.payment_method || doc.payment_method || 'card',
-          payment_status: paymentInfo?.status || null,
+          payment_status: paymentInfo?.status || (isAuthenticator ? 'authenticator_service' : null),
           client_name: doc.client_name || null,
           display_name: isAuthenticator && doc.client_name && doc.client_name !== 'Cliente Padrão'
             ? `${doc.client_name} (${userProfile?.name || 'N/A'})`
@@ -504,26 +504,28 @@ export function DocumentsTable({ onViewDocument, dateRange, onDateRangeChange }:
   // Define a cor de fundo e texto com base no status de pagamento
   const getPaymentStatusColor = (paymentStatus: string | null | undefined) => {
     if (!paymentStatus) return 'bg-gray-100 text-gray-800';
-    
+
     // Normalizar para minúsculo para facilitar comparação
     const status = paymentStatus.toLowerCase();
-    
+
+    if (status === 'authenticator_service') return 'bg-green-100 text-green-800';
     if (status === 'completed' || status === 'paid') return 'bg-green-100 text-green-800';
     if (status === 'pending') return 'bg-yellow-100 text-yellow-800';
     if (status === 'pending_verification' || status.includes('manual') || status.includes('revisão')) return 'bg-orange-100 text-orange-800';
     if (status === 'failed' || status === 'declined') return 'bg-red-100 text-red-800';
     if (status === 'refunded') return 'bg-purple-100 text-purple-800';
-    
+
     return 'bg-gray-100 text-gray-800';
   };
 
   // Formata o texto do status de pagamento
   const getPaymentStatusText = (paymentStatus: string | null | undefined) => {
     if (!paymentStatus) return 'N/A';
-    
+
     // Normalizar para minúsculo
     const status = paymentStatus.toLowerCase();
-    
+
+    if (status === 'authenticator_service') return 'Paid';
     if (status === 'completed' || status === 'paid') return 'Paid';
     if (status === 'pending') return 'Pending';
     if (status === 'pending_verification' || status.includes('manual') || status.includes('revisão')) return 'Review Needed';

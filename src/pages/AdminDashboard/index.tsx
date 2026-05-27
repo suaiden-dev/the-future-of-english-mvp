@@ -92,7 +92,7 @@ export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProp
               ))}
             </select>
           </div>
-          
+
           {/* Desktop: Horizontal tabs */}
           <nav className="hidden sm:flex space-x-4 lg:space-x-8 overflow-x-auto" aria-label="Tabs">
             {tabs.map((tab) => {
@@ -121,7 +121,7 @@ export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProp
           {activeTab === 'overview' && (
             <div className="space-y-4 sm:space-y-6 w-full">
               <StatsCards documents={documents} />
-              <DocumentsTable 
+              <DocumentsTable
                 documents={documents}
                 onViewDocument={handleViewDocument}
                 onStatusUpdate={onStatusUpdate}
@@ -162,7 +162,7 @@ export function AdminDashboard({ documents, onStatusUpdate }: AdminDashboardProp
           )}
         </div>
       </div>
-      <DocumentDetailsModal 
+      <DocumentDetailsModal
         document={selectedDocument}
         onClose={handleCloseModal}
       />

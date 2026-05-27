@@ -3,7 +3,7 @@ import { Menu, User, ShieldCheck } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import type { CustomUser } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import LanguageSelector from './LanguageSelector';
+// import LanguageSelector from './LanguageSelector'; // sem internacionalização
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -85,9 +85,7 @@ export function AdminLayout({
               </div>
             </div>
             <div className="flex items-center space-x-5">
-              <div className="pr-2 border-r border-slate-100">
-                <LanguageSelector />
-              </div>
+              {/* <div className="pr-2 border-r border-slate-100"><LanguageSelector /></div> */}
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => navigate('/finance/profile')}

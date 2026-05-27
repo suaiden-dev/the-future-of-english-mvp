@@ -1,5 +1,5 @@
 import React from 'react';
-import { Upload, Search, FileText, MessageCircle, Download, HelpCircle, ArrowUpRight, CheckCircle } from 'lucide-react';
+import { Upload, Search, FileText, Download, ArrowUpRight, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../contexts/I18nContext';
 
@@ -46,20 +46,6 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
       shadow: 'hover:shadow-[0_0_40px_rgba(22,51,83,0.4)]',
       onClick: () => navigate('/translations')
     },
-    {
-      id: 'contact',
-      title: t('dashboard.quickActions.actions.contact.title'),
-      description: t('dashboard.quickActions.actions.contact.description'),
-      icon: MessageCircle,
-      color: 'bg-slate-700 hover:bg-slate-600',
-      textColor: 'text-white',
-      iconBg: 'bg-white/20',
-      shadow: 'hover:shadow-[0_0_30px_rgba(100,116,139,0.3)]',
-      onClick: () => {
-        // Placeholder for contact support
-        console.log('Contact support clicked');
-      }
-    }
   ];
 
   // Add download action if user has completed documents
@@ -87,28 +73,28 @@ export function QuickActions({ onUploadClick, hasCompletedDocuments }: QuickActi
         <p className="text-lg text-gray-600">{t('dashboard.quickActions.description')}</p>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="flex flex-col gap-3 mb-6">
         {actions.map((action) => {
           const Icon = action.icon;
           return (
             <button
               key={action.id}
               onClick={action.onClick}
-              className={`${action.color} ${action.textColor} ${action.shadow} p-5 rounded-2xl transition-all duration-200 text-left group hover:scale-105 transform`}
+              className={`${action.color} ${action.textColor} ${action.shadow} p-4 rounded-2xl transition-all duration-200 text-left group hover:scale-[1.02] transform`}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className={`${action.iconBg} p-2 rounded-lg backdrop-blur-sm`}>
+              <div className="flex items-center gap-4">
+                <div className={`${action.iconBg} p-2.5 rounded-xl backdrop-blur-sm flex-shrink-0`}>
                   <Icon className="w-5 h-5" />
                 </div>
-                <ArrowUpRight className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <div>
-                <h4 className="font-bold text-white mb-1 group-hover:text-gray-100">
-                  {action.title}
-                </h4>
-                <p className="text-sm text-white/80 group-hover:text-white/90 leading-relaxed">
-                  {action.description}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-white mb-0.5 group-hover:text-gray-100">
+                    {action.title}
+                  </h4>
+                  <p className="text-sm text-white/80 group-hover:text-white/90 leading-relaxed">
+                    {action.description}
+                  </p>
+                </div>
+                <ArrowUpRight className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0" />
               </div>
             </button>
           );
